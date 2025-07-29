@@ -595,6 +595,17 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
                 <small>Uploading... {uploadProgress}%</small>
               </div>
             )}
+            {isProcessing && (
+              <div className="processing-progress">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill ai-progress" 
+                    style={{ width: `${processingProgress}%` }}
+                  ></div>
+                </div>
+                <small>🤖 AI is analyzing document... {Math.round(processingProgress)}%</small>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

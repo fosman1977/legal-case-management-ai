@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Case, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
-import { DocumentManager } from './DocumentManager';
+import { EnhancedDocumentManager } from './EnhancedDocumentManager';
 import { KeyPointsManager } from './KeyPointsManager';
 import { ChronologyManager } from './ChronologyManager';
 import { AuthoritiesManager } from './AuthoritiesManager';
@@ -12,6 +12,7 @@ import { EnhancedDramatisPersonae } from './EnhancedDramatisPersonae';
 import { EnhancedIssuesBuilder } from './EnhancedIssuesBuilder';
 import { SecuritySettings } from './SecuritySettings';
 import { AIDialogue } from './AIDialogue';
+import { EnhancedCaseOverview } from './EnhancedCaseOverview';
 
 interface CaseDetailProps {
   case: Case;
@@ -174,43 +175,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
       <div className="case-content">
         {activeTab === 'overview' && (
-          <div className="case-overview">
-            <div className="overview-grid">
-              <div className="overview-item">
-                <label>Client:</label>
-                <p>{caseData.client}</p>
-              </div>
-              <div className="overview-item">
-                <label>Opponent:</label>
-                <p>{caseData.opponent}</p>
-              </div>
-              <div className="overview-item">
-                <label>Court:</label>
-                <p>{caseData.court}</p>
-              </div>
-              <div className="overview-item">
-                <label>Judge:</label>
-                <p>{caseData.judge || 'Not assigned'}</p>
-              </div>
-              <div className="overview-item">
-                <label>Hearing Date:</label>
-                <p>{new Date(caseData.hearingDate).toLocaleDateString('en-GB', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}</p>
-              </div>
-              <div className="overview-item">
-                <label>Status:</label>
-                <p className={`status-${caseData.status}`}>{caseData.status.replace('_', ' ')}</p>
-              </div>
-            </div>
-          </div>
+          <EnhancedCaseOverview caseData={caseData} documents={documents} />
         )}
 
         {activeTab === 'documents' && (
-          <DocumentManager caseId={caseData.id} onDocumentChange={refreshDocuments} />
+          <EnhancedDocumentManager caseId={caseData.id} onDocumentChange={refreshDocuments} />
         )}
 
         {activeTab === 'auto-generate' && (

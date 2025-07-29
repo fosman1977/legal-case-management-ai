@@ -31,6 +31,34 @@ export const CaseList: React.FC<CaseListProps> = ({
     return colors[status];
   };
 
+  const getDaysUntilHearing = (hearingDate: string) => {
+    const hearing = new Date(hearingDate);
+    const today = new Date();
+    const diffTime = hearing.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDaysLabel = (days: number) => {
+    if (days < 0) {
+      return `${Math.abs(days)} days ago`;
+    } else if (days === 0) {
+      return 'Today';
+    } else if (days === 1) {
+      return 'Tomorrow';
+    } else {
+      return `${days} days left`;
+    }
+  };
+
+  const getDaysColor = (days: number) => {
+    if (days < 0) return 'days-past';
+    if (days === 0) return 'days-today';
+    if (days <= 7) return 'days-urgent';
+    if (days <= 30) return 'days-soon';
+    return 'days-future';
+  };
+
   return (
     <div className="case-list">
       <div className="case-list-header">
@@ -43,28 +71,36 @@ export const CaseList: React.FC<CaseListProps> = ({
         {cases.length === 0 ? (
           <p className="empty-state">No cases yet. Create your first case to get started.</p>
         ) : (
-          cases.map(caseItem => (
-            <div
-              key={caseItem.id}
-              className={`case-item ${selectedCaseId === caseItem.id ? 'selected' : ''}`}
-              onClick={() => onSelectCase(caseItem.id)}
-            >
-              <div className="case-item-header">
-                <h4>{caseItem.title}</h4>
-                <span className={`badge ${getStatusBadge(caseItem.status)}`}>
-                  {caseItem.status}
-                </span>
+          cases.map(caseItem => {
+            const daysLeft = getDaysUntilHearing(caseItem.hearingDate);
+            return (
+              <div
+                key={caseItem.id}
+                className={`case-item ${selectedCaseId === caseItem.id ? 'selected' : ''}`}
+                onClick={() => onSelectCase(caseItem.id)}
+              >
+                <div className="case-item-header">
+                  <h4>{caseItem.title}</h4>
+                  <div className="case-badges">
+                    <span className={`badge ${getStatusBadge(caseItem.status)}`}>
+                      {caseItem.status}
+                    </span>
+                    <span className={`days-countdown ${getDaysColor(daysLeft)}`}>
+                      {getDaysLabel(daysLeft)}
+                    </span>
+                  </div>
+                </div>
+                <p className="case-ref">{caseItem.courtReference}</p>
+                <p className="case-parties">{caseItem.client} v {caseItem.opponent}</p>
+                <div className="case-item-footer">
+                  <span className="court">{caseItem.court}</span>
+                  <span className="hearing-date">
+                    📅 {formatDate(caseItem.hearingDate)}
+                  </span>
+                </div>
               </div>
-              <p className="case-ref">{caseItem.courtReference}</p>
-              <p className="case-parties">{caseItem.client} v {caseItem.opponent}</p>
-              <div className="case-item-footer">
-                <span className="court">{caseItem.court}</span>
-                <span className="hearing-date">
-                  Hearing: {formatDate(caseItem.hearingDate)}
-                </span>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

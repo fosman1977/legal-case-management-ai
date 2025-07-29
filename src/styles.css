@@ -137,6 +137,87 @@ body {
   transition: width 0.3s ease;
 }
 
+.progress-fill.ai-progress {
+  background: linear-gradient(90deg, #4caf50, #2196f3, #9c27b0);
+  background-size: 200% 100%;
+  animation: ai-gradient 2s ease-in-out infinite;
+}
+
+@keyframes ai-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.processing-progress {
+  margin-top: 1rem;
+}
+
+.processing-progress .progress-bar {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.processing-progress small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+/* Days countdown styling */
+.case-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.days-countdown {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.days-past {
+  background-color: #e0e0e0;
+  color: #757575;
+}
+
+.days-today {
+  background-color: #ff5722;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.days-urgent {
+  background-color: #f44336;
+  color: white;
+  animation: urgent-blink 1.5s infinite;
+}
+
+.days-soon {
+  background-color: #ff9800;
+  color: white;
+}
+
+.days-future {
+  background-color: #4caf50;
+  color: white;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes urgent-blink {
+  0%, 50% { background-color: #f44336; }
+  25%, 75% { background-color: #d32f2f; }
+}
+
 .document-category {
   margin-bottom: 2rem;
 }
