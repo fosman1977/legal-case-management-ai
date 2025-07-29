@@ -57,6 +57,12 @@ export interface LegalAuthority {
   paragraph?: string;
 }
 
+export interface PersonRelationship {
+  targetPersonId: string;
+  type: 'represents' | 'opposing_counsel' | 'witness_for' | 'expert_for' | 'employed_by' | 'related_to' | 'reports_to' | 'colleague_of' | 'adverse_to' | 'other';
+  description?: string;
+}
+
 export interface Person {
   id: string;
   caseId: string;
@@ -65,7 +71,19 @@ export interface Person {
   description: string;
   relevance: string;
   contactInfo?: string;
+  organization?: string;
+  email?: string;
+  phone?: string;
   documentRefs: string[];
+  relationships?: PersonRelationship[];
+  firstMentionDate?: string;
+  keyQuotes?: string[];
+}
+
+export interface IssueRelationship {
+  targetIssueId: string;
+  type: 'depends_on' | 'blocks' | 'related_to' | 'contradicts' | 'supports' | 'sub_issue_of' | 'parent_of';
+  description?: string;
 }
 
 export interface Issue {
@@ -80,6 +98,15 @@ export interface Issue {
   defendantPosition?: string;
   documentRefs: string[];
   relatedIssues: string[];
+  relationships?: IssueRelationship[];
+  tags?: string[];
+  assignedTo?: string;
+  dueDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  notes?: string;
+  evidenceNeeded?: string[];
+  legalAuthorities?: string[];
 }
 
 export interface AIAnalysisResult {

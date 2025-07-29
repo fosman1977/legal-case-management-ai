@@ -227,6 +227,13 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
       return { answer, extractedData };
     } catch (error) {
       console.error('AI analysis failed:', error);
+      // Return a helpful message when Ollama is not available
+      if (error instanceof Error && error.message.includes('No Ollama models are available')) {
+        return {
+          answer: "⚠️ AI features are not available in the browser environment. Please run this application in Electron mode to use AI analysis features with Ollama.",
+          extractedData: undefined
+        };
+      }
       throw error;
     }
   };

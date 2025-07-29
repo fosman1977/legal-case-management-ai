@@ -6,6 +6,7 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
+import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
 
 interface DocumentManagerProps {
   caseId: string;
@@ -27,6 +28,8 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [caseData, setCaseData] = useState<any>(null);
   const [useFileSystem, setUseFileSystem] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -204,16 +207,45 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         };
         reader.readAsText(file);
       } else if (PDFTextExtractor.isPDF(file)) {
-        // For PDF files, extract text content
+        // For PDF files, extract and process with AI
+        setIsProcessing(true);
+        setProcessingProgress(0);
+        
         PDFTextExtractor.extractText(file)
-          .then(extractedText => {
-            setFormData(prev => ({
-              ...prev,
-              fileName: file.name,
-              fileSize: file.size,
-              fileType: file.type,
-              fileContent: extractedText.substring(0, 1000) // Preview first 1000 chars
-            }));
+          .then(async extractedText => {
+            setProcessingProgress(30);
+            
+            // Process with AI to get structured summary
+            try {
+              const processed = await aiDocumentProcessor.processDocument(
+                extractedText,
+                file.name,
+                aiDocumentProcessor.detectDocumentType(extractedText, file.name),
+                (progress) => setProcessingProgress(30 + (progress * 0.6)) // 30-90%
+              );
+              
+              setFormData(prev => ({
+                ...prev,
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                fileContent: processed.structuredContent,
+                // Auto-populate fields from AI analysis
+                content: processed.summary.executiveSummary,
+                notes: processed.summary.relevance
+              }));
+              
+              setProcessingProgress(100);
+            } catch (error) {
+              console.error('AI processing failed, using raw text:', error);
+              setFormData(prev => ({
+                ...prev,
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                fileContent: extractedText.substring(0, 1000) + '...'
+              }));
+            }
           })
           .catch(error => {
             console.error('PDF extraction failed:', error);
@@ -224,6 +256,10 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
               fileType: file.type,
               fileContent: `PDF File: ${file.name} (${Math.round(file.size / 1024)}KB) - Text extraction failed`
             }));
+          })
+          .finally(() => {
+            setIsProcessing(false);
+            setProcessingProgress(0);
           });
       } else {
         // For other binary files, just store metadata

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Case, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
-import { EnhancedDocumentManager } from './EnhancedDocumentManager';
+import { DocumentManager } from './DocumentManager';
 import { KeyPointsManager } from './KeyPointsManager';
 import { ChronologyManager } from './ChronologyManager';
 import { AuthoritiesManager } from './AuthoritiesManager';
 import { PresentationPrep } from './PresentationPrep';
 import { AutoGenerator } from './AutoGenerator';
-import { ChronologyBuilder } from './ChronologyBuilder';
-import { DramatisPersonae } from './DramatisPersonae';
-import { IssuesBuilder } from './IssuesBuilder';
+import { EnhancedChronologyBuilder } from './EnhancedChronologyBuilder';
+import { EnhancedDramatisPersonae } from './EnhancedDramatisPersonae';
+import { EnhancedIssuesBuilder } from './EnhancedIssuesBuilder';
 import { SecuritySettings } from './SecuritySettings';
 import { AIDialogue } from './AIDialogue';
 
@@ -24,7 +24,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onEditCase,
   onDeleteCase 
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'auto-generate' | 'ai-dialogue' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints' | 'chronology' | 'authorities' | 'presentation' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'auto-generate' | 'ai-dialogue' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints' | 'authorities' | 'presentation' | 'settings'>('overview');
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
 
   // Refresh documents when tab changes or when returning to this component
@@ -153,12 +153,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           Key Points
         </button>
         <button 
-          className={`tab ${activeTab === 'chronology' ? 'active' : ''}`}
-          onClick={() => setActiveTab('chronology')}
-        >
-          Chronology
-        </button>
-        <button 
           className={`tab ${activeTab === 'authorities' ? 'active' : ''}`}
           onClick={() => setActiveTab('authorities')}
         >
@@ -216,7 +210,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
         )}
 
         {activeTab === 'documents' && (
-          <EnhancedDocumentManager caseId={caseData.id} onDocumentChange={refreshDocuments} />
+          <DocumentManager caseId={caseData.id} onDocumentChange={refreshDocuments} />
         )}
 
         {activeTab === 'auto-generate' && (
@@ -231,24 +225,21 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
         )}
 
         {activeTab === 'ai-chronology' && (
-          <ChronologyBuilder caseId={caseData.id} />
+          <EnhancedChronologyBuilder caseId={caseData.id} />
         )}
 
         {activeTab === 'ai-persons' && (
-          <DramatisPersonae caseId={caseData.id} />
+          <EnhancedDramatisPersonae caseId={caseData.id} />
         )}
 
         {activeTab === 'ai-issues' && (
-          <IssuesBuilder caseId={caseData.id} />
+          <EnhancedIssuesBuilder caseId={caseData.id} />
         )}
 
         {activeTab === 'keypoints' && (
           <KeyPointsManager caseId={caseData.id} />
         )}
 
-        {activeTab === 'chronology' && (
-          <ChronologyManager caseId={caseData.id} />
-        )}
 
         {activeTab === 'authorities' && (
           <AuthoritiesManager caseId={caseData.id} />

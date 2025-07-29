@@ -8,7 +8,8 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         strictPort: false,
-        cors: true
+        cors: true,
+        allowedHosts: ['hpjp98-8080.csb.app', '.csb.app']
     },
     optimizeDeps: {
         include: ['pdfjs-dist']
