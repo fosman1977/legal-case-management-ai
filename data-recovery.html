@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Legal Case Manager - Data Recovery</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .data { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        .export-btn { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        .import-btn { background: #28a745; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Legal Case Manager - Data Recovery Tool</h1>
+    
+    <div class="section">
+        <h2>🔍 Check for Existing Data</h2>
+        <button onclick="checkForData()" class="export-btn">Check All Storage</button>
+        <div id="dataStatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>📤 Export Data (if found)</h2>
+        <button onclick="exportData()" class="export-btn">Export All Data</button>
+        <textarea id="exportData" placeholder="Exported data will appear here..."></textarea>
+        <button onclick="downloadData()" class="export-btn">Download JSON File</button>
+    </div>
+
+    <div class="section">
+        <h2>📥 Import Data (paste exported data)</h2>
+        <textarea id="importData" placeholder="Paste exported data here..."></textarea>
+        <button onclick="importData()" class="import-btn">Import Data</button>
+        <div id="importStatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>🗂️ Access Different Origins</h2>
+        <p>Your data might be on a different port. Try these links:</p>
+        <ul>
+            <li><a href="http://localhost:5173" target="_blank">Port 5173 (original)</a></li>
+            <li><a href="http://localhost:5174" target="_blank">Port 5174</a></li>
+            <li><a href="http://localhost:8080" target="_blank">Port 8080 (current)</a></li>
+        </ul>
+        <p>If you find data on another port, export it there and import it here.</p>
+    </div>
+
+    <script>
+        async function checkForData() {
+            const status = document.getElementById('dataStatus');
+            let findings = [];
+
+            // Check localStorage
+            const lsKeys = [
+                'barrister_cases',
+                'case_documents', 
+                'key_points',
+                'chronology_events',
+                'legal_authorities',
+                'case_persons',
+                'case_issues'
+            ];
+
+            lsKeys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        findings.push(`✅ localStorage.${key}: ${Array.isArray(parsed) ? parsed.length : 1} items`);
+                    } catch (e) {
+                        findings.push(`⚠️ localStorage.${key}: Found but corrupted`);
+                    }
+                } else {
+                    findings.push(`❌ localStorage.${key}: No data`);
+                }
+            });
+
+            // Check for scanned documents
+            const scannedKeys = Object.keys(localStorage).filter(k => k.startsWith('scanned_documents_'));
+            if (scannedKeys.length > 0) {
+                scannedKeys.forEach(key => {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            findings.push(`✅ ${key}: ${parsed.length} scanned documents`);
+                        } catch (e) {
+                            findings.push(`⚠️ ${key}: Found but corrupted`);
+                        }
+                    }
+                });
+            }
+
+            // Check IndexedDB
+            try {
+                const request = indexedDB.open('CaseManagerDB');
+                request.onsuccess = () => {
+                    const db = request.result;
+                    if (db.objectStoreNames.contains('cases')) {
+                        const transaction = db.transaction(['cases'], 'readonly');
+                        const store = transaction.objectStore('cases');
+                        const countRequest = store.count();
+                        countRequest.onsuccess = () => {
+                            findings.push(`✅ IndexedDB.cases: ${countRequest.result} items`);
+                            updateStatus();
+                        };
+                    }
+                    if (db.objectStoreNames.contains('documents')) {
+                        const transaction = db.transaction(['documents'], 'readonly');
+                        const store = transaction.objectStore('documents');
+                        const countRequest = store.count();
+                        countRequest.onsuccess = () => {
+                            findings.push(`✅ IndexedDB.documents: ${countRequest.result} items`);
+                            updateStatus();
+                        };
+                    }
+                };
+                request.onerror = () => {
+                    findings.push(`❌ IndexedDB: Error accessing database`);
+                    updateStatus();
+                };
+            } catch (e) {
+                findings.push(`❌ IndexedDB: Not available`);
+            }
+
+            function updateStatus() {
+                status.innerHTML = findings.map(f => `<div>${f}</div>`).join('');
+            }
+            
+            updateStatus();
+        }
+
+        async function exportData() {
+            const exportArea = document.getElementById('exportData');
+            const allData = {};
+
+            // Export localStorage data
+            const lsKeys = [
+                'barrister_cases',
+                'case_documents', 
+                'key_points',
+                'chronology_events',
+                'legal_authorities',
+                'case_persons',
+                'case_issues'
+            ];
+
+            lsKeys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        allData[key] = JSON.parse(data);
+                    } catch (e) {
+                        allData[key + '_raw'] = data;
+                    }
+                }
+            });
+
+            // Export scanned documents
+            const scannedKeys = Object.keys(localStorage).filter(k => k.startsWith('scanned_documents_'));
+            scannedKeys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        allData[key] = JSON.parse(data);
+                    } catch (e) {
+                        allData[key + '_raw'] = data;
+                    }
+                }
+            });
+
+            // Export IndexedDB data
+            try {
+                const dbData = await getIndexedDBData();
+                if (dbData) {
+                    allData.indexedDB = dbData;
+                }
+            } catch (e) {
+                console.error('Failed to export IndexedDB:', e);
+            }
+
+            exportArea.value = JSON.stringify(allData, null, 2);
+        }
+
+        async function getIndexedDBData() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('CaseManagerDB');
+                request.onsuccess = () => {
+                    const db = request.result;
+                    const data = {};
+                    let transactions = 0;
+                    let completed = 0;
+
+                    function checkComplete() {
+                        if (completed === transactions) {
+                            resolve(data);
+                        }
+                    }
+
+                    if (db.objectStoreNames.contains('cases')) {
+                        transactions++;
+                        const transaction = db.transaction(['cases'], 'readonly');
+                        const store = transaction.objectStore('cases');
+                        const request = store.getAll();
+                        request.onsuccess = () => {
+                            data.cases = request.result;
+                            completed++;
+                            checkComplete();
+                        };
+                    }
+
+                    if (db.objectStoreNames.contains('documents')) {
+                        transactions++;
+                        const transaction = db.transaction(['documents'], 'readonly');
+                        const store = transaction.objectStore('documents');
+                        const request = store.getAll();
+                        request.onsuccess = () => {
+                            data.documents = request.result;
+                            completed++;
+                            checkComplete();
+                        };
+                    }
+
+                    if (transactions === 0) {
+                        resolve(null);
+                    }
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function downloadData() {
+            const data = document.getElementById('exportData').value;
+            if (!data) {
+                alert('No data to download. Click "Export All Data" first.');
+                return;
+            }
+
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `legal-case-data-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function importData() {
+            const importArea = document.getElementById('importData');
+            const statusDiv = document.getElementById('importStatus');
+            
+            try {
+                const data = JSON.parse(importArea.value);
+                let imported = 0;
+
+                // Import localStorage data
+                const lsKeys = [
+                    'barrister_cases',
+                    'case_documents', 
+                    'key_points',
+                    'chronology_events',
+                    'legal_authorities',
+                    'case_persons',
+                    'case_issues'
+                ];
+
+                lsKeys.forEach(key => {
+                    if (data[key]) {
+                        localStorage.setItem(key, JSON.stringify(data[key]));
+                        imported++;
+                    }
+                });
+
+                // Import scanned documents
+                Object.keys(data).filter(k => k.startsWith('scanned_documents_')).forEach(key => {
+                    localStorage.setItem(key, JSON.stringify(data[key]));
+                    imported++;
+                });
+
+                // Import IndexedDB data
+                if (data.indexedDB) {
+                    await importIndexedDBData(data.indexedDB);
+                    imported++;
+                }
+
+                statusDiv.innerHTML = `<div style="color: green;">✅ Successfully imported ${imported} data sets!</div>`;
+                
+                // Redirect to main app
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+
+            } catch (e) {
+                statusDiv.innerHTML = `<div style="color: red;">❌ Error importing data: ${e.message}</div>`;
+            }
+        }
+
+        async function importIndexedDBData(data) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('CaseManagerDB', 1);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    if (!db.objectStoreNames.contains('cases')) {
+                        db.createObjectStore('cases', { keyPath: 'id' });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('documents')) {
+                        const docStore = db.createObjectStore('documents', { keyPath: 'id' });
+                        docStore.createIndex('caseId', 'caseId', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('files')) {
+                        const fileStore = db.createObjectStore('files', { keyPath: 'id' });
+                        fileStore.createIndex('documentId', 'documentId', { unique: false });
+                    }
+                };
+
+                request.onsuccess = () => {
+                    const db = request.result;
+                    let transactions = 0;
+                    let completed = 0;
+
+                    function checkComplete() {
+                        if (completed === transactions) {
+                            resolve();
+                        }
+                    }
+
+                    if (data.cases && data.cases.length > 0) {
+                        transactions++;
+                        const transaction = db.transaction(['cases'], 'readwrite');
+                        const store = transaction.objectStore('cases');
+                        data.cases.forEach(caseData => {
+                            store.put(caseData);
+                        });
+                        transaction.oncomplete = () => {
+                            completed++;
+                            checkComplete();
+                        };
+                    }
+
+                    if (data.documents && data.documents.length > 0) {
+                        transactions++;
+                        const transaction = db.transaction(['documents'], 'readwrite');
+                        const store = transaction.objectStore('documents');
+                        data.documents.forEach(doc => {
+                            store.put(doc);
+                        });
+                        transaction.oncomplete = () => {
+                            completed++;
+                            checkComplete();
+                        };
+                    }
+
+                    if (transactions === 0) {
+                        resolve();
+                    }
+                };
+                
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Auto-check on load
+        window.onload = checkForData;
+    </script>
+</body>
+</html>

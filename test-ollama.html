@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Ollama Connection</title>
+</head>
+<body>
+    <h1>Testing Ollama Connection</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        class OllamaClient {
+            constructor(baseUrl = 'http://127.0.0.1:11434') {
+                this.baseUrl = baseUrl;
+            }
+            
+            async isAvailable() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/tags`);
+                    return response.ok;
+                } catch (error) {
+                    return false;
+                }
+            }
+            
+            async getModels() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/tags`);
+                    const data = await response.json();
+                    return data.models || [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            
+            async generate(model, prompt, options = {}) {
+                const response = await fetch(`${this.baseUrl}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model,
+                        prompt,
+                        stream: false,
+                        options: {
+                            temperature: options.temperature || 0.1,
+                            num_predict: options.max_tokens || 50
+                        }
+                    })
+                });
+                const data = await response.json();
+                return data.response;
+            }
+        }
+        
+        async function test() {
+            const results = document.getElementById('results');
+            const ollama = new OllamaClient();
+            
+            try {
+                results.innerHTML += '<p>🔍 Testing availability...</p>';
+                const available = await ollama.isAvailable();
+                results.innerHTML += `<p>✅ Available: ${available}</p>`;
+                
+                if (available) {
+                    results.innerHTML += '<p>📋 Getting models...</p>';
+                    const models = await ollama.getModels();
+                    results.innerHTML += `<p>✅ Models: ${models.map(m => m.name).join(', ')}</p>`;
+                    
+                    results.innerHTML += '<p>🤖 Testing generation...</p>';
+                    const response = await ollama.generate('llama3.2:1b', 'Say: Connection test successful', { temperature: 0.1, max_tokens: 10 });
+                    results.innerHTML += `<p>✅ Response: ${response}</p>`;
+                    
+                    results.innerHTML += '<p><strong>🎉 All tests passed! Claude can access Ollama while coding.</strong></p>';
+                }
+            } catch (error) {
+                results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

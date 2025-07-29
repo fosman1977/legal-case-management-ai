@@ -16,27 +16,47 @@ export default function App() {
     loadCases();
   }, []);
 
-  const loadCases = () => {
-    const loadedCases = storage.getCases();
-    setCases(loadedCases);
-    if (loadedCases.length > 0 && !selectedCaseId) {
-      setSelectedCaseId(loadedCases[0].id);
+  const loadCases = async () => {
+    try {
+      const loadedCases = await storage.getCases();
+      setCases(loadedCases);
+      if (loadedCases.length > 0 && !selectedCaseId) {
+        setSelectedCaseId(loadedCases[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load cases:', error);
+      // Fallback to sync method if async fails
+      const fallbackCases = storage.getCasesSync();
+      setCases(fallbackCases);
+      if (fallbackCases.length > 0 && !selectedCaseId) {
+        setSelectedCaseId(fallbackCases[0].id);
+      }
     }
   };
 
-  const handleSaveCase = (caseData: Case) => {
-    storage.saveCase(caseData);
-    loadCases();
-    setShowForm(false);
-    setEditingCase(undefined);
-    setSelectedCaseId(caseData.id);
+  const handleSaveCase = async (caseData: Case) => {
+    try {
+      await storage.saveCase(caseData);
+      await loadCases();
+      setShowForm(false);
+      setEditingCase(undefined);
+      setSelectedCaseId(caseData.id);
+    } catch (error) {
+      console.error('Failed to save case:', error);
+      alert('Failed to save case. Please try again.');
+    }
   };
 
-  const handleDeleteCase = () => {
+  const handleDeleteCase = async () => {
     if (selectedCaseId) {
-      storage.deleteCase(selectedCaseId);
-      loadCases();
-      setSelectedCaseId(undefined);
+      try {
+        await storage.deleteCase(selectedCaseId);
+        await loadCases();
+        setSelectedCaseId(undefined);
+      } catch (error) {
+        console.error('Failed to delete case:', error);
+        alert('Failed to delete case. Please try again.');
+      }
     }
   };
 

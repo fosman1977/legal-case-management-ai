@@ -16,10 +16,18 @@ export interface CaseDocument {
   id: string;
   caseId: string;
   title: string;
-  type: 'witness_statement' | 'expert_report' | 'exhibit' | 'authority' | 'skeleton_argument' | 'other';
+  category: 'claimant' | 'defendant' | 'pleadings' | 'hearing_bundle' | 'authorities' | 'orders_judgments';
+  type: 'witness_statement' | 'exhibit' | 'skeleton_argument' | 'particulars' | 'defence' | 'reply' | 'hearing_bundle' | 'authorities' | 'order' | 'judgment' | 'letter' | 'ruling' | 'memo';
   content: string;
   pageReferences?: string;
   notes?: string;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  fileContent?: string;
+  fileId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface KeyPoint {
@@ -47,4 +55,39 @@ export interface LegalAuthority {
   principle: string;
   relevance: string;
   paragraph?: string;
+}
+
+export interface Person {
+  id: string;
+  caseId: string;
+  name: string;
+  role: 'claimant' | 'defendant' | 'witness' | 'expert' | 'lawyer' | 'judge' | 'other';
+  description: string;
+  relevance: string;
+  contactInfo?: string;
+  documentRefs: string[];
+}
+
+export interface Issue {
+  id: string;
+  caseId: string;
+  title: string;
+  description: string;
+  category: 'factual' | 'legal' | 'quantum' | 'procedural';
+  priority: 'high' | 'medium' | 'low';
+  status: 'unresolved' | 'disputed' | 'agreed' | 'resolved';
+  claimantPosition?: string;
+  defendantPosition?: string;
+  documentRefs: string[];
+  relatedIssues: string[];
+}
+
+export interface AIAnalysisResult {
+  chronologyEvents: Omit<ChronologyEvent, 'id' | 'caseId'>[];
+  persons: Omit<Person, 'id' | 'caseId'>[];
+  issues: Omit<Issue, 'id' | 'caseId'>[];
+  keyPoints: Omit<KeyPoint, 'id' | 'caseId'>[];
+  authorities: Omit<LegalAuthority, 'id' | 'caseId'>[];
+  confidence: number;
+  processingTime: number;
 }
