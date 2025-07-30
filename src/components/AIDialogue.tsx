@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CaseDocument, ChronologyEvent, Person, Issue, KeyPoint, LegalAuthority } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
-import { ollamaClient } from '../utils/ollamaClient';
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { PDFTextExtractor } from '../utils/pdfExtractor';
 import { fileSystemManager } from '../utils/fileSystemManager';
 
@@ -202,11 +202,13 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         contentLength: d.content?.length || 0
       })));
       
-      const response = await ollamaClient.generate(prefs.selectedModel || 'llama3.2:1b', analysisPrompt, {
+      const aiResponse = await unifiedAIClient.query(analysisPrompt, {
+        model: prefs.selectedModel || 'llama3.2:1b',
         temperature: 0.3,
-        max_tokens: 2500,
-        system: "You are an expert legal assistant with extensive knowledge of case law and legal procedures. Provide thorough, accurate analysis and extract detailed information when found."
+        maxTokens: 2500,
+        context: "You are an expert legal assistant with extensive knowledge of case law and legal procedures. Provide thorough, accurate analysis and extract detailed information when found."
       });
+      const response = aiResponse.content;
       
       console.log(`📊 AI response length: ${response.length} characters`);
 

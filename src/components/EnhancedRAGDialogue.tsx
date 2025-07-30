@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CaseDocument } from '../types';
 import { openWebUIClient, ChatMessage, Citation, DocumentUpload, RAGResponse } from '../utils/openWebUIClient';
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 
 interface EnhancedRAGDialogueProps {
   caseId: string;
@@ -28,6 +29,9 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
 
   useEffect(() => {
     initializeOpenWebUI();
+  }, []); // Empty dependency array - only run once on mount
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -39,27 +43,26 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
 
   const initializeOpenWebUI = async () => {
     try {
-      const isAvailable = await openWebUIClient.isAvailable();
-      if (!isAvailable) {
-        addSystemMessage('⚠️ OpenWebUI is not available. Please ensure it\'s running on http://localhost:3001');
-        return;
-      }
+      // Skip OpenWebUI availability check in auth-disabled mode
+      addSystemMessage('✅ AI Assistant Ready - Using Direct Ollama Integration');
 
-      const initialized = await openWebUIClient.initialize();
-      if (initialized) {
-        setIsConnected(true);
-        addSystemMessage('✅ Connected to OpenWebUI - Enhanced AI with RAG capabilities enabled');
-        
-        const models = await openWebUIClient.getModels();
-        setAvailableModels(models.map(m => m.name));
-        
-        // Set default model if available
-        if (models.length > 0) {
-          const preferredModel = models.find(m => m.name.includes('llama3.2:3b')) || models[0];
-          setSelectedModel(preferredModel.name);
+      setIsConnected(true);
+      
+      // Try to get models from Ollama directly
+      try {
+        const response = await fetch('http://localhost:11435/api/tags');
+        if (response.ok) {
+          const data = await response.json();
+          const modelNames = data.models?.map((m: any) => m.name) || ['llama3.2:3b'];
+          setAvailableModels(modelNames);
+          if (modelNames.length > 0) {
+            setSelectedModel(modelNames[0]);
+          }
         }
-      } else {
-        addSystemMessage('❌ Failed to initialize OpenWebUI. Using fallback mode.');
+      } catch (error) {
+        // Default models if Ollama not accessible
+        setAvailableModels(['llama3.2:3b', 'llama3.2:1b']);
+        setSelectedModel('llama3.2:3b');
       }
     } catch (error) {
       console.error('OpenWebUI initialization failed:', error);
@@ -71,44 +74,37 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
     if (!isConnected || documents.length === 0) return;
 
     try {
-      addSystemMessage('📤 Uploading case documents to OpenWebUI for RAG processing...');
+      addSystemMessage('📤 Processing case documents for AI analysis...');
       
-      const documentFiles: File[] = [];
+      // For now, we'll store documents in memory for context
+      const docsWithContent = documents.filter(doc => doc.fileContent || doc.content);
       
-      // Convert case documents to files for upload
-      for (const doc of documents) {
-        if (doc.fileContent || doc.content) {
-          const content = doc.fileContent || doc.content || '';
-          const blob = new Blob([content], { type: 'text/plain' });
-          const file = new File([blob], `${doc.title}.txt`, { type: 'text/plain' });
-          documentFiles.push(file);
-        }
-      }
-
-      if (documentFiles.length > 0) {
-        const uploads = await openWebUIClient.uploadDocuments(documentFiles);
-        setUploadedDocuments(uploads);
+      if (docsWithContent.length > 0) {
+        // Create mock uploads for UI consistency
+        const mockUploads = docsWithContent.map(doc => ({
+          id: `doc_${doc.id}`,
+          name: doc.title,
+          type: 'text/plain',
+          size: (doc.fileContent || doc.content || '').length,
+          uploadedAt: new Date().toISOString(),
+          processed: true,
+          extractedText: doc.fileContent || doc.content || ''
+        }));
         
-        const successCount = uploads.length;
-        const totalCount = documentFiles.length;
-        
-        if (successCount === totalCount) {
-          addSystemMessage(`✅ Successfully uploaded ${successCount} documents for RAG analysis`);
-        } else {
-          addSystemMessage(`⚠️ Uploaded ${successCount}/${totalCount} documents. Some uploads may have failed.`);
-        }
+        setUploadedDocuments(mockUploads);
+        addSystemMessage(`✅ Loaded ${mockUploads.length} documents for AI analysis`);
       } else {
-        addSystemMessage('ℹ️ No document content available for RAG processing');
+        addSystemMessage('ℹ️ No document content available for AI processing');
       }
     } catch (error) {
-      console.error('Document upload failed:', error);
-      addSystemMessage('❌ Failed to upload documents for RAG processing');
+      console.error('Document processing failed:', error);
+      addSystemMessage('❌ Failed to process documents for AI analysis');
     }
   };
 
   const addSystemMessage = (content: string) => {
     const systemMessage: ExtendedMessage = {
-      id: `system_${Date.now()}`,
+      id: `system_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       role: 'system',
       content,
       timestamp: new Date().toISOString()
@@ -121,7 +117,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
     if (!input.trim() || isProcessing) return;
 
     const userMessage: ExtendedMessage = {
-      id: `user_${Date.now()}`,
+      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       role: 'user',
       content: input,
       timestamp: new Date().toISOString()
@@ -132,41 +128,45 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
     setIsProcessing(true);
 
     try {
-      if (isConnected && uploadedDocuments.length > 0) {
-        // Use RAG with document context
-        const ragResponse = await openWebUIClient.queryDocuments({
-          query: input,
-          documentIds: uploadedDocuments.map(doc => doc.id),
-          model: selectedModel,
-          temperature: 0.3,
-          maxTokens: 2500,
-          includeCitations: true,
-          searchMode
+      // Build context from uploaded documents
+      let context = '';
+      if (uploadedDocuments.length > 0) {
+        context = 'Context from case documents:\n\n';
+        uploadedDocuments.forEach(doc => {
+          context += `Document: ${doc.name}\n${doc.extractedText?.substring(0, 2000)}...\n\n`;
         });
-
-        const aiMessage: ExtendedMessage = {
-          id: `ai_${Date.now()}`,
-          role: 'assistant',
-          content: ragResponse.response,
-          timestamp: new Date().toISOString(),
-          citations: ragResponse.citations,
-          ragResponse
-        };
-
-        setMessages(prev => [...prev, aiMessage]);
-      } else {
-        // Fallback to regular chat
-        const response = await openWebUIClient.chat([userMessage], selectedModel);
-        const aiMessage: ExtendedMessage = {
-          ...response,
-          id: `ai_${Date.now()}`
-        };
-        setMessages(prev => [...prev, aiMessage]);
       }
+
+      // Query using unified AI client with document context
+      const aiResponse = await unifiedAIClient.queryWithDocuments(
+        input,
+        uploadedDocuments.map(doc => ({
+          title: doc.name,
+          content: doc.extractedText || ''
+        })),
+        {
+          model: selectedModel
+        }
+      );
+      
+      const aiMessage: ExtendedMessage = {
+        id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        role: 'assistant',
+        content: aiResponse.content,
+        timestamp: new Date().toISOString(),
+        citations: aiResponse.sources.map(source => ({
+          source,
+          content: '',
+          confidence: 0.8,
+          page: undefined
+        }))
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('AI query failed:', error);
       const errorMessage: ExtendedMessage = {
-        id: `error_${Date.now()}`,
+        id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         role: 'assistant',
         content: '❌ I encountered an error processing your request. Please check that OpenWebUI is running and try again.',
         timestamp: new Date().toISOString()

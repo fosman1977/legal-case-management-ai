@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CaseDocument, ChronologyEvent, Person, Issue, KeyPoint, LegalAuthority } from '../types';
 import { storage } from '../utils/storage';
-import { ollamaClient } from '../utils/ollamaClient';
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { useAISync } from '../hooks/useAISync';
 
 interface EnhancedAIDialogueProps {
@@ -317,11 +317,13 @@ If you identify specific structured data (dates, people, issues, authorities), f
 Focus on being helpful, accurate, and strategic in your response.`;
 
     try {
-      const response = await ollamaClient.generate('llama3.2:1b', prompt, {
+      const aiResponse = await unifiedAIClient.query(prompt, {
+        model: 'llama3.2:1b',
         temperature: 0.3,
-        max_tokens: 1500,
-        system: "You are a professional legal assistant. Provide clear, structured, and actionable advice. Keep responses conversational but comprehensive."
+        maxTokens: 1500,
+        context: "You are a professional legal assistant. Provide clear, structured, and actionable advice. Keep responses conversational but comprehensive."
       });
+      const response = aiResponse.content;
 
       // Parse response for structured data but don't expose it prominently
       const extractedData = parseExtractedData(response);

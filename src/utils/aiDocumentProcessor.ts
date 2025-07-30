@@ -1,4 +1,4 @@
-import { OllamaClient } from './ollamaClient';
+import { unifiedAIClient, EntityExtractionResult } from './unifiedAIClient';
 
 export interface DocumentSummary {
   executiveSummary: string;
@@ -24,10 +24,7 @@ export interface ProcessedDocument {
 }
 
 class AIDocumentProcessor {
-  private ollamaClient: OllamaClient;
-
   constructor() {
-    this.ollamaClient = new OllamaClient();
   }
 
   /**
@@ -138,15 +135,15 @@ Focus on legal significance rather than copying raw text. Summarize and interpre
    */
   private async getAIAnalysis(prompt: string, onProgress?: (progress: number) => void): Promise<string> {
     try {
-      // Check if AI is available
-      const response = await this.ollamaClient.generate('llama3.2:1b', prompt, {
+      // Use unified AI client
+      const response = await unifiedAIClient.query(prompt, {
         temperature: 0.1,
-        max_tokens: 2000,
-        system: "You are a professional legal assistant. Provide accurate, structured analysis of legal documents. Always respond in valid JSON format."
+        maxTokens: 2000,
+        context: "You are a professional legal assistant. Provide accurate, structured analysis of legal documents. Always respond in valid JSON format."
       });
       
       onProgress?.(70);
-      return response;
+      return response.content;
       
     } catch (error) {
       console.warn('AI analysis not available, using structured fallback');
@@ -371,12 +368,7 @@ Focus on legal significance rather than copying raw text. Summarize and interpre
     cleanedText: string,
     fileName: string,
     documentType?: string
-  ): Promise<{
-    persons: any[];
-    issues: any[];
-    chronologyEvents: any[];
-    authorities: any[];
-  } | null> {
+  ): Promise<EntityExtractionResult | null> {
     const entityPrompt = `You are an expert legal analyst. Extract structured entities from this legal document for case management.
 
 Document: ${fileName}
@@ -432,23 +424,36 @@ Extract the following entities in JSON format:
 Focus on extracting clear, distinct entities. Avoid duplicates.`;
 
     try {
-      const response = await this.getAIAnalysis(entityPrompt);
+      const result = await unifiedAIClient.extractEntities(
+        cleanedText.substring(0, 6000),
+        documentType || 'legal'
+      );
       
-      // Try to parse the AI response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        // Validate the response has the expected structure
-        if (parsed && typeof parsed === 'object') {
-          return {
-            persons: Array.isArray(parsed.persons) ? parsed.persons : [],
-            issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-            chronologyEvents: Array.isArray(parsed.chronologyEvents) ? parsed.chronologyEvents : [],
-            authorities: Array.isArray(parsed.authorities) ? parsed.authorities : []
-          };
-        }
-      }
+      // Transform to match expected format with document refs
+      return {
+        persons: result.persons.map(p => ({
+          ...p,
+          documentRefs: [fileName],
+          description: p.role,
+          relevance: `${p.role} in ${fileName}`
+        })),
+        issues: result.issues.map(i => ({
+          ...i,
+          documentRefs: [fileName],
+          description: i.issue,
+          category: i.type
+        })),
+        chronologyEvents: result.chronologyEvents.map(e => ({
+          ...e,
+          documentRefs: [fileName],
+          description: e.event
+        })),
+        authorities: result.authorities.map(a => ({
+          ...a,
+          documentRefs: [fileName],
+          principle: a.relevance
+        }))
+      };
     } catch (error) {
       console.warn('AI entity extraction failed:', error);
     }

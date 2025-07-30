@@ -14,6 +14,15 @@ services:
       - DEFAULT_USER_ROLE=admin
       - WEBUI_SECRET_KEY=simple-secret-key
       - CORS_ALLOW_ORIGIN=http://localhost:5173,http://localhost:3002
+      - ENABLE_RAG_WEB_SEARCH=true
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text:latest
+      - CHUNK_SIZE=1500
+      - CHUNK_OVERLAP=100
+      - PDF_EXTRACT_IMAGES=true
+      - ENABLE_IMAGE_GENERATION=false
+      - ENABLE_COMMUNITY_SHARING=false
+      - HF_HUB_OFFLINE=1  # Offline mode for better performance
     volumes:
       - minimal-webui-data:/app/backend/data
     depends_on:

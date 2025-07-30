@@ -118,7 +118,7 @@ class OpenWebUIClient {
   }
 
   /**
-   * Get available AI models
+   * Get available AI models (OpenAI-compatible format)
    */
   async getModels(): Promise<ModelInfo[]> {
     try {
@@ -128,7 +128,7 @@ class OpenWebUIClient {
       }
 
       const data = await response.json();
-      return data.models || [];
+      return data.data || data.models || [];
     } catch (error) {
       console.error('Failed to get models:', error);
       return [];
@@ -143,7 +143,7 @@ class OpenWebUIClient {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await this.fetch('/api/v1/documents/upload', {
+      const response = await this.fetch('/api/v1/files', {
         method: 'POST',
         body: formData
       });

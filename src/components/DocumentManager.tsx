@@ -20,7 +20,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
   const [editingDoc, setEditingDoc] = useState<CaseDocument | null>(null);
   
   // AI Synchronization
-  const { publishAIResults, isProcessing: aiProcessing } = useAISync(caseId, 'DocumentManager');
+  const { publishAIResults } = useAISync(caseId, 'DocumentManager');
   const [formData, setFormData] = useState<Partial<CaseDocument>>({
     title: '',
     category: 'claimant',
@@ -311,9 +311,9 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         
         try {
           const entities = await aiDocumentProcessor.extractEntitiesForSync(
-            doc.fileContent,
+            doc.fileContent || '',
             doc.fileName || doc.title,
-            aiDocumentProcessor.detectDocumentType(doc.fileContent, doc.fileName || doc.title)
+            aiDocumentProcessor.detectDocumentType(doc.fileContent || '', doc.fileName || doc.title)
           );
           
           // Only publish if we found entities

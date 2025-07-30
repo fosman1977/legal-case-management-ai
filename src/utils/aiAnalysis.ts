@@ -2,7 +2,7 @@ import { CaseDocument, AIAnalysisResult, ChronologyEvent, Person, Issue, KeyPoin
 import { dataAnonymizer, AnonymizationMapping } from './dataAnonymizer';
 import { indexedDBManager } from './indexedDB';
 import { PDFTextExtractor } from './pdfExtractor';
-import { ollamaClient } from './ollamaClient';
+import { unifiedAIClient } from './unifiedAIClient';
 
 class AIDocumentAnalyzer {
   // private apiEndpoint = '/api/analyze'; // Reserved for future AI service endpoint
@@ -29,7 +29,7 @@ class AIDocumentAnalyzer {
    */
   async getAvailableModels() {
     try {
-      return await ollamaClient.getModels();
+      return await unifiedAIClient.getModels();
     } catch (error) {
       console.error('Failed to get Ollama models:', error);
       return [];
@@ -166,20 +166,20 @@ class AIDocumentAnalyzer {
   ): Promise<Omit<AIAnalysisResult, 'confidence' | 'processingTime'>> {
     console.log('🤖 Starting Ollama AI analysis...');
 
-    // Check if Ollama is available
-    const isOllamaAvailable = await ollamaClient.isAvailable();
-    if (!isOllamaAvailable) {
-      console.warn('⚠️ Ollama not available, falling back to pattern matching');
+    // Check if AI is available
+    const isAIAvailable = await unifiedAIClient.isAvailable();
+    if (!isAIAvailable) {
+      console.warn('⚠️ AI not available, falling back to pattern matching');
       return this.simulateAIAnalysis(documents);
     }
 
-    console.log(`✅ Ollama is available, using model: ${this.ollamaModel}`);
+    console.log(`✅ AI is available, using model: ${this.ollamaModel}`);
 
-    // Preload model for faster responses
+    // Ensure model is available
     try {
-      await ollamaClient.preloadModel(this.ollamaModel);
+      await unifiedAIClient.ensureModel(this.ollamaModel);
     } catch (error) {
-      console.warn('Model preload failed, continuing anyway:', error);
+      console.warn('Model check failed, continuing anyway:', error);
     }
 
     const chronologyEvents: Omit<ChronologyEvent, 'id' | 'caseId'>[] = [];
@@ -253,7 +253,17 @@ class AIDocumentAnalyzer {
             max_tokens: 1200
           };
           
-          extractedData = await ollamaClient.extractAllLegalInfo(content, this.ollamaModel, speedOptions);
+          // Use unified AI client for entity extraction
+          const entityResult = await unifiedAIClient.extractEntities(content, 'legal');
+          
+          // Transform to match expected format
+          extractedData = {
+            chronologyEvents: entityResult.chronologyEvents,
+            persons: entityResult.persons,
+            issues: entityResult.issues,
+            keyPoints: [], // Will be extracted separately if needed
+            authorities: entityResult.authorities
+          };
           const extractionTime = Date.now() - startExtraction;
           console.log(`✅ Combined extraction completed in ${extractionTime}ms`);
           
