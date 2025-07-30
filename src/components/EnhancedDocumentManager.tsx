@@ -7,6 +7,257 @@ import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
 import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+import { useAISync } from '../hooks/useAISync';
+
+// Modal Components
+const TagEditModal: React.FC<{
+  document: CaseDocument;
+  onSave: (doc: CaseDocument, tags: string[], category?: CaseDocument['category'], type?: CaseDocument['type']) => void;
+  onClose: () => void;
+  suggestedTags: string[];
+}> = ({ document, onSave, onClose, suggestedTags }) => {
+  const [tags, setTags] = useState<string[]>(document.tags || []);
+  const [category, setCategory] = useState(document.category);
+  const [type, setType] = useState(document.type);
+  const [newTag, setNewTag] = useState('');
+
+  const addTag = (tag: string) => {
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag]);
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag));
+  };
+
+  const handleSave = () => {
+    onSave(document, tags, category, type);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content tag-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>🏷️ Edit Document Tags</h3>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="document-info">
+            <h4>{document.title}</h4>
+            <p>{document.fileName}</p>
+          </div>
+
+          <div className="form-section">
+            <label>Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value as any)}>
+              <option value="claimant">Claimant Documents</option>
+              <option value="defendant">Defendant Documents</option>
+              <option value="pleadings">Pleadings</option>
+              <option value="hearing_bundle">Hearing Bundle</option>
+              <option value="authorities">Authorities</option>
+              <option value="orders_judgments">Orders & Judgments</option>
+            </select>
+          </div>
+
+          <div className="form-section">
+            <label>Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value as any)}>
+              <option value="witness_statement">Witness Statement</option>
+              <option value="exhibit">Exhibit</option>
+              <option value="skeleton_argument">Skeleton Argument</option>
+              <option value="particulars">Particulars</option>
+              <option value="defence">Defence</option>
+              <option value="reply">Reply</option>
+              <option value="hearing_bundle">Hearing Bundle</option>
+              <option value="authorities">Legal Authorities</option>
+              <option value="order">Court Order</option>
+              <option value="judgment">Judgment</option>
+              <option value="letter">Letter</option>
+              <option value="ruling">Ruling</option>
+              <option value="memo">Memo</option>
+            </select>
+          </div>
+
+          <div className="form-section">
+            <label>Tags</label>
+            <div className="tag-input-container">
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Add new tag..."
+                onKeyPress={(e) => e.key === 'Enter' && addTag(newTag)}
+              />
+              <button onClick={() => addTag(newTag)} disabled={!newTag}>Add</button>
+            </div>
+            
+            <div className="current-tags">
+              <h5>Current Tags:</h5>
+              <div className="tags-list">
+                {tags.map(tag => (
+                  <span key={tag} className="tag-item">
+                    {tag}
+                    <button onClick={() => removeTag(tag)}>×</button>
+                  </span>
+                ))}
+                {tags.length === 0 && <span className="no-tags">No tags</span>}
+              </div>
+            </div>
+
+            {suggestedTags.length > 0 && (
+              <div className="suggested-tags">
+                <h5>Suggested Tags:</h5>
+                <div className="tags-list">
+                  {suggestedTags.filter(tag => !tags.includes(tag)).map(tag => (
+                    <button key={tag} className="suggested-tag" onClick={() => addTag(tag)}>
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BulkTagModal: React.FC<{
+  selectedCount: number;
+  onSave: (tagsToAdd: string[], tagsToRemove: string[], category?: CaseDocument['category'], type?: CaseDocument['type']) => void;
+  onClose: () => void;
+}> = ({ selectedCount, onSave, onClose }) => {
+  const [tagsToAdd, setTagsToAdd] = useState<string[]>([]);
+  const [tagsToRemove, setTagsToRemove] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState<CaseDocument['category'] | undefined>();
+  const [newType, setNewType] = useState<CaseDocument['type'] | undefined>();
+  const [newTag, setNewTag] = useState('');
+  const [removeTag, setRemoveTag] = useState('');
+
+  const addToAddList = (tag: string) => {
+    if (tag && !tagsToAdd.includes(tag)) {
+      setTagsToAdd([...tagsToAdd, tag]);
+      setNewTag('');
+    }
+  };
+
+  const addToRemoveList = (tag: string) => {
+    if (tag && !tagsToRemove.includes(tag)) {
+      setTagsToRemove([...tagsToRemove, tag]);
+      setRemoveTag('');
+    }
+  };
+
+  const handleSave = () => {
+    onSave(tagsToAdd, tagsToRemove, newCategory, newType);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content bulk-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>🏷️ Bulk Tag Documents</h3>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <p className="bulk-info">Updating {selectedCount} selected documents</p>
+
+          <div className="form-section">
+            <label>Change Category (Optional)</label>
+            <select value={newCategory || ''} onChange={(e) => setNewCategory(e.target.value as any || undefined)}>
+              <option value="">-- Keep Current --</option>
+              <option value="claimant">Claimant Documents</option>
+              <option value="defendant">Defendant Documents</option>
+              <option value="pleadings">Pleadings</option>
+              <option value="hearing_bundle">Hearing Bundle</option>
+              <option value="authorities">Authorities</option>
+              <option value="orders_judgments">Orders & Judgments</option>
+            </select>
+          </div>
+
+          <div className="form-section">
+            <label>Change Type (Optional)</label>
+            <select value={newType || ''} onChange={(e) => setNewType(e.target.value as any || undefined)}>
+              <option value="">-- Keep Current --</option>
+              <option value="witness_statement">Witness Statement</option>
+              <option value="exhibit">Exhibit</option>
+              <option value="skeleton_argument">Skeleton Argument</option>
+              <option value="particulars">Particulars</option>
+              <option value="defence">Defence</option>
+              <option value="reply">Reply</option>
+              <option value="hearing_bundle">Hearing Bundle</option>
+              <option value="authorities">Legal Authorities</option>
+              <option value="order">Court Order</option>
+              <option value="judgment">Judgment</option>
+              <option value="letter">Letter</option>
+              <option value="ruling">Ruling</option>
+              <option value="memo">Memo</option>
+            </select>
+          </div>
+
+          <div className="form-section">
+            <label>Add Tags</label>
+            <div className="tag-input-container">
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Tag to add to all documents..."
+                onKeyPress={(e) => e.key === 'Enter' && addToAddList(newTag)}
+              />
+              <button onClick={() => addToAddList(newTag)} disabled={!newTag}>Add</button>
+            </div>
+            <div className="tags-list">
+              {tagsToAdd.map(tag => (
+                <span key={tag} className="tag-item add-tag">
+                  + {tag}
+                  <button onClick={() => setTagsToAdd(tagsToAdd.filter(t => t !== tag))}>×</button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-section">
+            <label>Remove Tags</label>
+            <div className="tag-input-container">
+              <input
+                type="text"
+                value={removeTag}
+                onChange={(e) => setRemoveTag(e.target.value)}
+                placeholder="Tag to remove from all documents..."
+                onKeyPress={(e) => e.key === 'Enter' && addToRemoveList(removeTag)}
+              />
+              <button onClick={() => addToRemoveList(removeTag)} disabled={!removeTag}>Remove</button>
+            </div>
+            <div className="tags-list">
+              {tagsToRemove.map(tag => (
+                <span key={tag} className="tag-item remove-tag">
+                  - {tag}
+                  <button onClick={() => setTagsToRemove(tagsToRemove.filter(t => t !== tag))}>×</button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button className="btn btn-primary" onClick={handleSave}>Apply to All</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface EnhancedDocumentManagerProps {
   caseId: string;
@@ -38,6 +289,11 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<CaseDocument | null>(null);
+  const [editingTags, setEditingTags] = useState<CaseDocument | null>(null);
+  const [showBulkTagging, setShowBulkTagging] = useState(false);
+
+  // AI Synchronization
+  const { publishAIResults, isProcessing: aiProcessing } = useAISync(caseId, 'EnhancedDocumentManager');
   
   // Form states
   const [isAdding, setIsAdding] = useState(false);
@@ -63,6 +319,8 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
   const [showScanner, setShowScanner] = useState(false);
   const [scannedDocuments, setScannedDocuments] = useState<CaseDocument[]>([]);
   const [stats, setStats] = useState<DocumentStats | null>(null);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, currentDoc: '' });
 
   useEffect(() => {
     initializeComponent();
@@ -206,6 +464,90 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
     onDocumentChange?.();
   };
 
+  const processBulkAIExtraction = async () => {
+    if (isBulkProcessing) return;
+    
+    setIsBulkProcessing(true);
+    setBulkProgress({ current: 0, total: 0, currentDoc: '' });
+    
+    try {
+      // Get all documents with content
+      const documentsWithContent = documents.filter(doc => 
+        doc.fileContent && doc.fileContent.length > 100
+      );
+      
+      setBulkProgress({ current: 0, total: documentsWithContent.length, currentDoc: '' });
+      
+      let processedCount = 0;
+      let totalExtracted = { persons: 0, issues: 0, chronology: 0, authorities: 0 };
+      
+      for (const doc of documentsWithContent) {
+        setBulkProgress({ 
+          current: processedCount, 
+          total: documentsWithContent.length, 
+          currentDoc: doc.title 
+        });
+        
+        console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
+        
+        try {
+          const entities = await aiDocumentProcessor.extractEntitiesForSync(
+            doc.fileContent,
+            doc.fileName || doc.title,
+            aiDocumentProcessor.detectDocumentType(doc.fileContent, doc.fileName || doc.title)
+          );
+          
+          // Only publish if we found entities
+          if (entities.persons.length > 0 || entities.issues.length > 0 || 
+              entities.chronologyEvents.length > 0 || entities.authorities.length > 0) {
+            
+            await publishAIResults(doc.fileName || doc.title, entities, 0.7);
+            
+            totalExtracted.persons += entities.persons.length;
+            totalExtracted.issues += entities.issues.length;
+            totalExtracted.chronology += entities.chronologyEvents.length;
+            totalExtracted.authorities += entities.authorities.length;
+            
+            console.log(`✅ Extracted from ${doc.title}:`, {
+              persons: entities.persons.length,
+              issues: entities.issues.length,
+              chronology: entities.chronologyEvents.length,
+              authorities: entities.authorities.length
+            });
+          } else {
+            console.log(`⚠️ No entities found in ${doc.title}`);
+          }
+          
+        } catch (error) {
+          console.error(`❌ Failed to process ${doc.title}:`, error);
+        }
+        
+        processedCount++;
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      setBulkProgress({ 
+        current: documentsWithContent.length, 
+        total: documentsWithContent.length, 
+        currentDoc: 'Complete!' 
+      });
+      
+      console.log(`🎉 Bulk AI extraction complete! Total extracted:`, totalExtracted);
+      
+      // Show completion message
+      alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.`);
+      
+    } catch (error) {
+      console.error('Bulk AI extraction failed:', error);
+      alert('Bulk AI extraction failed. Please try again.');
+    } finally {
+      setIsBulkProcessing(false);
+      setBulkProgress({ current: 0, total: 0, currentDoc: '' });
+    }
+  };
+
   const filteredAndSortedDocuments = () => {
     let filtered = documents;
 
@@ -267,6 +609,90 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
   const handleClearSelection = () => {
     setSelectedDocs(new Set());
     setShowBulkActions(false);
+  };
+
+  const handleSaveDocumentTags = async (doc: CaseDocument, newTags: string[], newCategory?: CaseDocument['category'], newType?: CaseDocument['type']) => {
+    try {
+      const updatedDoc = {
+        ...doc,
+        tags: newTags,
+        category: newCategory || doc.category,
+        type: newType || doc.type,
+        updatedAt: new Date()
+      };
+
+      // Save to storage
+      storage.saveDocument(updatedDoc);
+      
+      // Update file system metadata if applicable
+      if (useFileSystem && caseData && doc.id.startsWith('fs_')) {
+        const metadata = await fileSystemManager.loadCaseMetadata(caseId, caseData.title) || { documents: {} };
+        metadata.documents = metadata.documents || {};
+        metadata.documents[doc.id] = {
+          ...metadata.documents[doc.id],
+          tags: newTags,
+          category: newCategory || doc.category,
+          type: newType || doc.type,
+          updatedAt: new Date().toISOString()
+        };
+        await fileSystemManager.saveCaseMetadata(caseId, caseData.title, metadata);
+      }
+
+      await loadDocuments();
+      setEditingTags(null);
+    } catch (error) {
+      console.error('Failed to save document tags:', error);
+      alert('Failed to update document. Please try again.');
+    }
+  };
+
+  const handleBulkTagging = async (tagsToAdd: string[], tagsToRemove: string[], newCategory?: CaseDocument['category'], newType?: CaseDocument['type']) => {
+    try {
+      const selectedDocsList = documents.filter(doc => selectedDocs.has(doc.id));
+      
+      for (const doc of selectedDocsList) {
+        const currentTags = doc.tags || [];
+        const newTags = [...new Set([...currentTags.filter(tag => !tagsToRemove.includes(tag)), ...tagsToAdd])];
+        
+        await handleSaveDocumentTags(doc, newTags, newCategory, newType);
+      }
+
+      setShowBulkTagging(false);
+      handleClearSelection();
+    } catch (error) {
+      console.error('Failed to bulk update tags:', error);
+      alert('Failed to update documents. Please try again.');
+    }
+  };
+
+  const getSuggestedTags = (doc: CaseDocument): string[] => {
+    const suggestions = new Set<string>();
+    const content = (doc.content + ' ' + doc.title + ' ' + (doc.fileContent || '')).toLowerCase();
+
+    // Legal document type suggestions
+    if (content.includes('witness statement')) suggestions.add('witness-statement');
+    if (content.includes('expert report')) suggestions.add('expert-report');
+    if (content.includes('contract')) suggestions.add('contract');
+    if (content.includes('correspondence')) suggestions.add('correspondence');
+    if (content.includes('pleading')) suggestions.add('pleading');
+    if (content.includes('particulars of claim')) suggestions.add('particulars');
+    if (content.includes('defence')) suggestions.add('defence');
+    if (content.includes('reply')) suggestions.add('reply');
+    
+    // Party suggestions
+    if (content.includes('claimant')) suggestions.add('claimant-document');
+    if (content.includes('defendant')) suggestions.add('defendant-document');
+    
+    // Issue type suggestions
+    if (content.includes('liability')) suggestions.add('liability');
+    if (content.includes('quantum') || content.includes('damages')) suggestions.add('quantum');
+    if (content.includes('breach')) suggestions.add('breach');
+    
+    // Importance suggestions
+    if (content.includes('key') || content.includes('crucial')) suggestions.add('key-document');
+    if (content.includes('confidential')) suggestions.add('confidential');
+    
+    return Array.from(suggestions);
   };
 
   const getCategoryLabel = (category: CaseDocument['category']) => {
@@ -442,6 +868,13 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
             <div className="card-actions">
               <button 
                 className="btn-icon" 
+                onClick={(e) => { e.stopPropagation(); setEditingTags(doc); }}
+                title="Edit Tags"
+              >
+                🏷️
+              </button>
+              <button 
+                className="btn-icon" 
                 onClick={(e) => { e.stopPropagation(); setPreviewDoc(doc); }}
                 title="Preview"
               >
@@ -491,7 +924,15 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
             <div className="list-col">
               <button 
                 className="btn-icon" 
+                onClick={(e) => { e.stopPropagation(); setEditingTags(doc); }}
+                title="Edit Tags"
+              >
+                🏷️
+              </button>
+              <button 
+                className="btn-icon" 
                 onClick={(e) => { e.stopPropagation(); setPreviewDoc(doc); }}
+                title="Preview"
               >
                 👁️
               </button>
@@ -548,7 +989,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
           <p className="doc-count">{documents.length} documents • {stats && formatFileSize(stats.totalSize)}</p>
         </div>
         <div className="header-actions">
-          {!showScanner && !isAdding && (
+          {!showScanner && !isAdding && !isBulkProcessing && (
             <>
               <button 
                 className="btn btn-secondary" 
@@ -556,6 +997,15 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
               >
                 📁 Scan Folder
               </button>
+              {documents.length > 0 && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={processBulkAIExtraction}
+                  title="Extract persons, issues, dates, and authorities from all documents"
+                >
+                  🤖 AI Extract All
+                </button>
+              )}
               <button 
                 className="btn btn-primary" 
                 onClick={() => setIsAdding(true)}
@@ -567,8 +1017,37 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         </div>
       </div>
 
+      {/* Bulk Processing Progress */}
+      {isBulkProcessing && (
+        <div className="bulk-processing">
+          <div className="processing-header">
+            <h4>🤖 AI Processing Documents</h4>
+            <p>Extracting entities from all documents...</p>
+          </div>
+          <div className="progress-bar">
+            <div 
+              className="progress-fill ai-progress"
+              style={{ width: `${bulkProgress.total > 0 ? (bulkProgress.current / bulkProgress.total) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="progress-details">
+            <span className="progress-text">
+              {bulkProgress.current} of {bulkProgress.total} documents processed
+            </span>
+            {bulkProgress.currentDoc && (
+              <span className="current-file">
+                📄 {bulkProgress.currentDoc.length > 50 
+                  ? '...' + bulkProgress.currentDoc.slice(-47)
+                  : bulkProgress.currentDoc
+                }
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Controls */}
-      {!showScanner && !isAdding && (
+      {!showScanner && !isAdding && !isBulkProcessing && (
         <div className="controls-bar">
           <div className="search-controls">
             <input
@@ -633,6 +1112,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
           <span>{selectedDocs.size} documents selected</span>
           <button onClick={handleSelectAll}>Select All</button>
           <button onClick={handleClearSelection}>Clear Selection</button>
+          <button onClick={() => setShowBulkTagging(true)}>🏷️ Bulk Tag</button>
           <button className="btn-danger">Delete Selected</button>
         </div>
       )}
@@ -712,7 +1192,267 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         </div>
       )}
 
+      {/* Edit Tags Modal */}
+      {editingTags && (
+        <TagEditModal 
+          document={editingTags}
+          onSave={handleSaveDocumentTags}
+          onClose={() => setEditingTags(null)}
+          suggestedTags={getSuggestedTags(editingTags)}
+        />
+      )}
+
+      {/* Bulk Tagging Modal */}
+      {showBulkTagging && (
+        <BulkTagModal 
+          selectedCount={selectedDocs.size}
+          onSave={handleBulkTagging}
+          onClose={() => setShowBulkTagging(false)}
+        />
+      )}
+
       <style>{`
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          max-width: 600px;
+          width: 90%;
+          max-height: 80vh;
+          overflow-y: auto;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px;
+          border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          color: #333;
+        }
+
+        .modal-header button {
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #666;
+          padding: 4px;
+          border-radius: 4px;
+        }
+
+        .modal-header button:hover {
+          background: #f0f0f0;
+        }
+
+        .modal-body {
+          padding: 20px;
+        }
+
+        .document-info {
+          margin-bottom: 20px;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+
+        .document-info h4 {
+          margin: 0 0 4px 0;
+          color: #333;
+        }
+
+        .document-info p {
+          margin: 0;
+          color: #666;
+          font-size: 14px;
+        }
+
+        .form-section {
+          margin-bottom: 20px;
+        }
+
+        .form-section label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .form-section select,
+        .form-section input {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 14px;
+        }
+
+        .tag-input-container {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .tag-input-container input {
+          flex: 1;
+        }
+
+        .tag-input-container button {
+          padding: 8px 16px;
+          background: #007bff;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+
+        .tag-input-container button:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
+
+        .current-tags,
+        .suggested-tags {
+          margin-top: 12px;
+        }
+
+        .current-tags h5,
+        .suggested-tags h5 {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          color: #333;
+        }
+
+        .tags-list {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .tag-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          background: #e9ecef;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #495057;
+        }
+
+        .tag-item button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #666;
+          font-size: 14px;
+          padding: 0;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+        }
+
+        .tag-item button:hover {
+          background: rgba(0,0,0,0.1);
+        }
+
+        .add-tag {
+          background: #d4edda;
+          color: #155724;
+        }
+
+        .remove-tag {
+          background: #f8d7da;
+          color: #721c24;
+        }
+
+        .suggested-tag {
+          padding: 4px 8px;
+          background: #e3f2fd;
+          color: #1976d2;
+          border: 1px solid #bbdefb;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .suggested-tag:hover {
+          background: #bbdefb;
+        }
+
+        .no-tags {
+          color: #999;
+          font-style: italic;
+          font-size: 12px;
+        }
+
+        .bulk-info {
+          margin-bottom: 20px;
+          padding: 12px;
+          background: #e3f2fd;
+          border-radius: 6px;
+          color: #1976d2;
+          font-weight: 500;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px solid #eee;
+        }
+
+        .btn {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .btn-primary {
+          background: #007bff;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background: #0056b3;
+        }
+
+        .btn-secondary {
+          background: #6c757d;
+          color: white;
+        }
+
+        .btn-secondary:hover {
+          background: #545b62;
+        }
+
         .enhanced-document-manager {
           padding: 24px;
           max-width: 1400px;
@@ -1299,6 +2039,165 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
 
         .btn-danger:hover {
           background: #c82333;
+        }
+
+        /* Tag Modal Styles */
+        .tag-modal,
+        .bulk-modal {
+          max-width: 600px;
+          width: 90%;
+        }
+
+        .document-info {
+          margin-bottom: 20px;
+          padding: 12px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+
+        .document-info h4 {
+          margin: 0 0 4px 0;
+          color: #333;
+        }
+
+        .document-info p {
+          margin: 0;
+          color: #666;
+          font-size: 14px;
+        }
+
+        .form-section {
+          margin-bottom: 20px;
+        }
+
+        .form-section label {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 500;
+          color: #333;
+        }
+
+        .form-section select,
+        .form-section input {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 14px;
+        }
+
+        .tag-input-container {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .tag-input-container input {
+          flex: 1;
+        }
+
+        .tag-input-container button {
+          padding: 8px 16px;
+          background: #007bff;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+
+        .tag-input-container button:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
+
+        .current-tags,
+        .suggested-tags {
+          margin-top: 12px;
+        }
+
+        .current-tags h5,
+        .suggested-tags h5 {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          color: #333;
+        }
+
+        .tags-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .tag-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          background: #e9ecef;
+          border-radius: 12px;
+          font-size: 12px;
+          color: #495057;
+        }
+
+        .tag-item.add-tag {
+          background: #d4edda;
+          color: #155724;
+        }
+
+        .tag-item.remove-tag {
+          background: #f8d7da;
+          color: #721c24;
+        }
+
+        .tag-item button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 14px;
+          color: #6c757d;
+          padding: 0;
+          margin-left: 4px;
+        }
+
+        .tag-item button:hover {
+          color: #495057;
+        }
+
+        .suggested-tag {
+          padding: 4px 8px;
+          background: #fff3cd;
+          color: #856404;
+          border: 1px solid #ffeaa7;
+          border-radius: 12px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .suggested-tag:hover {
+          background: #ffeaa7;
+        }
+
+        .no-tags {
+          color: #999;
+          font-style: italic;
+          font-size: 12px;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 24px;
+          justify-content: flex-end;
+        }
+
+        .bulk-info {
+          background: #e3f2fd;
+          padding: 12px;
+          border-radius: 6px;
+          margin-bottom: 20px;
+          font-weight: 500;
+          color: #1976d2;
         }
 
         /* Responsive */

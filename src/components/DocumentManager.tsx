@@ -7,6 +7,7 @@ import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
 import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+import { useAISync } from '../hooks/useAISync';
 
 interface DocumentManagerProps {
   caseId: string;
@@ -17,6 +18,9 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingDoc, setEditingDoc] = useState<CaseDocument | null>(null);
+  
+  // AI Synchronization
+  const { publishAIResults, isProcessing: aiProcessing } = useAISync(caseId, 'DocumentManager');
   const [formData, setFormData] = useState<Partial<CaseDocument>>({
     title: '',
     category: 'claimant',
@@ -30,10 +34,91 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  
+  // State persistence key
+  const FORM_STATE_KEY = `doc_form_state_${caseId}`;
+  const FILE_STATE_KEY = `doc_file_state_${caseId}`;
   const [caseData, setCaseData] = useState<any>(null);
   const [useFileSystem, setUseFileSystem] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedDocuments, setScannedDocuments] = useState<CaseDocument[]>([]);
+  const [stateRestored, setStateRestored] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, currentDoc: '' });
+
+  // Save form state to localStorage
+  const saveFormState = () => {
+    if (isAdding && (formData.title || selectedFile)) {
+      const stateToSave = {
+        formData,
+        hasFile: !!selectedFile,
+        fileName: selectedFile?.name,
+        fileSize: selectedFile?.size,
+        fileType: selectedFile?.type,
+        isAdding,
+        editingDocId: editingDoc?.id
+      };
+      localStorage.setItem(FORM_STATE_KEY, JSON.stringify(stateToSave));
+      
+      // Store file separately if it exists
+      if (selectedFile) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          localStorage.setItem(FILE_STATE_KEY, e.target?.result as string);
+        };
+        reader.readAsDataURL(selectedFile);
+      }
+    }
+  };
+
+  // Restore form state from localStorage
+  const restoreFormState = () => {
+    const savedState = localStorage.getItem(FORM_STATE_KEY);
+    if (savedState) {
+      try {
+        const parsedState = JSON.parse(savedState);
+        setFormData(parsedState.formData);
+        setIsAdding(parsedState.isAdding);
+        setStateRestored(true);
+        
+        if (parsedState.editingDocId) {
+          // Find and set editing document
+          const editDoc = documents.find(d => d.id === parsedState.editingDocId);
+          if (editDoc) {
+            setEditingDoc(editDoc);
+          }
+        }
+        
+        // Restore file if it was saved
+        if (parsedState.hasFile) {
+          const savedFileData = localStorage.getItem(FILE_STATE_KEY);
+          if (savedFileData) {
+            // Convert base64 back to File object
+            fetch(savedFileData)
+              .then(res => res.blob())
+              .then(blob => {
+                const file = new File([blob], parsedState.fileName, { 
+                  type: parsedState.fileType 
+                });
+                setSelectedFile(file);
+              });
+          }
+        }
+        
+        // Hide restoration notice after 3 seconds
+        setTimeout(() => setStateRestored(false), 3000);
+      } catch (error) {
+        console.error('Failed to restore form state:', error);
+        clearFormState();
+      }
+    }
+  };
+
+  // Clear saved form state
+  const clearFormState = () => {
+    localStorage.removeItem(FORM_STATE_KEY);
+    localStorage.removeItem(FILE_STATE_KEY);
+  };
 
   // Check if we can use file system and load scanned documents
   useEffect(() => {
@@ -61,6 +146,29 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
     loadDocuments();
     initializeIndexedDB();
   }, [caseId]);
+
+  // Restore form state after documents are loaded
+  useEffect(() => {
+    if (documents.length >= 0) { // Even if no documents, try to restore
+      restoreFormState();
+    }
+  }, [documents]);
+
+  // Save form state whenever it changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      saveFormState();
+    }, 500); // Debounce saves
+    
+    return () => clearTimeout(timeoutId);
+  }, [formData, selectedFile, isAdding, editingDoc]);
+
+  // Save state when component unmounts or tab changes
+  useEffect(() => {
+    return () => {
+      saveFormState();
+    };
+  }, []);
 
   // Reload documents when scanned documents change
   useEffect(() => {
@@ -175,6 +283,90 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
     console.log('🗑️ Cleared scanned documents');
   };
 
+  const processBulkAIExtraction = async () => {
+    if (isBulkProcessing) return;
+    
+    setIsBulkProcessing(true);
+    setBulkProgress({ current: 0, total: 0, currentDoc: '' });
+    
+    try {
+      // Get all documents with content
+      const documentsWithContent = documents.filter(doc => 
+        doc.fileContent && doc.fileContent.length > 100
+      );
+      
+      setBulkProgress({ current: 0, total: documentsWithContent.length, currentDoc: '' });
+      
+      let processedCount = 0;
+      let totalExtracted = { persons: 0, issues: 0, chronology: 0, authorities: 0 };
+      
+      for (const doc of documentsWithContent) {
+        setBulkProgress({ 
+          current: processedCount, 
+          total: documentsWithContent.length, 
+          currentDoc: doc.title 
+        });
+        
+        console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
+        
+        try {
+          const entities = await aiDocumentProcessor.extractEntitiesForSync(
+            doc.fileContent,
+            doc.fileName || doc.title,
+            aiDocumentProcessor.detectDocumentType(doc.fileContent, doc.fileName || doc.title)
+          );
+          
+          // Only publish if we found entities
+          if (entities.persons.length > 0 || entities.issues.length > 0 || 
+              entities.chronologyEvents.length > 0 || entities.authorities.length > 0) {
+            
+            await publishAIResults(doc.fileName || doc.title, entities, 0.7);
+            
+            totalExtracted.persons += entities.persons.length;
+            totalExtracted.issues += entities.issues.length;
+            totalExtracted.chronology += entities.chronologyEvents.length;
+            totalExtracted.authorities += entities.authorities.length;
+            
+            console.log(`✅ Extracted from ${doc.title}:`, {
+              persons: entities.persons.length,
+              issues: entities.issues.length,
+              chronology: entities.chronologyEvents.length,
+              authorities: entities.authorities.length
+            });
+          } else {
+            console.log(`⚠️ No entities found in ${doc.title}`);
+          }
+          
+        } catch (error) {
+          console.error(`❌ Failed to process ${doc.title}:`, error);
+        }
+        
+        processedCount++;
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      setBulkProgress({ 
+        current: documentsWithContent.length, 
+        total: documentsWithContent.length, 
+        currentDoc: 'Complete!' 
+      });
+      
+      console.log(`🎉 Bulk AI extraction complete! Total extracted:`, totalExtracted);
+      
+      // Show completion message
+      alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.`);
+      
+    } catch (error) {
+      console.error('Bulk AI extraction failed:', error);
+      alert('Bulk AI extraction failed. Please try again.');
+    } finally {
+      setIsBulkProcessing(false);
+      setBulkProgress({ current: 0, total: 0, currentDoc: '' });
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -211,7 +403,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         setIsProcessing(true);
         setProcessingProgress(0);
         
-        PDFTextExtractor.extractText(file)
+        PDFTextExtractor.extractWithOCRFallback(file)
           .then(async extractedText => {
             setProcessingProgress(30);
             
@@ -221,7 +413,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
                 extractedText,
                 file.name,
                 aiDocumentProcessor.detectDocumentType(extractedText, file.name),
-                (progress) => setProcessingProgress(30 + (progress * 0.6)) // 30-90%
+                (progress) => setProcessingProgress(30 + (progress * 0.5)) // 30-80%
               );
               
               setFormData(prev => ({
@@ -234,6 +426,31 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
                 content: processed.summary.executiveSummary,
                 notes: processed.summary.relevance
               }));
+              
+              setProcessingProgress(85);
+              
+              // Extract entities for AI sync system
+              try {
+                const entities = await aiDocumentProcessor.extractEntitiesForSync(
+                  extractedText,
+                  file.name,
+                  aiDocumentProcessor.detectDocumentType(extractedText, file.name)
+                );
+                
+                // Publish AI results to sync system
+                await publishAIResults(file.name, entities, processed.metadata.confidence);
+                
+                console.log('🤖 AI entities published for new document:', {
+                  fileName: file.name,
+                  persons: entities.persons.length,
+                  issues: entities.issues.length,
+                  chronology: entities.chronologyEvents.length,
+                  authorities: entities.authorities.length
+                });
+              } catch (syncError) {
+                console.error('AI sync publishing failed:', syncError);
+                // Don't fail the upload if AI sync fails
+              }
               
               setProcessingProgress(100);
             } catch (error) {
@@ -346,6 +563,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
       setUploadProgress(100);
       await loadDocuments();
       onDocumentChange?.(); // Notify parent to refresh documents
+      clearFormState(); // Clear saved state on successful submission
       resetForm();
     } catch (error) {
       console.error('Failed to save document:', error);
@@ -381,6 +599,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
     setSelectedFile(null);
     setIsAdding(false);
     setEditingDoc(null);
+    clearFormState(); // Clear saved state when form is reset
   };
 
   const handleEdit = (doc: CaseDocument) => {
@@ -521,6 +740,15 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
               📁 Scan Case Folder
             </button>
           )}
+          {documents.length > 0 && !isBulkProcessing && !isAdding && !showScanner && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={processBulkAIExtraction}
+              title="Extract persons, issues, dates, and authorities from all documents"
+            >
+              🤖 AI Extract All
+            </button>
+          )}
           {!isAdding && !showScanner && (
             <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
               + Add Document
@@ -529,7 +757,35 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         </div>
       </div>
 
-      {!showScanner && !isAdding && (
+      {isBulkProcessing && (
+        <div className="bulk-processing">
+          <div className="processing-header">
+            <h4>🤖 AI Processing Documents</h4>
+            <p>Extracting entities from all documents...</p>
+          </div>
+          <div className="progress-bar">
+            <div 
+              className="progress-fill ai-progress"
+              style={{ width: `${bulkProgress.total > 0 ? (bulkProgress.current / bulkProgress.total) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="progress-details">
+            <span className="progress-text">
+              {bulkProgress.current} of {bulkProgress.total} documents processed
+            </span>
+            {bulkProgress.currentDoc && (
+              <span className="current-file">
+                📄 {bulkProgress.currentDoc.length > 50 
+                  ? '...' + bulkProgress.currentDoc.slice(-47)
+                  : bulkProgress.currentDoc
+                }
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!showScanner && !isAdding && !isBulkProcessing && (
         <CaseFolderSetup 
           caseId={caseId}
           caseTitle={caseData?.title || 'Unknown Case'}
@@ -560,6 +816,15 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
 
       {isAdding && !showScanner && (
         <form className="document-form" onSubmit={handleSubmit}>
+          {stateRestored && (
+            <div className="restoration-notice">
+              <div className="notice-content">
+                <span className="notice-icon">💾</span>
+                <span className="notice-text">Form state restored from previous session</span>
+              </div>
+            </div>
+          )}
+          
           <div className="form-group">
             <label>Document Title</label>
             <input

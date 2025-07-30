@@ -95,7 +95,7 @@ export const AIDialogue: React.FC<AIDialogueProps> = ({ caseId, documents }) => 
                 
                 if (file) {
                   if (PDFTextExtractor.isPDF(file)) {
-                    const pdfText = await PDFTextExtractor.extractText(file);
+                    const pdfText = await PDFTextExtractor.extractWithOCRFallback(file);
                     content += '\n\n' + pdfText;
                     console.log(`📄 Extracted ${pdfText.length} chars from OneDrive PDF: ${doc.title}`);
                   } else {
@@ -114,7 +114,7 @@ export const AIDialogue: React.FC<AIDialogueProps> = ({ caseId, documents }) => 
               const file = await indexedDBManager.getFile(doc.fileId);
               if (file) {
                 if (PDFTextExtractor.isPDF(file)) {
-                  const pdfText = await PDFTextExtractor.extractText(file);
+                  const pdfText = await PDFTextExtractor.extractWithOCRFallback(file);
                   content += '\n\n' + pdfText;
                   console.log(`📄 Extracted ${pdfText.length} chars from IndexedDB PDF: ${doc.title}`);
                 } else {

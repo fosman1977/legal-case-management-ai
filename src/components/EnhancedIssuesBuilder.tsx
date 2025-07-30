@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Issue, IssueRelationship, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
+import { useAISync, useAIUpdates } from '../hooks/useAISync';
 
 interface EnhancedIssuesBuilderProps {
   caseId: string;
@@ -29,6 +30,10 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
   const [issues, setIssues] = useState<Issue[]>([]);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
   const [viewMode, setViewMode] = useState<'kanban' | 'network' | 'table' | 'matrix'>('kanban');
+  
+  // AI Synchronization
+  const { publishAIResults } = useAISync(caseId, 'EnhancedIssuesBuilder');
+  const { updateCount } = useAIUpdates(caseId, ['ai-issues-updated']);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string>('');
@@ -76,6 +81,14 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
     loadIssues();
     loadDocuments();
   }, [caseId]);
+
+  // Reload issues when AI updates occur
+  useEffect(() => {
+    if (updateCount > 0) {
+      loadIssues();
+      console.log('📋 Issues reloaded due to AI update');
+    }
+  }, [updateCount]);
 
   useEffect(() => {
     // Extract unique tags from all issues

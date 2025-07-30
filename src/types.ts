@@ -28,6 +28,7 @@ export interface CaseDocument {
   fileId?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  tags?: string[];
 }
 
 export interface KeyPoint {
@@ -55,6 +56,27 @@ export interface LegalAuthority {
   principle: string;
   relevance: string;
   paragraph?: string;
+  // File attachment support
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  fileId?: string;
+  fileContent?: string;
+  // Folder linking support
+  folderPath?: string;
+  isLinkedFromFolder?: boolean;
+  // Additional metadata
+  court?: string;
+  judges?: string;
+  year?: string;
+  jurisdiction?: 'UK' | 'EU' | 'US' | 'Commonwealth' | 'Other';
+  authorityType?: 'case' | 'statute' | 'regulation' | 'directive' | 'treaty' | 'other';
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  // Cross-references
+  relatedAuthorities?: string[];
+  citedInDocuments?: string[];
 }
 
 export interface PersonRelationship {

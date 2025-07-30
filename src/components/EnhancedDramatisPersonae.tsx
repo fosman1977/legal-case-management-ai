@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Person, PersonRelationship, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
+import { useAISync, useAIUpdates } from '../hooks/useAISync';
 
 interface EnhancedDramatisPersonaeProps {
   caseId: string;
@@ -29,6 +30,10 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
   const [persons, setPersons] = useState<Person[]>([]);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'network' | 'table'>('grid');
+  
+  // AI Synchronization
+  const { publishAIResults } = useAISync(caseId, 'EnhancedDramatisPersonae');
+  const { updateCount } = useAIUpdates(caseId, ['ai-persons-updated']);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string>('');
@@ -67,6 +72,14 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
     loadPersons();
     loadDocuments();
   }, [caseId]);
+
+  // Reload persons when AI updates occur
+  useEffect(() => {
+    if (updateCount > 0) {
+      loadPersons();
+      console.log('👥 Persons reloaded due to AI update');
+    }
+  }, [updateCount]);
 
   const loadPersons = () => {
     const data = localStorage.getItem(`dramatis_personae_${caseId}`);

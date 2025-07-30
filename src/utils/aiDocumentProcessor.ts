@@ -37,7 +37,8 @@ class AIDocumentProcessor {
     rawText: string, 
     fileName: string, 
     documentType?: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    customPrompt?: string
   ): Promise<ProcessedDocument> {
     const startTime = Date.now();
     
@@ -51,7 +52,7 @@ class AIDocumentProcessor {
       onProgress?.(20);
       
       // Create structured prompt for AI analysis
-      const analysisPrompt = this.buildAnalysisPrompt(cleanedText, fileName, documentType);
+      const analysisPrompt = customPrompt || this.buildAnalysisPrompt(cleanedText, fileName, documentType);
       onProgress?.(30);
       
       // Get AI analysis
@@ -320,6 +321,359 @@ Focus on legal significance rather than copying raw text. Summarize and interpre
         processingTime: 0
       }
     };
+  }
+
+  /**
+   * Extract entities for AI sync system with improved fallback
+   */
+  async extractEntitiesForSync(
+    rawText: string,
+    fileName: string,
+    documentType?: string
+  ): Promise<{
+    persons: any[];
+    issues: any[];
+    chronologyEvents: any[];
+    authorities: any[];
+  }> {
+    console.log(`🤖 Starting entity extraction for: ${fileName}`);
+    
+    try {
+      const cleanedText = this.cleanRawText(rawText);
+      
+      // Try AI extraction first
+      const aiResult = await this.tryAIEntityExtraction(cleanedText, fileName, documentType);
+      if (aiResult) {
+        console.log(`✅ AI extraction successful:`, {
+          persons: aiResult.persons.length,
+          issues: aiResult.issues.length,
+          chronologyEvents: aiResult.chronologyEvents.length,
+          authorities: aiResult.authorities.length
+        });
+        return aiResult;
+      }
+      
+      // If AI fails, use enhanced fallback
+      console.log(`🔄 AI extraction failed, using enhanced fallback for: ${fileName}`);
+      return this.extractEntitiesEnhancedFallback(cleanedText, fileName);
+      
+    } catch (error) {
+      console.error('Entity extraction failed:', error);
+      // Always return enhanced fallback, never empty
+      return this.extractEntitiesEnhancedFallback(rawText, fileName);
+    }
+  }
+
+  /**
+   * Try AI extraction with multiple model fallbacks
+   */
+  private async tryAIEntityExtraction(
+    cleanedText: string,
+    fileName: string,
+    documentType?: string
+  ): Promise<{
+    persons: any[];
+    issues: any[];
+    chronologyEvents: any[];
+    authorities: any[];
+  } | null> {
+    const entityPrompt = `You are an expert legal analyst. Extract structured entities from this legal document for case management.
+
+Document: ${fileName}
+${documentType ? `Type: ${documentType}` : ''}
+
+TEXT:
+${cleanedText.substring(0, 6000)}
+
+Extract the following entities in JSON format:
+{
+  "persons": [
+    {
+      "name": "Full name",
+      "role": "claimant|defendant|witness|expert|lawyer|judge|other",
+      "description": "Brief description of their role/relevance",
+      "relevance": "How they relate to the case",
+      "organization": "Company/firm if applicable",
+      "documentRefs": ["${fileName}"],
+      "keyQuotes": ["Relevant quotes about this person"]
+    }
+  ],
+  "issues": [
+    {
+      "title": "Brief issue title",
+      "description": "Detailed description",
+      "category": "factual|legal|quantum|procedural",
+      "priority": "high|medium|low",
+      "status": "unresolved|disputed|agreed|resolved",
+      "claimantPosition": "Position if stated",
+      "defendantPosition": "Position if stated",
+      "documentRefs": ["${fileName}"]
+    }
+  ],
+  "chronologyEvents": [
+    {
+      "date": "YYYY-MM-DD or best estimate",
+      "description": "What happened",
+      "significance": "Why this event matters",
+      "documentRef": "${fileName}"
+    }
+  ],
+  "authorities": [
+    {
+      "citation": "Case name or statute reference",
+      "principle": "Legal principle established",
+      "relevance": "How it applies to this case",
+      "court": "Court if applicable",
+      "year": "Year if available"
+    }
+  ]
+}
+
+Focus on extracting clear, distinct entities. Avoid duplicates.`;
+
+    try {
+      const response = await this.getAIAnalysis(entityPrompt);
+      
+      // Try to parse the AI response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Validate the response has the expected structure
+        if (parsed && typeof parsed === 'object') {
+          return {
+            persons: Array.isArray(parsed.persons) ? parsed.persons : [],
+            issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+            chronologyEvents: Array.isArray(parsed.chronologyEvents) ? parsed.chronologyEvents : [],
+            authorities: Array.isArray(parsed.authorities) ? parsed.authorities : []
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('AI entity extraction failed:', error);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Enhanced fallback entity extraction using advanced text analysis
+   */
+  private extractEntitiesEnhancedFallback(text: string, fileName: string): {
+    persons: any[];
+    issues: any[];
+    chronologyEvents: any[];
+    authorities: any[];
+  } {
+    console.log(`🔍 Using enhanced fallback extraction for: ${fileName}`);
+    const lowerText = text.toLowerCase();
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    // Enhanced person extraction with better patterns and role detection
+    const persons: any[] = [];
+    const personPatterns = [
+      // Full names with titles
+      /\b(Mr|Mrs|Ms|Dr|Judge|Justice|Professor|Sir|Dame)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/gi,
+      // Full names (First Last)
+      /\b([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})\b/g,
+      // Legal roles with names
+      /\b(claimant|defendant|plaintiff|applicant|respondent)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+      // Witness statements
+      /\bwitness\s+statement\s+of\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+      // Legal representation
+      /\b(counsel|solicitor|barrister)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi
+    ];
+    
+    personPatterns.forEach((pattern, index) => {
+      let match;
+      const regex = new RegExp(pattern.source, pattern.flags);
+      while ((match = regex.exec(text)) !== null) {
+        const title = match[1];
+        const name = match[2] || match[1];
+        
+        if (name && name.length > 3 && !persons.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+          let role = 'other';
+          let description = `Person mentioned in ${fileName}`;
+          
+          // Determine role based on context
+          if (/claimant|plaintiff|applicant/i.test(title)) {
+            role = 'claimant';
+            description = 'Party bringing the claim';
+          } else if (/defendant|respondent/i.test(title)) {
+            role = 'defendant';
+            description = 'Party defending the claim';
+          } else if (/witness/i.test(title)) {
+            role = 'witness';
+            description = 'Witness in the case';
+          } else if (/judge|justice/i.test(title)) {
+            role = 'judge';
+            description = 'Presiding judge';
+          } else if (/counsel|barrister|solicitor/i.test(title)) {
+            role = 'lawyer';
+            description = 'Legal representative';
+          } else if (/expert|professor|dr/i.test(title)) {
+            role = 'expert';
+            description = 'Expert witness or consultant';
+          }
+          
+          persons.push({
+            name: name.trim(),
+            role,
+            description,
+            relevance: 'Mentioned in document',
+            organization: '',
+            documentRefs: [fileName],
+            keyQuotes: []
+          });
+        }
+      }
+    });
+
+    // Enhanced date extraction with context analysis
+    const chronologyEvents: any[] = [];
+    const datePatterns = [
+      // Various date formats
+      /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/g,
+      /\b(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})\b/g,
+      // Written dates
+      /\b(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})\b/gi,
+      /\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})\b/gi
+    ];
+    
+    datePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const date = match[1];
+        const startContext = Math.max(0, match.index - 150);
+        const endContext = Math.min(text.length, match.index + 150);
+        const context = text.substring(startContext, endContext);
+        
+        // Extract meaningful description from context
+        let description = `Event on ${date}`;
+        let significance = 'Date mentioned in document';
+        
+        // Look for action words near the date
+        const actionWords = /\b(signed|executed|delivered|received|sent|filed|issued|ordered|decided|agreed|terminated|breached|completed|started|began|ended|concluded)\b/gi;
+        const actionMatch = actionWords.exec(context);
+        if (actionMatch) {
+          description = `Document ${actionMatch[1]} on ${date}`;
+          significance = 'Significant legal action or event';
+        }
+        
+        // Look for contract/agreement terms
+        if (/contract|agreement|deed|document/i.test(context)) {
+          description = `Contract or agreement event on ${date}`;
+          significance = 'Contractual milestone';
+        }
+        
+        chronologyEvents.push({
+          date,
+          description,
+          significance,
+          documentRef: fileName
+        });
+      }
+    });
+
+    // Enhanced legal issues extraction using keywords and patterns
+    const issues: any[] = [];
+    const issueKeywords = [
+      'breach', 'damages', 'liability', 'negligence', 'contract', 'agreement',
+      'dispute', 'claim', 'defence', 'counterclaim', 'injunction', 'remedy',
+      'compensation', 'penalty', 'termination', 'warranty', 'guarantee'
+    ];
+    
+    sentences.forEach((sentence, index) => {
+      const lowerSentence = sentence.toLowerCase();
+      let issueScore = 0;
+      let matchedKeywords: string[] = [];
+      
+      issueKeywords.forEach(keyword => {
+        if (lowerSentence.includes(keyword)) {
+          issueScore++;
+          matchedKeywords.push(keyword);
+        }
+      });
+      
+      // If sentence has multiple legal keywords, it's likely an issue
+      if (issueScore >= 2 && sentence.length > 50) {
+        const title = sentence.substring(0, 80).trim() + (sentence.length > 80 ? '...' : '');
+        
+        let category = 'factual';
+        let priority = 'medium';
+        
+        if (matchedKeywords.some(k => ['breach', 'liability', 'negligence', 'damages'].includes(k))) {
+          category = 'legal';
+          priority = 'high';
+        }
+        
+        issues.push({
+          title,
+          description: sentence.trim(),
+          category,
+          priority,
+          status: 'unresolved',
+          claimantPosition: '',
+          defendantPosition: '',
+          documentRefs: [fileName]
+        });
+      }
+    });
+
+    // Legal authorities extraction using citation patterns
+    const authorities: any[] = [];
+    const citationPatterns = [
+      // Case citations: Name v Name [Year] Court Reference
+      /\b([A-Z][a-z\s&]+)\s+v\.?\s+([A-Z][a-z\s&]+)\s*\[(\d{4})\]\s*([A-Z]{2,10}\s*\d+)/gi,
+      // Statute citations
+      /\b([A-Z][a-z\s]+(Act|Code|Regulation))\s*(\d{4})/gi,
+      // Court references
+      /\b(CA|HC|EWHC|EWCA|UKSC|UKHL)\s*(\d+)/gi
+    ];
+    
+    citationPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        let citation = match[0];
+        let principle = 'Legal authority cited';
+        let relevance = 'Referenced in document';
+        
+        if (pattern.source.includes('v\\.?')) {
+          // Case law
+          citation = `${match[1]} v ${match[2]} [${match[3]}] ${match[4]}`;
+          principle = 'Case law precedent';
+          relevance = 'Legal precedent applicable to case';
+        } else if (pattern.source.includes('Act|Code')) {
+          // Statute
+          principle = 'Statutory provision';
+          relevance = 'Relevant statutory authority';
+        }
+        
+        authorities.push({
+          citation: citation.trim(),
+          principle,
+          relevance,
+          court: match[4] || '',
+          year: match[3] || ''
+        });
+      }
+    });
+
+    const result = {
+      persons: persons.slice(0, 10), // Increased limit for better extraction
+      issues: issues.slice(0, 5),
+      chronologyEvents: chronologyEvents.slice(0, 15),
+      authorities: authorities.slice(0, 8)
+    };
+    
+    console.log(`🔍 Enhanced fallback extracted:`, {
+      persons: result.persons.length,
+      issues: result.issues.length,
+      chronologyEvents: result.chronologyEvents.length,
+      authorities: result.authorities.length
+    });
+    
+    return result;
   }
 
   /**

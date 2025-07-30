@@ -78,8 +78,8 @@ export default function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>⚖️ Barrister Case Preparation</h1>
-        <p>Organize your cases for effective oral presentation</p>
+        <h1>Agentic Case Management</h1>
+        <p>AI-powered legal case preparation and document analysis platform</p>
       </header>
 
       <div className="app-content">
@@ -110,8 +110,8 @@ export default function App() {
             />
           ) : (
             <div className="welcome-message">
-              <h2>Welcome to Your Case Preparation System</h2>
-              <p>Create your first case to get started organizing your court presentations.</p>
+              <h2>Welcome to Agentic Case Management</h2>
+              <p>Create your first case to get started with AI-powered legal document analysis and case preparation.</p>
               <button className="btn btn-primary btn-large" onClick={handleNewCase}>
                 Create Your First Case
               </button>

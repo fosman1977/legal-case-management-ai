@@ -19,6 +19,7 @@ export const CaseFolderScanner: React.FC<CaseFolderScannerProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0, currentFile: '' });
 
   const handleSelectFolder = async () => {
     try {
@@ -49,9 +50,16 @@ export const CaseFolderScanner: React.FC<CaseFolderScannerProps> = ({
     if (!folderHandle) return;
 
     setIsScanning(true);
+    setScanProgress({ current: 0, total: 0, currentFile: '' });
+    
     try {
-      // Scan all files in the folder
-      const files = await caseFolderScanner.scanCaseFolder(folderHandle);
+      // Scan all files in the folder with progress tracking
+      const files = await caseFolderScanner.scanCaseFolder(
+        folderHandle,
+        (current, total, currentFile) => {
+          setScanProgress({ current, total, currentFile });
+        }
+      );
       setScannedFiles(files);
 
       // Load existing tags
@@ -59,12 +67,13 @@ export const CaseFolderScanner: React.FC<CaseFolderScannerProps> = ({
       setTags(existingTags);
 
       setScanComplete(true);
-      console.log(`📄 Found ${files.length} documents in case folder`);
+      console.log(`📄 Found ${files.length} documents in case folder (including subfolders)`);
     } catch (error) {
       console.error('Failed to scan folder:', error);
       alert('Failed to scan folder. Please try again.');
     } finally {
       setIsScanning(false);
+      setScanProgress({ current: 0, total: 0, currentFile: '' });
     }
   };
 
@@ -195,6 +204,34 @@ export const CaseFolderScanner: React.FC<CaseFolderScannerProps> = ({
               )}
             </div>
           </div>
+
+          {isScanning && scanProgress.total > 0 && (
+            <div className="scan-progress">
+              <div className="progress-header">
+                <h4>📂 Scanning Documents</h4>
+                <p>Including all subfolders...</p>
+              </div>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
+                />
+              </div>
+              <div className="progress-details">
+                <span className="progress-text">
+                  {scanProgress.current} of {scanProgress.total} files processed
+                </span>
+                {scanProgress.currentFile && (
+                  <span className="current-file">
+                    📄 {scanProgress.currentFile.length > 50 
+                      ? '...' + scanProgress.currentFile.slice(-47)
+                      : scanProgress.currentFile
+                    }
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {scanComplete && (
             <div className="scan-results">

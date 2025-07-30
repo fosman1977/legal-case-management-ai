@@ -3,6 +3,7 @@ import { ChronologyEvent, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { aiAnalyzer } from '../utils/aiAnalysis';
+import { useAISync, useAIUpdates } from '../hooks/useAISync';
 
 interface EnhancedChronologyBuilderProps {
   caseId: string;
@@ -11,6 +12,11 @@ interface EnhancedChronologyBuilderProps {
 export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps> = ({ caseId }) => {
   const [events, setEvents] = useState<ChronologyEvent[]>([]);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
+  
+  // AI Synchronization
+  const { publishAIResults } = useAISync(caseId, 'EnhancedChronologyBuilder');
+  const { updateCount } = useAIUpdates(caseId, ['ai-chronology-updated']);
+  
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string>('');
@@ -33,6 +39,14 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
     loadEvents();
     loadDocuments();
   }, [caseId]);
+
+  // Reload chronology when AI updates occur
+  useEffect(() => {
+    if (updateCount > 0) {
+      loadEvents();
+      console.log('📅 Chronology reloaded due to AI update');
+    }
+  }, [updateCount]);
 
   // Auto-expand current year on load
   useEffect(() => {

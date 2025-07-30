@@ -29,19 +29,72 @@ export class CaseFolderScanner {
   private tagFileName = 'document-tags.json';
 
   /**
-   * Scan a case folder and categorize all files
+   * Scan a case folder and categorize all files (including subfolders)
    */
-  async scanCaseFolder(folderHandle: FileSystemDirectoryHandle): Promise<ScannedFile[]> {
+  async scanCaseFolder(
+    folderHandle: FileSystemDirectoryHandle,
+    onProgress?: (current: number, total: number, currentFile: string) => void
+  ): Promise<ScannedFile[]> {
     const files: ScannedFile[] = [];
+    let processedCount = 0;
 
+    try {
+      // First pass: count total files for progress tracking
+      const totalFiles = await this.countFilesRecursive(folderHandle);
+      
+      await this.scanFolderRecursive(folderHandle, files, '', (fileName) => {
+        processedCount++;
+        onProgress?.(processedCount, totalFiles, fileName);
+      });
+      
+      console.log(`📁 Scanned folder recursively: found ${files.length} documents in ${totalFiles} total files`);
+      return files.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      console.error('Failed to scan case folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Count total files recursively for progress tracking
+   */
+  private async countFilesRecursive(folderHandle: FileSystemDirectoryHandle): Promise<number> {
+    let count = 0;
     try {
       for await (const [name, handle] of (folderHandle as any).entries()) {
         if (handle.kind === 'file' && this.isDocumentFile(name)) {
+          count++;
+        } else if (handle.kind === 'directory') {
+          count += await this.countFilesRecursive(handle);
+        }
+      }
+    } catch (error) {
+      console.warn('Error counting files:', error);
+    }
+    return count;
+  }
+
+  /**
+   * Recursively scan folder and subfolders
+   */
+  private async scanFolderRecursive(
+    folderHandle: FileSystemDirectoryHandle, 
+    files: ScannedFile[], 
+    path: string,
+    onProgress?: (fileName: string) => void
+  ): Promise<void> {
+    try {
+      for await (const [name, handle] of (folderHandle as any).entries()) {
+        const currentPath = path ? `${path}/${name}` : name;
+        
+        if (handle.kind === 'file' && this.isDocumentFile(name)) {
+          onProgress?.(currentPath);
+          
           const file = await handle.getFile();
-          const suggestion = this.categorizeFile(name, file);
+          const suggestion = this.categorizeFile(name, file, currentPath);
           
           const scannedFile: ScannedFile = {
-            name,
+            name: currentPath, // Include full path for uniqueness
             handle,
             size: file.size,
             lastModified: new Date(file.lastModified),
@@ -59,30 +112,62 @@ export class CaseFolderScanner {
               scannedFile.extractedText = text.substring(0, 500);
             }
           } catch (error) {
-            console.warn(`Failed to extract text from ${name}:`, error);
+            console.warn(`Failed to extract text from ${currentPath}:`, error);
           }
 
           files.push(scannedFile);
+          
+        } else if (handle.kind === 'directory') {
+          // Recursively scan subdirectory
+          console.log(`📂 Scanning subdirectory: ${currentPath}`);
+          await this.scanFolderRecursive(handle, files, currentPath, onProgress);
         }
       }
-
-      console.log(`📁 Scanned folder: found ${files.length} documents`);
-      return files.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-      console.error('Failed to scan case folder:', error);
-      throw error;
+      console.warn(`Failed to scan directory ${path}:`, error);
+      // Continue scanning other directories
     }
   }
 
   /**
-   * Smart categorization based on filename patterns
+   * Smart categorization based on filename patterns and folder structure
    */
-  private categorizeFile(fileName: string, _file: File): {
+  private categorizeFile(fileName: string, _file: File, fullPath?: string): {
     suggestedCategory: string;
     suggestedType: string;
     confidence: 'high' | 'medium' | 'low';
   } {
     const name = fileName.toLowerCase();
+    const path = (fullPath || fileName).toLowerCase();
+    
+    // Enhanced categorization based on folder structure
+    if (this.matchesFolderPattern(path, /witness/)) {
+      return { suggestedCategory: 'claimant', suggestedType: 'witness_statement', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /pleading|claim|defence|defense/)) {
+      return { suggestedCategory: 'pleadings', suggestedType: 'particulars', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /skeleton|argument/)) {
+      return { suggestedCategory: 'authorities', suggestedType: 'skeleton_argument', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /correspondence|letter|email/)) {
+      return { suggestedCategory: 'correspondence', suggestedType: 'letter', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /evidence|exhibit/)) {
+      return { suggestedCategory: 'evidence', suggestedType: 'exhibit', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /expert|report/)) {
+      return { suggestedCategory: 'expert', suggestedType: 'expert_report', confidence: 'high' };
+    }
+    
+    if (this.matchesFolderPattern(path, /court|order|judgment/)) {
+      return { suggestedCategory: 'court', suggestedType: 'order', confidence: 'high' };
+    }
     
     // High confidence patterns
     if (this.matchesPattern(name, /witness\s*statement|statement\s*of\s*\w+/)) {
@@ -156,6 +241,10 @@ export class CaseFolderScanner {
    */
   private matchesPattern(text: string, pattern: RegExp): boolean {
     return pattern.test(text);
+  }
+
+  private matchesFolderPattern(path: string, pattern: RegExp): boolean {
+    return pattern.test(path);
   }
 
   /**
