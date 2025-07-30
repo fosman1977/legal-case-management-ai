@@ -117,7 +117,7 @@ export const EnhancedAuthoritiesManager: React.FC<EnhancedAuthoritiesManagerProp
 
       // Load from file system if available
       if (useFileSystem && caseData) {
-        const authorityFiles = await fileSystemManager.listCaseFiles(caseId, caseData.title, 'authorities');
+        const authorityFiles = await fileSystemManager.listCaseFiles(caseId, caseData.title);
         const metadata = await fileSystemManager.loadCaseMetadata(caseId, caseData.title) || {};
         
         const fileSystemAuthorities: LegalAuthority[] = authorityFiles.map(filePath => {

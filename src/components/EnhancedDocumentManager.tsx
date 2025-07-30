@@ -492,9 +492,9 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         
         try {
           const entities = await aiDocumentProcessor.extractEntitiesForSync(
-            doc.fileContent,
+            doc.fileContent || '',
             doc.fileName || doc.title,
-            aiDocumentProcessor.detectDocumentType(doc.fileContent, doc.fileName || doc.title)
+            aiDocumentProcessor.detectDocumentType(doc.fileContent || '', doc.fileName || doc.title)
           );
           
           // Only publish if we found entities
@@ -818,7 +818,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
                   <div className="recent-content">
                     <div className="recent-title">{doc.title}</div>
                     <div className="recent-meta">
-                      {getCategoryLabel(doc.category)} • {formatDate(doc.createdAt!)}
+                      {getCategoryLabel(doc.category)} • {formatDate(typeof doc.createdAt === 'string' ? doc.createdAt : doc.createdAt?.toISOString() || new Date().toISOString())}
                     </div>
                   </div>
                 </div>
@@ -862,7 +862,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
               )}
             </div>
             <div className="card-footer">
-              <span className="doc-date">{formatDate(doc.createdAt || new Date().toISOString())}</span>
+              <span className="doc-date">{formatDate(typeof doc.createdAt === 'string' ? doc.createdAt : doc.createdAt?.toISOString() || new Date().toISOString())}</span>
               {doc.fileSize && <span className="doc-size">{formatFileSize(doc.fileSize)}</span>}
             </div>
             <div className="card-actions">
@@ -919,7 +919,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
               <span className="category-badge">{getCategoryLabel(doc.category)}</span>
             </div>
             <div className="list-col">{getDocTypeLabel(doc.type)}</div>
-            <div className="list-col">{formatDate(doc.createdAt || new Date().toISOString())}</div>
+            <div className="list-col">{formatDate(typeof doc.createdAt === 'string' ? doc.createdAt : doc.createdAt?.toISOString() || new Date().toISOString())}</div>
             <div className="list-col">{doc.fileSize ? formatFileSize(doc.fileSize) : '-'}</div>
             <div className="list-col">
               <button 

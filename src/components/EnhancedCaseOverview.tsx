@@ -139,7 +139,7 @@ export const EnhancedCaseOverview: React.FC<EnhancedCaseOverviewProps> = ({
   };
 
   const generateRecentActivity = (docs: CaseDocument[], issues: Issue[], persons: Person[]) => {
-    const activities = [];
+    const activities: Array<{type: string, icon: string, title: string, time: string, color: string}> = [];
 
     // Recent documents (last 7 days)
     const recentDocs = docs
