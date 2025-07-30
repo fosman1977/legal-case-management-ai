@@ -84,7 +84,7 @@ class OptimizedOpenWebUIClient {
     };
 
     if (this.config.apiKey) {
-      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      (headers as any)['Authorization'] = `Bearer ${this.config.apiKey}`;
     }
 
     try {

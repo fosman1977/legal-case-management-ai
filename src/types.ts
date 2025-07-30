@@ -100,6 +100,9 @@ export interface Person {
   relationships?: PersonRelationship[];
   firstMentionDate?: string;
   keyQuotes?: string[];
+  tags?: string[];
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface IssueRelationship {

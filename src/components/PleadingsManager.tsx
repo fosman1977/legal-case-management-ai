@@ -63,7 +63,6 @@ export const PleadingsManager: React.FC<PleadingsManagerProps> = ({ caseId, case
         doc.type === 'particulars' || 
         doc.type === 'defence' || 
         doc.type === 'reply' ||
-        doc.type === 'pleading' ||
         doc.tags?.includes('pleading')
       );
 

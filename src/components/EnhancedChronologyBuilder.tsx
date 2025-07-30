@@ -104,26 +104,26 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
     setAnalysisProgress(0);
 
     try {
-      const result = await aiAnalyzer.analyzeChronology(
+      // Use the existing analyzeDocuments method to extract chronology events
+      const result = await aiAnalyzer.analyzeDocuments(
         documents,
-        (progress: number, timeEstimate?: string) => {
+        true, // use anonymization
+        (stage: string, progress: number) => {
           setAnalysisProgress(Math.round(progress));
-          if (timeEstimate) {
-            setEstimatedTime(timeEstimate);
-          }
         }
       );
 
-      if (result.events && result.events.length > 0) {
-        result.events.forEach(event => {
-          storage.addChronologyEvent({
+      if (result.chronologyEvents && result.chronologyEvents.length > 0) {
+        result.chronologyEvents.forEach((event: any) => {
+          storage.saveChronologyEvent({
             ...event,
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
             caseId
           });
         });
         
         loadEvents();
-        alert(`Successfully extracted ${result.events.length} chronology events!`);
+        alert(`Successfully extracted ${result.chronologyEvents.length} chronology events!`);
       } else {
         alert('No chronology events could be extracted from the documents.');
       }
@@ -146,11 +146,8 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
       caseId
     };
 
-    if (editingEvent) {
-      storage.updateChronologyEvent(event);
-    } else {
-      storage.addChronologyEvent(event);
-    }
+    // Save the event (storage.saveChronologyEvent handles both add and update)
+    storage.saveChronologyEvent(event);
 
     loadEvents();
     resetForm();

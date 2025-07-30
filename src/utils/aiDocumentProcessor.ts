@@ -10,6 +10,8 @@ export interface DocumentSummary {
   relevance: string;
   keyQuotes: string[];
   actionItems: string[];
+  mainPoints?: string[];
+  factualDisputes?: string[];
 }
 
 export interface ProcessedDocument {
@@ -20,6 +22,9 @@ export interface ProcessedDocument {
     pageCount?: number;
     confidence: number;
     processingTime: number;
+    court?: string;
+    year?: string;
+    tags?: string[];
   };
 }
 
