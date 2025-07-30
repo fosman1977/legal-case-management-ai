@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # OpenWebUI with Ollama integration
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: legal-case-open-webui
+    ports:
+      - "3001:8080"  # OpenWebUI interface
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=legal-case-management-secret-key-change-in-production
+      - WEBUI_JWT_SECRET_KEY=jwt-secret-change-in-production
+      - DEFAULT_MODELS=llama3.2:1b,llama3.2:3b
+      - ENABLE_RAG_WEB_SEARCH=true
+      - ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=false
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text:latest
+      - PDF_EXTRACT_IMAGES=true
+      - ENABLE_SIGNUP=true
+      - ENABLE_LOGIN_FORM=true
+      - DEFAULT_USER_ROLE=admin
+      - WEBUI_NAME="Legal Case Management AI"
+      - WEBUI_URL=http://localhost:3001
+      - DATABASE_URL=postgresql://openwebui:openwebui-password-change-in-prod@postgres:5432/openwebui
+      - CORS_ALLOW_ORIGIN=http://localhost:3001,http://localhost:5174
+      - WEBUI_AUTH=false
+      - ENABLE_ADMIN_EXPORT=true
+      - ENABLE_COMMUNITY_SHARING=false
+      - ENABLE_MESSAGE_RATING=false
+      - ENABLE_API_KEY=true
+    volumes:
+      - open-webui-data:/app/backend/data
+      - ./openwebui-uploads:/app/backend/data/uploads  # Shared upload directory
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - legal-ai-network
+
+  # Ollama service for LLM hosting
+  ollama:
+    image: ollama/ollama:latest
+    container_name: legal-case-ollama
+    ports:
+      - "11435:11434"  # Use port 11435 to avoid conflict
+    environment:
+      - OLLAMA_ORIGINS=http://localhost:3001,http://localhost:5174
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - legal-ai-network
+    # Uncomment the following if you have NVIDIA GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # PostgreSQL for OpenWebUI (more robust than SQLite)
+  postgres:
+    image: postgres:15-alpine
+    container_name: legal-case-postgres
+    environment:
+      - POSTGRES_DB=openwebui
+      - POSTGRES_USER=openwebui
+      - POSTGRES_PASSWORD=openwebui-password-change-in-prod
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwebui -d openwebui"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - legal-ai-network
+
+volumes:
+  open-webui-data:
+    driver: local
+  ollama-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  legal-ai-network:
+    driver: bridge

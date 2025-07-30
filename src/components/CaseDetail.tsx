@@ -10,6 +10,7 @@ import { EnhancedDramatisPersonae } from './EnhancedDramatisPersonae';
 import { EnhancedIssuesBuilder } from './EnhancedIssuesBuilder';
 import { SecuritySettings } from './SecuritySettings';
 import { EnhancedAIDialogue } from './EnhancedAIDialogue';
+import { EnhancedRAGDialogue } from './EnhancedRAGDialogue';
 import { EnhancedCaseOverview } from './EnhancedCaseOverview';
 import { PleadingsManager } from './PleadingsManager';
 import { AISyncNotification } from './AISyncNotification';
@@ -29,7 +30,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onEditCase,
   onDeleteCase 
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'settings'>('overview');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
@@ -172,7 +173,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           {/* AI Tools Dropdown */}
           <div className="nav-dropdown">
             <button 
-              className={`nav-tab dropdown-trigger ${['ai-dialogue', 'ai-chronology', 'ai-persons', 'ai-issues', 'auto-generate'].includes(activeTab) ? 'active' : ''}`}
+              className={`nav-tab dropdown-trigger ${['ai-dialogue', 'ai-rag', 'ai-chronology', 'ai-persons', 'ai-issues', 'auto-generate'].includes(activeTab) ? 'active' : ''}`}
               onClick={(e) => handleDropdownToggle('ai', e)}
             >
               🤖 AI Tools <span className="dropdown-arrow">▼</span>
@@ -251,7 +252,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             className={`dropdown-item ${activeTab === 'ai-dialogue' ? 'active' : ''}`}
             onClick={() => { setActiveTab('ai-dialogue'); setActiveDropdown(null); setDropdownPosition(null); }}
           >
-            💬 AI Q&A
+            💬 AI Q&A (Legacy)
+          </button>
+          <button 
+            className={`dropdown-item ${activeTab === 'ai-rag' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('ai-rag'); setActiveDropdown(null); setDropdownPosition(null); }}
+          >
+            🧠 AI RAG Assistant
           </button>
           <button 
             className={`dropdown-item ${activeTab === 'auto-generate' ? 'active' : ''}`}
@@ -328,6 +335,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
         {activeTab === 'ai-dialogue' && (
           <EnhancedAIDialogue 
+            caseId={caseData.id} 
+            documents={documents}
+          />
+        )}
+
+        {activeTab === 'ai-rag' && (
+          <EnhancedRAGDialogue 
             caseId={caseData.id} 
             documents={documents}
           />

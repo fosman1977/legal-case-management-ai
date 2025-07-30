@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Minimal OpenWebUI setup - No auth restrictions
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: minimal-open-webui
+    ports:
+      - "3002:8080"  # Use different port to avoid conflicts
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=False  # Disable authentication completely
+      - ENABLE_SIGNUP=True
+      - DEFAULT_USER_ROLE=admin
+      - WEBUI_SECRET_KEY=simple-secret-key
+      - CORS_ALLOW_ORIGIN=http://localhost:5173,http://localhost:3002
+    volumes:
+      - minimal-webui-data:/app/backend/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - minimal-network
+
+  # Ollama service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: minimal-ollama
+    ports:
+      - "11436:11434"  # Different port
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - minimal-ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - minimal-network
+
+volumes:
+  minimal-webui-data:
+    driver: local
+  minimal-ollama-data:
+    driver: local
+
+networks:
+  minimal-network:
+    driver: bridge
