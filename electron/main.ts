@@ -22,7 +22,6 @@ const createWindow = (): void => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
       preload: join(__dirname, 'preload.js'),
       webSecurity: false, // Allows local file access for documents
     },
