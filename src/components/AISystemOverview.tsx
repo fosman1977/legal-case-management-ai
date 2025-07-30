@@ -92,10 +92,10 @@ export const AISystemOverview: React.FC<AISystemOverviewProps> = ({ caseId }) =>
             <div className="component-header">
               <span className="component-icon">{getComponentIcon(component)}</span>
               <span className="component-name">{component}</span>
-              <span className="insight-count">{componentInsights.length} insights</span>
+              <span className="insight-count">{(componentInsights as any[]).length} insights</span>
             </div>
             <div className="insight-list">
-              {componentInsights.slice(0, 5).map((insight, index) => (
+              {(componentInsights as any[]).slice(0, 5).map((insight: any) => (
                 <div key={insight.id} className="insight-item">
                   <span className="insight-icon">{getIcon(insight.type)}</span>
                   <div className="insight-details">
@@ -111,9 +111,9 @@ export const AISystemOverview: React.FC<AISystemOverviewProps> = ({ caseId }) =>
                   </div>
                 </div>
               ))}
-              {componentInsights.length > 5 && (
+              {(componentInsights as any[]).length > 5 && (
                 <div className="more-insights">
-                  +{componentInsights.length - 5} more insights...
+                  +{(componentInsights as any[]).length - 5} more insights...
                 </div>
               )}
             </div>

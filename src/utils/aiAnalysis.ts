@@ -96,7 +96,7 @@ class AIDocumentAnalyzer {
     const allContent = documents.map(doc => doc.content + (doc.fileContent || '')).join('\n\n');
     
     // Perform anonymization on combined content
-    const { anonymizedText, mapping } = dataAnonymizer.anonymize(allContent);
+    const { mapping } = dataAnonymizer.anonymize(allContent);
     
     // Split back into individual documents and apply anonymization
     const anonymizedDocuments = documents.map(doc => {
@@ -120,7 +120,7 @@ class AIDocumentAnalyzer {
     };
   }
 
-  private anonymizeTitle(title: string, mapping: AnonymizationMapping): string {
+  private anonymizeTitle(title: string, _mapping: AnonymizationMapping): string {
     const { anonymizedText } = dataAnonymizer.anonymize(title);
     return anonymizedText;
   }
@@ -247,12 +247,6 @@ class AIDocumentAnalyzer {
           
           const startExtraction = Date.now();
           
-          // Use speed-optimized options for faster processing
-          const speedOptions = this.fastMode ? ollamaClient.getSpeedOptimizedOptions() : {
-            temperature: 0.1,
-            max_tokens: 1200
-          };
-          
           // Use unified AI client for entity extraction
           const entityResult = await unifiedAIClient.extractEntities(content, 'legal');
           
@@ -278,19 +272,22 @@ class AIDocumentAnalyzer {
           if (totalItems === 0 && content.length > 100) {
             console.log('⚠️ Combined extraction returned no results, trying individual extraction...');
             
+            // Fall back to individual entity extraction using unified AI client
+            const fallbackResult = await unifiedAIClient.extractEntities(content, 'legal');
+            
             const [
               ollamaEvents,
               ollamaPersons,
               ollamaIssues,
               ollamaKeyPoints,
               ollamaAuthorities
-            ] = await Promise.all([
-              ollamaClient.extractChronologyEvents(content, this.ollamaModel).catch(() => []),
-              ollamaClient.extractPersons(content, this.ollamaModel).catch(() => []),
-              ollamaClient.extractIssues(content, this.ollamaModel).catch(() => []),
-              ollamaClient.extractKeyPoints(content, this.ollamaModel).catch(() => []),
-              ollamaClient.extractAuthorities(content, this.ollamaModel).catch(() => [])
-            ]);
+            ] = [
+              fallbackResult.chronologyEvents,
+              fallbackResult.persons,
+              fallbackResult.issues,
+              [], // Key points require separate analysis
+              fallbackResult.authorities
+            ];
             
             extractedData = {
               chronologyEvents: ollamaEvents,

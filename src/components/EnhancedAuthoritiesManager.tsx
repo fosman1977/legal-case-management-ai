@@ -5,7 +5,7 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { PDFTextExtractor } from '../utils/pdfExtractor';
 import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
-import { useAISync, useAIUpdates } from '../hooks/useAISync';
+import { useAIUpdates } from '../hooks/useAISync';
 
 interface EnhancedAuthoritiesManagerProps {
   caseId: string;
@@ -29,11 +29,11 @@ export const EnhancedAuthoritiesManager: React.FC<EnhancedAuthoritiesManagerProp
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [sortBy, setSortBy] = useState<SortBy>('citation');
-  const [selectedAuthorities, setSelectedAuthorities] = useState<Set<string>>(new Set());
+  // const [selectedAuthorities, setSelectedAuthorities] = useState<Set<string>>(new Set());
   const [previewAuthority, setPreviewAuthority] = useState<LegalAuthority | null>(null);
   
   // AI Synchronization
-  const { publishAIResults } = useAISync(caseId, 'EnhancedAuthoritiesManager');
+  // const { publishAIResults } = useAISync(caseId, 'EnhancedAuthoritiesManager');
   const { updateCount } = useAIUpdates(caseId, ['ai-authorities-updated']);
   
   // Form states
