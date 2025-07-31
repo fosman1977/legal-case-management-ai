@@ -38,7 +38,7 @@ class UnifiedAIClient {
       ollamaUrl: config.ollamaUrl || 'http://localhost:11434',
       openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
       defaultModel: config.defaultModel || 'llama3.2:1b', // Use faster 1b model for document processing
-      timeout: config.timeout || 120000, // Increased to 2 minutes for large documents
+      timeout: config.timeout || 300000, // Increased to 5 minutes for initial model load and large documents
       useOpenWebUI: config.useOpenWebUI !== undefined ? config.useOpenWebUI : false // Disabled by default for now
     };
   }
@@ -91,7 +91,7 @@ class UnifiedAIClient {
   }
 
   /**
-   * Ensure a model is available
+   * Ensure a model is available and loaded
    */
   async ensureModel(model: string): Promise<boolean> {
     if (this.modelCache.has(model)) return this.modelCache.get(model)!;
@@ -105,6 +105,24 @@ class UnifiedAIClient {
         console.log(`Model ${model} not found. Pulling...`);
         await this.pullModel(model);
         this.modelCache.set(model, true);
+      }
+      
+      // Preload the model to avoid timeout on first use
+      console.log(`Preloading model ${model}...`);
+      try {
+        await fetch(`${this.config.ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            prompt: 'test',
+            stream: false
+          }),
+          signal: AbortSignal.timeout(60000) // 1 minute for preload
+        });
+        console.log(`Model ${model} preloaded successfully`);
+      } catch (error) {
+        console.warn(`Model preload warning:`, error);
       }
       
       return true;
