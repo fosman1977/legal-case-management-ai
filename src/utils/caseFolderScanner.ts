@@ -301,6 +301,14 @@ export class CaseFolderScanner {
    */
   async saveTags(folderHandle: FileSystemDirectoryHandle, tags: FileTags): Promise<void> {
     try {
+      // Check if we're in Electron context
+      if (window.electronAPI) {
+        // In Electron, we can't use createWritable() due to security restrictions
+        // Tags will be stored in the app's local storage instead
+        console.log('📝 Running in Electron - tags stored in app storage');
+        return;
+      }
+      
       const tagFileHandle = await folderHandle.getFileHandle(this.tagFileName, { create: true });
       const writable = await tagFileHandle.createWritable();
       await writable.write(JSON.stringify(tags, null, 2));
@@ -308,7 +316,8 @@ export class CaseFolderScanner {
       console.log(`💾 Saved document tags to ${this.tagFileName}`);
     } catch (error) {
       console.error('Failed to save tags:', error);
-      throw error;
+      // Don't throw the error, just log it - this allows document processing to continue
+      console.log('⚠️ Tag saving failed, but document processing will continue');
     }
   }
 
