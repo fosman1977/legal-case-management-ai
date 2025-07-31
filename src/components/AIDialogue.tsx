@@ -202,11 +202,12 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         contentLength: d.content?.length || 0
       })));
       
-      const aiResponse = await unifiedAIClient.query(analysisPrompt, {
-        model: prefs.selectedModel || 'llama3.2:1b',
+      // Use RAG for better document context understanding
+      const aiResponse = await unifiedAIClient.queryWithRAG(analysisPrompt, {
+        caseId: selectedCaseId,
+        model: prefs.selectedModel || 'llama3.2:3b',
         temperature: 0.3,
-        maxTokens: 2500,
-        context: "You are an expert legal assistant with extensive knowledge of case law and legal procedures. Provide thorough, accurate analysis and extract detailed information when found."
+        maxTokens: 2500
       });
       const response = aiResponse.content;
       

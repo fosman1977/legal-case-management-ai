@@ -4,6 +4,7 @@
  */
 
 import { optimizedOpenWebUIClient, ModelInfo } from './optimizedOpenWebUIClient';
+import { ragClient, RAGResponse } from './openWebUIRAGClient';
 
 interface UnifiedAIConfig {
   ollamaUrl: string;
@@ -391,6 +392,129 @@ Format with dates, descriptions, and sources.`;
       ...response,
       sources
     };
+  }
+
+  /**
+   * Upload document to RAG system for indexing
+   */
+  async uploadDocumentToRAG(
+    file: File,
+    metadata?: { caseId?: string; category?: string }
+  ): Promise<{ success: boolean; documentId?: string; error?: string }> {
+    try {
+      const ragDoc = await ragClient.uploadDocument(file, metadata);
+      console.log('✅ Document uploaded to RAG:', ragDoc.name);
+      
+      return {
+        success: true,
+        documentId: ragDoc.id
+      };
+    } catch (error) {
+      console.error('Failed to upload to RAG:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Query using RAG - automatically finds relevant document chunks
+   */
+  async queryWithRAG(
+    prompt: string,
+    options: {
+      caseId?: string;
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+    } = {}
+  ): Promise<AIResponse & { citations: RAGResponse['citations'] }> {
+    try {
+      // Check if RAG is available
+      const ragAvailable = await ragClient.isAvailable();
+      if (!ragAvailable) {
+        console.warn('RAG not available, falling back to direct query');
+        const response = await this.query(prompt, options);
+        return { ...response, citations: [] };
+      }
+
+      const ragResponse = await ragClient.query(prompt, {
+        model: options.model || this.config.defaultModel,
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+        caseId: options.caseId,
+        documents: true
+      });
+
+      return {
+        content: ragResponse.answer,
+        model: options.model || this.config.defaultModel,
+        timestamp: new Date().toISOString(),
+        confidence: ragResponse.confidence,
+        citations: ragResponse.citations
+      };
+    } catch (error) {
+      console.error('RAG query failed:', error);
+      // Fallback to direct query
+      const response = await this.query(prompt, options);
+      return { ...response, citations: [] };
+    }
+  }
+
+  /**
+   * Extract entities from documents using RAG
+   */
+  async extractEntitiesWithRAG(
+    caseId: string,
+    documentIds?: string[]
+  ): Promise<EntityExtractionResult> {
+    const prompt = `Analyze the legal documents and extract:
+
+1. PERSONS: Names and roles (plaintiff, defendant, witness, judge, lawyer, etc.)
+2. ISSUES: Legal issues, claims, defenses, disputes
+3. CHRONOLOGY EVENTS: Important dates and what happened
+4. AUTHORITIES: Case citations, statutes, legal references
+
+Return ONLY a JSON object with this exact structure:
+{
+  "persons": [{"name": "string", "role": "string", "confidence": number}],
+  "issues": [{"issue": "string", "type": "string", "confidence": number}],
+  "chronologyEvents": [{"date": "string", "event": "string", "confidence": number}],
+  "authorities": [{"citation": "string", "relevance": "string", "confidence": number}]
+}`;
+
+    try {
+      const response = await this.queryWithRAG(prompt, {
+        caseId,
+        temperature: 0.1, // Low temperature for structured extraction
+        maxTokens: 4000
+      });
+
+      // Parse the JSON response
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+
+      const extracted = JSON.parse(jsonMatch[0]);
+      console.log('🔍 RAG entity extraction completed:', {
+        persons: extracted.persons?.length || 0,
+        issues: extracted.issues?.length || 0,
+        events: extracted.chronologyEvents?.length || 0,
+        authorities: extracted.authorities?.length || 0
+      });
+
+      return extracted;
+    } catch (error) {
+      console.error('RAG entity extraction failed:', error);
+      return {
+        persons: [],
+        issues: [],
+        chronologyEvents: [],
+        authorities: []
+      };
+    }
   }
 }
 
