@@ -204,7 +204,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
       
       // Use RAG for better document context understanding
       const aiResponse = await unifiedAIClient.queryWithRAG(analysisPrompt, {
-        caseId: selectedCaseId,
+        caseId: caseId,
         model: prefs.selectedModel || 'llama3.2:3b',
         temperature: 0.3,
         maxTokens: 2500
