@@ -63,12 +63,16 @@
     "appId": "com.legalai.casemanager",
     "productName": "Legal Case Manager AI",
     "directories": {
-      "output": "release"
+      "output": "dist-electron",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
-      "node_modules/**/*",
+      "dist-electron/main.js",
+      "dist-electron/preload.js",
+      "!dist-electron/mac*",
+      "!dist-electron/win*",
+      "!dist-electron/linux*",
       "package.json"
     ],
     "mac": {
