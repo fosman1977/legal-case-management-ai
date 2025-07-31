@@ -88,6 +88,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
     setIsGenerating(true);
     setGenerationProgress(0);
     setCurrentStage('Initializing...');
+    const startTime = Date.now();
 
     try {
       // Get security preferences
@@ -113,9 +114,12 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       let savedChronology = 0;
       for (const event of result.chronologyEvents) {
         const chronologyEvent = {
-          ...event,
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          caseId
+          caseId,
+          date: event.date,
+          description: event.event, // Map 'event' to 'description'
+          significance: `Confidence: ${Math.round(event.confidence * 100)}%`, // Add significance based on confidence
+          documentRef: undefined
         };
         storage.saveChronologyEvent(chronologyEvent);
         savedChronology++;
@@ -131,9 +135,13 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       
       for (const person of result.persons) {
         const newPerson = {
-          ...person,
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          caseId
+          caseId,
+          name: person.name,
+          role: person.role as 'claimant' | 'defendant' | 'witness' | 'expert' | 'lawyer' | 'judge' | 'other',
+          description: `Role: ${person.role}`, // Add description based on role
+          relevance: `Confidence: ${Math.round(person.confidence * 100)}%`, // Add relevance based on confidence
+          documentRefs: [] // Initialize empty array since RAG result doesn't include documentRefs
         };
         
         // Check for duplicates by name
@@ -162,9 +170,15 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       
       for (const issue of result.issues) {
         const newIssue = {
-          ...issue,
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          caseId
+          caseId,
+          title: issue.issue, // Map 'issue' to 'title'
+          description: `Type: ${issue.type}`, // Use type as description
+          category: issue.type === 'legal' ? 'legal' as const : 'factual' as const, // Map type to category
+          priority: 'medium' as const, // Default priority
+          status: 'unresolved' as const, // Default status
+          documentRefs: [], // Initialize empty array
+          relatedIssues: [] // Initialize empty array
         };
         currentIssues.push(newIssue);
         savedIssues++;
@@ -175,13 +189,16 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       setCurrentStage('Processing key points...');
       setGenerationProgress(85);
 
-      // Save key points
+      // Save key points - RAG doesn't return keyPoints, so we'll extract from issues
       let savedKeyPoints = 0;
-      for (const keyPoint of result.keyPoints) {
+      for (const issue of result.issues) {
         const newKeyPoint = {
-          ...keyPoint,
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          caseId
+          caseId,
+          category: 'legal_argument' as const, // Default category
+          point: issue.issue, // Use issue text as key point
+          supportingDocs: [], // Initialize empty array
+          order: savedKeyPoints + 1
         };
         storage.saveKeyPoint(newKeyPoint);
         savedKeyPoints++;
@@ -194,9 +211,11 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       let savedAuthorities = 0;
       for (const authority of result.authorities) {
         const newAuthority = {
-          ...authority,
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          caseId
+          caseId,
+          citation: authority.citation,
+          principle: authority.relevance, // Map 'relevance' to 'principle'
+          relevance: `Confidence: ${Math.round(authority.confidence * 100)}%` // Add relevance based on confidence
         };
         storage.saveAuthority(newAuthority);
         savedAuthorities++;
@@ -206,14 +225,24 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       setGenerationProgress(100);
 
       // Set final stats
+      const processingTime = Date.now() - startTime;
+      const averageConfidence = [
+        ...result.chronologyEvents.map(e => e.confidence),
+        ...result.persons.map(p => p.confidence),
+        ...result.issues.map(i => i.confidence),
+        ...result.authorities.map(a => a.confidence)
+      ].reduce((sum, conf) => sum + conf, 0) / (
+        result.chronologyEvents.length + result.persons.length + result.issues.length + result.authorities.length
+      ) || 0;
+
       const stats: GenerationStats = {
         chronologyEvents: savedChronology,
         persons: savedPersons,
         issues: savedIssues,
         keyPoints: savedKeyPoints,
         authorities: savedAuthorities,
-        processingTime: result.processingTime,
-        confidence: result.confidence
+        processingTime: processingTime,
+        confidence: averageConfidence
       };
       
       setLastGenerationStats(stats);
@@ -228,8 +257,8 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
         `• ${savedIssues} issues\n` +
         `• ${savedKeyPoints} key points\n` +
         `• ${savedAuthorities} legal authorities\n\n` +
-        `Processing time: ${Math.round(result.processingTime / 1000)}s\n` +
-        `Confidence: ${Math.round(result.confidence * 100)}%`
+        `Processing time: ${Math.round(processingTime / 1000)}s\n` +
+        `Confidence: ${Math.round(averageConfidence * 100)}%`
       );
 
     } catch (error) {
