@@ -39,7 +39,7 @@ class UnifiedAIClient {
       openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
       defaultModel: config.defaultModel || 'llama3.2:1b', // Use faster 1b model for document processing
       timeout: config.timeout || 120000, // Increased to 2 minutes for large documents
-      useOpenWebUI: config.useOpenWebUI !== false // Default to true
+      useOpenWebUI: config.useOpenWebUI !== undefined ? config.useOpenWebUI : false // Disabled by default for now
     };
   }
 
