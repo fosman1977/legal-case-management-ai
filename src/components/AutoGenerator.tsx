@@ -3,6 +3,7 @@ import { CaseDocument } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { aiAnalyzer } from '../utils/aiAnalysis';
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { getSecurityPreferences } from './SecuritySettings';
 
 interface AutoGeneratorProps {
@@ -101,12 +102,9 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
         setGenerationProgress(20 + (progress * 0.2)); // 20-40% for analysis
       };
 
-      // Run comprehensive AI analysis with progress tracking
-      const result = await aiAnalyzer.analyzeDocuments(
-        documents, 
-        securityPrefs.useAnonymization,
-        progressCallback
-      );
+      // Use RAG-based entity extraction (much faster and more reliable)
+      setCurrentStage('Extracting entities with RAG...');
+      const result = await unifiedAIClient.extractEntitiesWithRAG(caseId);
       
       setCurrentStage('Processing chronology events...');
       setGenerationProgress(40);
