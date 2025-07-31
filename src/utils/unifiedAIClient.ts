@@ -35,7 +35,7 @@ class UnifiedAIClient {
 
   constructor(config: Partial<UnifiedAIConfig> = {}) {
     this.config = {
-      ollamaUrl: config.ollamaUrl || 'http://localhost:11435',
+      ollamaUrl: config.ollamaUrl || 'http://localhost:11434',
       openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
       defaultModel: config.defaultModel || 'llama3.2:1b', // Use faster 1b model for document processing
       timeout: config.timeout || 120000, // Increased to 2 minutes for large documents
