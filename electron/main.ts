@@ -5,9 +5,7 @@ import { existsSync } from 'fs';
 const isDev = process.env.NODE_ENV === 'development';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-  app.quit();
-}
+// Note: electron-squirrel-startup is only needed for Windows installers
 
 let mainWindow: BrowserWindow;
 
