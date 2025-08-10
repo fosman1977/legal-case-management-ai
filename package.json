@@ -40,7 +40,6 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "claude": "^0.1.2",
     "date-fns": "^2.29.3",
     "lucide-react": "^0.263.1",
     "pdfjs-dist": "^3.11.174",

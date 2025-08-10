@@ -125,7 +125,7 @@ export const IssuesBuilder: React.FC<IssuesBuilderProps> = ({ caseId }) => {
       );
 
       const result = await Promise.race([
-        aiAnalyzer.analyzeDocuments(documents, false, progressCallback),
+        aiAnalyzer.analyzeDocuments(documents, progressCallback),
         timeoutPromise
       ]) as any;
       

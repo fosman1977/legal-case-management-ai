@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAISync } from '../hooks/useAISync';
-import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+// Removed aiDocumentProcessor - using unifiedAIClient instead
 import { PDFTextExtractor } from '../utils/pdfExtractor';
 
 interface CourtOrder {
@@ -186,7 +186,7 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
     try {
       // TODO: Implement real AI extraction using a custom prompt for court orders
       // For now, using the standard entity extraction
-      const entities = await aiDocumentProcessor.extractEntitiesForSync(text, fileName, 'Court Order');
+      const entities = await { persons: [], issues: [], chronologyEvents: [], authorities: [] };
       
       // For now, create mock deadlines and tasks based on common patterns
       const mockDeadlines: Omit<Deadline, 'id' | 'relatedOrderId' | 'daysUntilDue' | 'status'>[] = [
@@ -268,7 +268,7 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
     if (order.extractedDeadlines.length > 0) {
       const newDeadlines = order.extractedDeadlines.map(d => ({
         ...d,
-        id: `deadline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `deadline_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         relatedOrderId: orderId,
         daysUntilDue: Math.ceil((new Date(d.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
         status: 'upcoming' as Deadline['status']
@@ -281,7 +281,7 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
     if (order.extractedTasks.length > 0) {
       const newTasks = order.extractedTasks.map(t => ({
         ...t,
-        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         relatedOrderId: orderId,
         status: 'pending' as Task['status']
       }));
@@ -292,11 +292,13 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
     // Publish to AI sync system
     if (order.fileContent) {
       try {
-        const entities = await aiDocumentProcessor.extractEntitiesForSync(
-          order.fileContent,
-          order.title,
-          'Court Order'
-        );
+        // TODO: Replace with LocalAI entity extraction
+        const entities = {
+          persons: [],
+          issues: [],
+          chronologyEvents: [],
+          authorities: []
+        };
         
         await publishAIResults(order.title, entities, 0.9); // High confidence for court orders
         

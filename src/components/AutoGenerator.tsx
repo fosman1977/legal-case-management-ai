@@ -4,7 +4,14 @@ import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { aiAnalyzer } from '../utils/aiAnalysis';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
-import { getSecurityPreferences } from './SecuritySettings';
+// Helper function to get AI preferences
+const getAIPreferences = (caseId: string) => {
+  const savedPrefs = localStorage.getItem(`ai_prefs_${caseId}`);
+  if (savedPrefs) {
+    return JSON.parse(savedPrefs);
+  }
+  return { selectedModel: 'gpt-3.5-turbo' };
+};
 import { AIStatusIndicator } from './AIStatusIndicator';
 
 interface AutoGeneratorProps {
@@ -96,7 +103,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
 
     try {
       // Get security preferences
-      const securityPrefs = getSecurityPreferences(caseId);
+      const aiPrefs = getAIPreferences(caseId);
       
       setCurrentStage('Analyzing documents with AI...');
       setGenerationProgress(20);
@@ -109,7 +116,9 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
 
       // Use RAG-based entity extraction (much faster and more reliable)
       setCurrentStage('Extracting entities with RAG...');
-      const result = await unifiedAIClient.extractEntitiesWithRAG(caseId);
+      // Extract from all available documents
+      const combinedText = documents.map((doc: any) => doc.fileContent || doc.content || '').join('\n\n');
+      const result = await unifiedAIClient.extractEntities(combinedText);
       
       setCurrentStage('Processing chronology events...');
       setGenerationProgress(40);
@@ -118,7 +127,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       let savedChronology = 0;
       for (const event of result.chronologyEvents) {
         const chronologyEvent = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           caseId,
           date: event.date,
           description: event.event, // Map 'event' to 'description'
@@ -139,7 +148,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       
       for (const person of result.persons) {
         const newPerson = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           caseId,
           name: person.name,
           role: person.role as 'claimant' | 'defendant' | 'witness' | 'expert' | 'lawyer' | 'judge' | 'other',
@@ -174,7 +183,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       
       for (const issue of result.issues) {
         const newIssue = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           caseId,
           title: issue.issue, // Map 'issue' to 'title'
           description: `Type: ${issue.type}`, // Use type as description
@@ -197,7 +206,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       let savedKeyPoints = 0;
       for (const issue of result.issues) {
         const newKeyPoint = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           caseId,
           category: 'legal_argument' as const, // Default category
           point: issue.issue, // Use issue text as key point
@@ -215,7 +224,7 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
       let savedAuthorities = 0;
       for (const authority of result.authorities) {
         const newAuthority = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
           caseId,
           citation: authority.citation,
           principle: authority.relevance, // Map 'relevance' to 'principle'

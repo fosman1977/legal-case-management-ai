@@ -1,7 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CaseDocument } from '../types';
-import { openWebUIClient, ChatMessage, Citation, DocumentUpload, RAGResponse } from '../utils/openWebUIClient';
-import { unifiedAIClient } from '../utils/unifiedAIClient';
+import { unifiedAIClient, AIResponse } from '../utils/unifiedAIClient';
+
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+interface Citation {
+  source: string;
+  content: string;
+  confidence?: number;
+  page?: number;
+}
+
+interface RAGResponse {
+  processingTime: number;
+  confidence: number;
+  sources: string[];
+}
+
+interface DocumentUpload {
+  id: string;
+  name: string;
+  status?: 'uploaded' | 'processing' | 'ready';
+  type?: string;
+  size?: number;
+  uploadedAt?: string;
+  processed?: boolean;
+  extractedText?: string;
+}
 
 interface EnhancedRAGDialogueProps {
   caseId: string;
@@ -10,9 +38,12 @@ interface EnhancedRAGDialogueProps {
 
 interface ExtendedMessage extends ChatMessage {
   id: string;
+  timestamp?: string;
   isProcessing?: boolean;
-  ragResponse?: RAGResponse;
+  response?: AIResponse;
   documentUploads?: DocumentUpload[];
+  citations?: Citation[];
+  ragResponse?: RAGResponse;
 }
 
 export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId, documents }) => {
@@ -21,7 +52,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<DocumentUpload[]>([]);
-  const [selectedModel, setSelectedModel] = useState('llama3.2:3b');
+  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const [searchMode, setSearchMode] = useState<'semantic' | 'hybrid' | 'keyword'>('hybrid');
@@ -43,30 +74,30 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
 
   const initializeOpenWebUI = async () => {
     try {
-      // Skip OpenWebUI availability check in auth-disabled mode
-      addSystemMessage('✅ AI Assistant Ready - Using Direct Ollama Integration');
+      // Initialize LocalAI connection
+      addSystemMessage('✅ AI Assistant Ready - Using LocalAI Integration');
 
       setIsConnected(true);
       
-      // Try to get models from Ollama directly
+      // Try to get models from LocalAI
       try {
-        const response = await fetch('http://localhost:11436/api/tags');
+        const response = await fetch('http://localhost:8080/v1/models');
         if (response.ok) {
           const data = await response.json();
-          const modelNames = data.models?.map((m: any) => m.name) || ['llama3.2:3b'];
+          const modelNames = data.data?.map((m: any) => m.id) || ['gpt-3.5-turbo'];
           setAvailableModels(modelNames);
           if (modelNames.length > 0) {
             setSelectedModel(modelNames[0]);
           }
         }
       } catch (error) {
-        // Default models if Ollama not accessible
-        setAvailableModels(['llama3.2:3b', 'llama3.2:1b']);
-        setSelectedModel('llama3.2:3b');
+        // Default models if LocalAI not accessible
+        setAvailableModels(['gpt-3.5-turbo', 'gpt-4']);
+        setSelectedModel('gpt-3.5-turbo');
       }
     } catch (error) {
-      console.error('OpenWebUI initialization failed:', error);
-      addSystemMessage('❌ OpenWebUI connection failed. Check that the service is running.');
+      console.error('LocalAI initialization failed:', error);
+      addSystemMessage('❌ LocalAI connection failed. Check that the service is running.');
     }
   };
 
@@ -104,7 +135,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
 
   const addSystemMessage = (content: string) => {
     const systemMessage: ExtendedMessage = {
-      id: `system_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `system_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       role: 'system',
       content,
       timestamp: new Date().toISOString()
@@ -117,7 +148,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
     if (!input.trim() || isProcessing) return;
 
     const userMessage: ExtendedMessage = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       role: 'user',
       content: input,
       timestamp: new Date().toISOString()
@@ -150,7 +181,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
       );
       
       const aiMessage: ExtendedMessage = {
-        id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `ai_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         role: 'assistant',
         content: aiResponse.content,
         timestamp: new Date().toISOString(),
@@ -166,9 +197,9 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
     } catch (error) {
       console.error('AI query failed:', error);
       const errorMessage: ExtendedMessage = {
-        id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `error_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         role: 'assistant',
-        content: '❌ I encountered an error processing your request. Please check that OpenWebUI is running and try again.',
+        content: '❌ I encountered an error processing your request. Please check that LocalAI is running and try again.',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -220,9 +251,11 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
               {citation.content && (
                 <div className="citation-preview">"{citation.content}"</div>
               )}
-              <div className="citation-confidence">
-                Confidence: {Math.round(citation.confidence * 100)}%
-              </div>
+              {citation.confidence && (
+                <div className="citation-confidence">
+                  Confidence: {Math.round(citation.confidence * 100)}%
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -258,7 +291,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
           <h3>🤖 Enhanced AI Assistant with RAG</h3>
           <div className="connection-status">
             {isConnected ? (
-              <span className="status-connected">✅ OpenWebUI Connected</span>
+              <span className="status-connected">✅ LocalAI Connected</span>
             ) : (
               <span className="status-disconnected">❌ Disconnected</span>
             )}
@@ -360,7 +393,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
             onChange={(e) => setInput(e.target.value)}
             placeholder={isConnected ? 
               "Ask about your case documents with enhanced AI..." : 
-              "Connect to OpenWebUI for enhanced features..."
+              "Connect to LocalAI for enhanced features..."
             }
             disabled={isProcessing}
             className="message-input"

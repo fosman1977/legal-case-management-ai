@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { aiEventSystem } from '../utils/aiEventSystem';
+// Removed aiEventSystem - using simplified approach
 
 interface AISystemOverviewProps {
   caseId: string;
@@ -10,15 +10,16 @@ export const AISystemOverview: React.FC<AISystemOverviewProps> = ({ caseId }) =>
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = aiEventSystem.subscribe(caseId, (insight) => {
-      setInsights(prev => [insight, ...prev.slice(0, 19)]); // Keep last 20
-    });
+    // TODO: Replace with LocalAI event system
+    // const unsubscribe = aiEventSystem.subscribe(caseId, (insight) => {
+    //   setInsights(prev => [insight, ...prev.slice(0, 19)]); // Keep last 20
+    // });
 
-    // Load existing insights
-    const existingInsights = aiEventSystem.getInsights(caseId);
-    setInsights(existingInsights.slice(0, 20));
+    // // Load existing insights
+    // const existingInsights = aiEventSystem.getInsights(caseId);
+    // setInsights(existingInsights.slice(0, 20));
 
-    return unsubscribe;
+    // return unsubscribe;
   }, [caseId]);
 
   if (!isVisible) {

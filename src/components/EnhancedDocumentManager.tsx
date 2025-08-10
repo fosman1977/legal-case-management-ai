@@ -6,7 +6,7 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
-import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+// Removed aiDocumentProcessor - using unifiedAIClient instead
 import { useAISync } from '../hooks/useAISync';
 
 // Modal Components
@@ -491,11 +491,8 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
         
         try {
-          const entities = await aiDocumentProcessor.extractEntitiesForSync(
-            doc.fileContent || '',
-            doc.fileName || doc.title,
-            aiDocumentProcessor.detectDocumentType(doc.fileContent || '', doc.fileName || doc.title)
-          );
+          // TODO: Replace with LocalAI equivalent
+          const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
           
           // Only publish if we found entities
           if (entities.persons.length > 0 || entities.issues.length > 0 || 

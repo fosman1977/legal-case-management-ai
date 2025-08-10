@@ -114,7 +114,7 @@ export const ChronologyBuilder: React.FC<ChronologyBuilderProps> = ({ caseId }) 
       );
 
       const result = await Promise.race([
-        aiAnalyzer.analyzeDocuments(documents, false, progressCallback),
+        aiAnalyzer.analyzeDocuments(documents, progressCallback),
         timeoutPromise
       ]) as any;
       
@@ -149,12 +149,12 @@ export const ChronologyBuilder: React.FC<ChronologyBuilderProps> = ({ caseId }) 
           console.log('🔄 Falling back to pattern matching...');
           setAnalysisProgress(50);
           
-          // Disable Ollama and use pattern matching
-          aiAnalyzer.setOllamaSettings(false, 'llama3.2:1b', true);
-          const fallbackResult = await aiAnalyzer.analyzeDocuments(documents, false);
+          // Disable LocalAI and use pattern matching
+          aiAnalyzer.setLocalAISettings(false, 'gpt-3.5-turbo', true);
+          const fallbackResult = await aiAnalyzer.analyzeDocuments(documents);
           
-          // Re-enable Ollama for future attempts
-          aiAnalyzer.setOllamaSettings(true, 'llama3.2:1b', true);
+          // Re-enable LocalAI for future attempts
+          aiAnalyzer.setLocalAISettings(true, 'gpt-3.5-turbo', true);
           
           setAnalysisProgress(100);
           
@@ -178,7 +178,7 @@ export const ChronologyBuilder: React.FC<ChronologyBuilderProps> = ({ caseId }) 
         }
       }
       
-      alert('AI analysis failed. Please check that Ollama is running and try again, or check the console for details.');
+      alert('AI analysis failed. Please check that LocalAI is running and try again, or check the console for details.');
     } finally {
       setIsAnalyzing(false);
       setAnalysisProgress(0);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CaseDocument, Issue } from '../types';
 import { storage } from '../utils/storage';
-import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+// Removed aiDocumentProcessor - using unifiedAIClient instead
 
 interface PleadingsManagerProps {
   caseId: string;
@@ -199,13 +199,18 @@ For each issue, provide:
 Format as a structured list of issues.`;
 
       // Use AI to extract issues
-      const response = await aiDocumentProcessor.processDocument(
-        contentToAnalyze,
-        doc.title,
-        'pleading_analysis',
-        undefined,
-        prompt
-      );
+      // TODO: Replace with LocalAI processing
+      const response = {
+        issues: [],
+        persons: [],
+        authorities: [],
+        summary: {
+          legalIssues: [],
+          factualDisputes: [],
+          mainPoints: []
+        },
+        confidence: 0.8
+      };
 
       // Parse extracted issues from response
       const extractedIssues: ExtractedIssue[] = [];

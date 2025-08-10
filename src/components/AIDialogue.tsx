@@ -146,8 +146,8 @@ export const AIDialogue: React.FC<AIDialogueProps> = ({ caseId, documents }) => 
       }
       
       // Get security preferences
-      const savedPrefs = localStorage.getItem(`security_prefs_${caseId}`);
-      const prefs = savedPrefs ? JSON.parse(savedPrefs) : { selectedModel: 'llama3.2:1b' };
+      const savedPrefs = localStorage.getItem(`ai_prefs_${caseId}`);
+      const prefs = savedPrefs ? JSON.parse(savedPrefs) : { selectedModel: 'gpt-3.5-turbo' };
       
       // Create prompt based on selected category
       let analysisPrompt = `You are analyzing REAL legal documents from an actual case. Answer this question based ONLY on the content provided: "${question}"
@@ -188,8 +188,8 @@ EXTRACTED_DATA:
 
 Remember: Only analyze the actual documents provided. Use clear formatting to make your response easy to read.`;
 
-      // Call Ollama for analysis
-      console.log(`🤖 Using model: ${prefs.selectedModel || 'llama3.2:1b'}`);
+      // Call LocalAI for analysis
+      console.log(`🤖 Using model: ${prefs.selectedModel || 'gpt-3.5-turbo'}`);
       console.log(`📝 Prompt length: ${analysisPrompt.length} characters`);
       console.log(`📄 Document context length: ${context.length} characters`);
       console.log(`📋 Documents processed:`, documents.map(d => ({ 
@@ -202,12 +202,14 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         contentLength: d.content?.length || 0
       })));
       
-      // Use RAG for better document context understanding
-      const aiResponse = await unifiedAIClient.queryWithRAG(analysisPrompt, {
-        caseId: caseId,
-        model: prefs.selectedModel || 'llama3.2:3b',
-        temperature: 0.3,
-        maxTokens: 2500
+      // Use document context for better understanding
+      const docContext = documents.map(doc => ({
+        title: doc.title,
+        content: doc.fileContent || doc.content || ''
+      }));
+      
+      const aiResponse = await unifiedAIClient.queryWithDocuments(analysisPrompt, docContext, {
+        model: prefs.selectedModel || 'gpt-3.5-turbo'
       });
       const response = aiResponse.content;
       
@@ -230,10 +232,10 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
       return { answer, extractedData };
     } catch (error) {
       console.error('AI analysis failed:', error);
-      // Return a helpful message when Ollama is not available
-      if (error instanceof Error && error.message.includes('No Ollama models are available')) {
+      // Return a helpful message when LocalAI is not available
+      if (error instanceof Error && error.message.includes('No LocalAI models are available')) {
         return {
-          answer: "⚠️ AI features are not available in the browser environment. Please run this application in Electron mode to use AI analysis features with Ollama.",
+          answer: "⚠️ AI features are not available. Please check that LocalAI is running on localhost:8080.",
           extractedData: undefined
         };
       }
@@ -335,7 +337,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         case 'chronologyEvents':
           const event: ChronologyEvent = {
             ...item,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId
           };
           storage.saveChronologyEvent(event);
@@ -345,7 +347,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         case 'persons':
           const person: Person = {
             ...item,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId,
             documentRefs: item.documentRefs || []
           };
@@ -356,7 +358,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         case 'issues':
           const issue: Issue = {
             ...item,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId,
             documentRefs: item.documentRefs || [],
             relatedIssues: item.relatedIssues || []
@@ -368,7 +370,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         case 'keyPoints':
           const keyPoint: KeyPoint = {
             ...item,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId,
             supportingDocs: item.supportingDocs || []
           };
@@ -379,7 +381,7 @@ Remember: Only analyze the actual documents provided. Use clear formatting to ma
         case 'authorities':
           const authority: LegalAuthority = {
             ...item,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId
           };
           storage.saveAuthority(authority);

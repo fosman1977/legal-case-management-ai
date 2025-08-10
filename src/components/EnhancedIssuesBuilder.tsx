@@ -33,7 +33,7 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
   
   // AI Synchronization
   const { publishAIResults } = useAISync(caseId, 'EnhancedIssuesBuilder');
-  const { updateCount } = useAIUpdates(caseId, ['ai-issues-updated']);
+  const { updateCount } = useAIUpdates(caseId, 'ai-issues-updated');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string>('');

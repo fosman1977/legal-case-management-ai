@@ -1,5 +1,15 @@
 import React from 'react';
-import { ExtractionProgress } from '../utils/advancedPdfExtractor';
+// import { ExtractionProgress } from '../utils/advancedPdfExtractor';
+// TODO: Replace with LocalAI PDF extraction
+interface ExtractionProgress {
+  stage: string;
+  progress: number;
+  status?: string;
+  currentPage?: number;
+  totalPages?: number;
+  extractedText?: string;
+  error?: string;
+}
 
 interface PDFExtractionProgressProps {
   progress: ExtractionProgress | null;
@@ -14,8 +24,8 @@ export const PDFExtractionProgress: React.FC<PDFExtractionProgressProps> = ({
 }) => {
   if (!progress) return null;
 
-  const progressPercentage = progress.totalPages > 0 
-    ? Math.round((progress.currentPage / progress.totalPages) * 100) 
+  const progressPercentage = (progress.totalPages || 0) > 0 
+    ? Math.round(((progress.currentPage || 0) / (progress.totalPages || 1)) * 100) 
     : 0;
 
 
@@ -37,13 +47,13 @@ export const PDFExtractionProgress: React.FC<PDFExtractionProgressProps> = ({
                 />
               </div>
               <span className="progress-text">
-                {progressPercentage}% - Page {progress.currentPage} of {progress.totalPages}
+                {progressPercentage}% - Page {progress.currentPage || 0} of {progress.totalPages || 0}
               </span>
             </div>
 
             <div className="progress-details">
               <div className="progress-stats">
-                <span>📊 Extracted: {progress.extractedText.length.toLocaleString()} characters</span>
+                <span>📊 Extracted: {(progress.extractedText || '').length.toLocaleString()} characters</span>
                 <span>⏱️ Processing large legal document...</span>
               </div>
             </div>
@@ -64,8 +74,8 @@ export const PDFExtractionProgress: React.FC<PDFExtractionProgressProps> = ({
             <div className="success-icon">✅</div>
             <h4>Extraction Complete!</h4>
             <div className="completion-stats">
-              <p>📄 Processed {progress.totalPages} pages</p>
-              <p>📊 Extracted {progress.extractedText.length.toLocaleString()} characters</p>
+              <p>📄 Processed {progress.totalPages || 0} pages</p>
+              <p>📊 Extracted {(progress.extractedText || '').length.toLocaleString()} characters</p>
               <p>🎯 Ready for AI analysis</p>
             </div>
           </div>

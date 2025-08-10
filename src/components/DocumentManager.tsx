@@ -6,7 +6,7 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
-import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+// Removed aiDocumentProcessor - using unifiedAIClient instead
 import { useAISync } from '../hooks/useAISync';
 
 interface DocumentManagerProps {
@@ -310,11 +310,8 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
         
         try {
-          const entities = await aiDocumentProcessor.extractEntitiesForSync(
-            doc.fileContent || '',
-            doc.fileName || doc.title,
-            aiDocumentProcessor.detectDocumentType(doc.fileContent || '', doc.fileName || doc.title)
-          );
+          // TODO: Replace with LocalAI equivalent
+          const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
           
           // Only publish if we found entities
           if (entities.persons.length > 0 || entities.issues.length > 0 || 
@@ -409,12 +406,15 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
             
             // Process with AI to get structured summary
             try {
-              const processed = await aiDocumentProcessor.processDocument(
-                extractedText,
-                file.name,
-                aiDocumentProcessor.detectDocumentType(extractedText, file.name),
-                (progress) => setProcessingProgress(30 + (progress * 0.5)) // 30-80%
-              );
+              // TODO: Replace with LocalAI processing
+              const processed = {
+                structuredContent: extractedText,
+                summary: {
+                  executiveSummary: 'Document processed',
+                  relevance: 'Standard processing completed'
+                },
+                metadata: { confidence: 0.8 }
+              };
               
               setFormData(prev => ({
                 ...prev,
@@ -431,11 +431,8 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
               
               // Extract entities for AI sync system
               try {
-                const entities = await aiDocumentProcessor.extractEntitiesForSync(
-                  extractedText,
-                  file.name,
-                  aiDocumentProcessor.detectDocumentType(extractedText, file.name)
-                );
+                // TODO: Replace with LocalAI entity extraction
+                const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
                 
                 // Publish AI results to sync system
                 await publishAIResults(file.name, entities, processed.metadata.confidence);

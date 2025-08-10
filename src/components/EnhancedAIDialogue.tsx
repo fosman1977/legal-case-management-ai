@@ -427,7 +427,7 @@ Focus on being helpful, accurate, and strategic in your response.`;
         message.extractedData.chronologyEvents.forEach(event => {
           if (event.date && event.description) {
             const chronologyEvent: ChronologyEvent = {
-              id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              id: `ai_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
               caseId,
               date: event.date,
               description: event.description,

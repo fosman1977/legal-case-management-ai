@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAISync } from '../hooks/useAISync';
-import { aiDocumentProcessor } from '../utils/aiDocumentProcessor';
+// Removed aiDocumentProcessor - using unifiedAIClient instead
 
 interface UserNote {
   id: string;
@@ -160,18 +160,20 @@ The transcribed content would appear here and be processed by AI for entity extr
     const contentForAI = note.transcript || note.content;
     if (contentForAI && contentForAI.length > 100) {
       try {
-        const entities = await aiDocumentProcessor.extractEntitiesForSync(
-          contentForAI,
-          note.title,
-          'User Note'
-        );
+        // TODO: Replace with LocalAI entity extraction
+        const entities = {
+          persons: [],
+          issues: [],
+          chronologyEvents: [],
+          authorities: []
+        };
         
         // Mark as user-generated content
         const userGeneratedEntities = {
-          persons: entities.persons.map(p => ({ ...p, source: 'user-generated', isUserContent: true })),
-          issues: entities.issues.map(i => ({ ...i, source: 'user-generated', isUserContent: true })),
-          chronologyEvents: entities.chronologyEvents.map(c => ({ ...c, source: 'user-generated', isUserContent: true })),
-          authorities: entities.authorities.map(a => ({ ...a, source: 'user-generated', isUserContent: true }))
+          persons: entities.persons.map((p: any) => ({ ...p, source: 'user-generated', isUserContent: true })),
+          issues: entities.issues.map((i: any) => ({ ...i, source: 'user-generated', isUserContent: true })),
+          chronologyEvents: entities.chronologyEvents.map((c: any) => ({ ...c, source: 'user-generated', isUserContent: true })),
+          authorities: entities.authorities.map((a: any) => ({ ...a, source: 'user-generated', isUserContent: true }))
         };
         
         await publishAIResults(note.title, userGeneratedEntities, 0.6);

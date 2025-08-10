@@ -13,13 +13,7 @@ export const AISyncNotification: React.FC<AISyncNotificationProps> = ({ caseId }
     timestamp: number;
   }>>([]);
 
-  const { updateCount, lastUpdate } = useAIUpdates(caseId, [
-    'ai-persons-updated',
-    'ai-issues-updated', 
-    'ai-chronology-updated',
-    'ai-authorities-updated',
-    'ai-cross-references-updated'
-  ]);
+  const { updateCount, lastUpdate } = useAIUpdates(caseId);
 
   useEffect(() => {
     if (lastUpdate && updateCount > 0) {
@@ -48,7 +42,7 @@ export const AISyncNotification: React.FC<AISyncNotificationProps> = ({ caseId }
 
       if (message) {
         const notification = {
-          id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `notification_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           message,
           type,
           timestamp: Date.now()

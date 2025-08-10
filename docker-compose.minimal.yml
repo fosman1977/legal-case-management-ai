@@ -1,57 +1,29 @@
 version: '3.8'
 
 services:
-  # Minimal OpenWebUI setup - No auth restrictions
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: minimal-open-webui
+  # LocalAI service - OpenAI-compatible AI backend
+  localai:
+    image: localai/localai:latest
+    container_name: localai
     ports:
-      - "3002:8080"  # Use different port to avoid conflicts
+      - "8080:8080"  # LocalAI API port
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_AUTH=False  # Disable authentication completely
-      - ENABLE_SIGNUP=True
-      - DEFAULT_USER_ROLE=admin
-      - WEBUI_SECRET_KEY=simple-secret-key
-      - CORS_ALLOW_ORIGIN=http://localhost:5173,http://localhost:3002
-      - ENABLE_RAG_WEB_SEARCH=true
-      - RAG_EMBEDDING_ENGINE=ollama
-      - RAG_EMBEDDING_MODEL=nomic-embed-text:latest
-      - CHUNK_SIZE=1500
-      - CHUNK_OVERLAP=100
-      - PDF_EXTRACT_IMAGES=true
-      - ENABLE_IMAGE_GENERATION=false
-      - ENABLE_COMMUNITY_SHARING=false
-      - HF_HUB_OFFLINE=1  # Offline mode for better performance
+      - THREADS=4
+      - CONTEXT_SIZE=4096
+      - MODELS_PATH=/models
+      - DEBUG=true
+      - CORS=true
     volumes:
-      - minimal-webui-data:/app/backend/data
-    depends_on:
-      - ollama
+      - localai-models:/models
+      - ./localai-config:/config  # Optional: for model configurations
     restart: unless-stopped
     networks:
-      - minimal-network
-
-  # Ollama service
-  ollama:
-    image: ollama/ollama:latest
-    container_name: minimal-ollama
-    ports:
-      - "11436:11434"  # Different port
-    environment:
-      - OLLAMA_ORIGINS=*
-      - OLLAMA_HOST=0.0.0.0
-    volumes:
-      - minimal-ollama-data:/root/.ollama
-    restart: unless-stopped
-    networks:
-      - minimal-network
+      - localai-network
 
 volumes:
-  minimal-webui-data:
-    driver: local
-  minimal-ollama-data:
+  localai-models:
     driver: local
 
 networks:
-  minimal-network:
+  localai-network:
     driver: bridge

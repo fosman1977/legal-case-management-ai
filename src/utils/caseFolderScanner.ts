@@ -302,7 +302,7 @@ export class CaseFolderScanner {
   async saveTags(folderHandle: FileSystemDirectoryHandle, tags: FileTags): Promise<void> {
     try {
       // Check if we're in Electron context
-      if (window.electronAPI) {
+      if ((window as any).electronAPI) {
         // In Electron, we can't use createWritable() due to security restrictions
         // Tags will be stored in the app's local storage instead
         console.log('📝 Running in Electron - tags stored in app storage');

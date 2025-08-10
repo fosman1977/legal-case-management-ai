@@ -15,7 +15,7 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
   
   // AI Synchronization
   const { publishAIResults } = useAISync(caseId, 'EnhancedChronologyBuilder');
-  const { updateCount } = useAIUpdates(caseId, ['ai-chronology-updated']);
+  const { updateCount } = useAIUpdates(caseId);
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -107,7 +107,6 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
       // Use the existing analyzeDocuments method to extract chronology events
       const result = await aiAnalyzer.analyzeDocuments(
         documents,
-        true, // use anonymization
         (stage: string, progress: number) => {
           setAnalysisProgress(Math.round(progress));
         }
@@ -117,7 +116,7 @@ export const EnhancedChronologyBuilder: React.FC<EnhancedChronologyBuilderProps>
         result.chronologyEvents.forEach((event: any) => {
           storage.saveChronologyEvent({
             ...event,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
             caseId
           });
         });

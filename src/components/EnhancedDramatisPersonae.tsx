@@ -33,7 +33,7 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
   
   // AI Synchronization
   const { publishAIResults } = useAISync(caseId, 'EnhancedDramatisPersonae');
-  const { updateCount } = useAIUpdates(caseId, ['ai-persons-updated']);
+  const { updateCount } = useAIUpdates(caseId, 'ai-persons-updated');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string>('');

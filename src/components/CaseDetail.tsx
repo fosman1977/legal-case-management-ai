@@ -8,7 +8,7 @@ import { AutoGenerator } from './AutoGenerator';
 import { EnhancedChronologyBuilder } from './EnhancedChronologyBuilder';
 import { EnhancedDramatisPersonae } from './EnhancedDramatisPersonae';
 import { EnhancedIssuesBuilder } from './EnhancedIssuesBuilder';
-import { SecuritySettings } from './SecuritySettings';
+import { AISettings } from './AISettings';
 import { EnhancedAIDialogue } from './EnhancedAIDialogue';
 import { EnhancedRAGDialogue } from './EnhancedRAGDialogue';
 import { EnhancedCaseOverview } from './EnhancedCaseOverview';
@@ -376,7 +376,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
         )}
 
         {activeTab === 'settings' && (
-          <SecuritySettings caseId={caseData.id} />
+          <AISettings caseId={caseData.id} />
         )}
       </div>
     </div>

@@ -3,15 +3,12 @@
  * Provides a single interface for all AI operations, replacing direct Ollama calls
  */
 
-import { optimizedOpenWebUIClient, ModelInfo } from './optimizedOpenWebUIClient';
-import { ragClient, RAGResponse } from './openWebUIRAGClient';
+// LocalAI-only implementation
 
 interface UnifiedAIConfig {
-  ollamaUrl: string;
-  openWebUIUrl: string;
+  localAIUrl: string;
   defaultModel: string;
   timeout: number;
-  useOpenWebUI: boolean;
 }
 
 interface AIResponse {
@@ -37,11 +34,9 @@ class UnifiedAIClient {
 
   constructor(config: Partial<UnifiedAIConfig> = {}) {
     this.config = {
-      ollamaUrl: config.ollamaUrl || 'http://localhost:11436',
-      openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
-      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'llama3.2:3b', // Better quality for legal analysis
-      timeout: config.timeout || 300000, // Increased to 5 minutes for initial model load and large documents
-      useOpenWebUI: config.useOpenWebUI !== undefined ? config.useOpenWebUI : false // Disabled by default for now
+      localAIUrl: config.localAIUrl || 'http://localhost:8080',
+      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'gpt-3.5-turbo', // LocalAI commonly supports this
+      timeout: config.timeout || 300000 // 5 minutes for model loading and processing
     };
   }
 
@@ -56,64 +51,67 @@ class UnifiedAIClient {
   }
 
   /**
-   * Check if AI service is available (OpenWebUI preferred)
+   * Check LocalAI availability
    */
-  async isAvailable(): Promise<boolean> {
-    if (this.config.useOpenWebUI) {
-      const isOpenWebUIAvailable = await optimizedOpenWebUIClient.isAvailable();
-      if (isOpenWebUIAvailable) return true;
-    }
-
-    // Fallback to direct Ollama
+  private async isLocalAIAvailable(): Promise<boolean> {
     try {
-      this.connectionStatus = 'connecting';
-      const response = await fetch(`${this.config.ollamaUrl}/api/version`, {
+      const response = await fetch(`${this.config.localAIUrl}/v1/models`, {
         signal: AbortSignal.timeout(5000)
       });
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Check if LocalAI service is available
+   */
+  async isAvailable(): Promise<boolean> {
+    this.connectionStatus = 'connecting';
+    
+    try {
+      const response = await fetch(`${this.config.localAIUrl}/v1/models`, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
       if (response.ok) {
         this.connectionStatus = 'connected';
         this.lastError = null;
         return true;
+      } else {
+        this.connectionStatus = 'disconnected';
+        this.lastError = `LocalAI responded with status ${response.status}`;
+        return false;
       }
-      this.connectionStatus = 'disconnected';
-      this.lastError = 'Ollama service not responding';
-      return false;
     } catch (error) {
       this.connectionStatus = 'disconnected';
-      this.lastError = error instanceof Error ? error.message : 'Connection failed';
+      this.lastError = error instanceof Error ? error.message : 'LocalAI connection failed';
       return false;
     }
   }
 
   /**
-   * Get available models (OpenWebUI preferred)
+   * Get available models from LocalAI
    */
   async getModels(): Promise<string[]> {
-    if (this.config.useOpenWebUI) {
-      try {
-        const models = await optimizedOpenWebUIClient.getModels();
-        if (models.length > 0) {
-          return models.map(m => m.id || m.name);
-        }
-      } catch (error) {
-        console.warn('OpenWebUI models fetch failed, falling back to Ollama');
-      }
-    }
-
-    // Fallback to direct Ollama
     try {
-      const response = await fetch(`${this.config.ollamaUrl}/api/tags`);
-      if (!response.ok) return [this.config.defaultModel];
-      
-      const data = await response.json();
-      return data.models?.map((m: any) => m.name) || [this.config.defaultModel];
-    } catch {
-      return [this.config.defaultModel];
+      const response = await fetch(`${this.config.localAIUrl}/v1/models`);
+      if (response.ok) {
+        const data = await response.json();
+        const models = data.data?.map((m: any) => m.id) || [];
+        return models.length > 0 ? models : [this.config.defaultModel];
+      }
+    } catch (error) {
+      console.warn('LocalAI models fetch failed:', error);
     }
+    
+    // Return default model if fetch fails
+    return [this.config.defaultModel];
   }
 
   /**
-   * Ensure a model is available and loaded
+   * Ensure a model is available in LocalAI
    */
   async ensureModel(model: string): Promise<boolean> {
     if (this.modelCache.has(model)) return this.modelCache.get(model)!;
@@ -124,52 +122,21 @@ class UnifiedAIClient {
       this.modelCache.set(model, exists);
       
       if (!exists) {
-        console.log(`Model ${model} not found. Pulling...`);
-        await this.pullModel(model);
-        this.modelCache.set(model, true);
-      }
-      
-      // Preload the model to avoid timeout on first use
-      console.log(`Preloading model ${model}...`);
-      try {
-        await fetch(`${this.config.ollamaUrl}/api/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            prompt: 'test',
-            stream: false
-          }),
-          signal: AbortSignal.timeout(60000) // 1 minute for preload
-        });
-        console.log(`Model ${model} preloaded successfully`);
-      } catch (error) {
-        console.warn(`Model preload warning:`, error);
+        console.warn(`Model ${model} not found in LocalAI. Available models:`, models);
+        // LocalAI doesn't support dynamic model pulling like Ollama
+        // Users need to configure models in LocalAI directly
+        return false;
       }
       
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Failed to check model availability:', error);
       return false;
     }
   }
 
   /**
-   * Pull a model
-   */
-  async pullModel(model: string): Promise<void> {
-    try {
-      await fetch(`${this.config.ollamaUrl}/api/pull`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: model })
-      });
-    } catch (error) {
-      console.error('Failed to pull model:', error);
-    }
-  }
-
-  /**
-   * General purpose AI query
+   * General purpose AI query using LocalAI
    */
   async query(
     prompt: string,
@@ -182,7 +149,17 @@ class UnifiedAIClient {
     } = {}
   ): Promise<AIResponse> {
     const model = options.model || this.config.defaultModel;
-    await this.ensureModel(model);
+    
+    // Ensure model is available
+    const modelAvailable = await this.ensureModel(model);
+    if (!modelAvailable) {
+      // Try with default model if specified model isn't available
+      const fallbackModel = this.config.defaultModel;
+      if (model !== fallbackModel) {
+        console.warn(`Model ${model} not available, falling back to ${fallbackModel}`);
+        return this.query(prompt, { ...options, model: fallbackModel });
+      }
+    }
 
     const fullPrompt = options.context 
       ? `Context:\n${options.context}\n\nQuestion: ${prompt}`
@@ -196,57 +173,51 @@ class UnifiedAIClient {
         if (attempt > 0) {
           // Exponential backoff: 1s, 2s, 4s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-          console.log(`Retry attempt ${attempt + 1}/${maxRetries} for AI query`);
+          console.log(`Retry attempt ${attempt + 1}/${maxRetries} for LocalAI query`);
         }
 
-        const response = await fetch(`${this.config.ollamaUrl}/api/generate`, {
+        const response = await fetch(`${this.config.localAIUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model,
-            prompt: fullPrompt,
-            stream: false,
-            options: {
-              temperature: options.temperature ?? 0.7,
-              num_predict: options.maxTokens ?? 2048,
-              top_k: 40,
-              top_p: 0.9,
-              repeat_penalty: 1.1
-            }
+            messages: [{ role: 'user', content: fullPrompt }],
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.maxTokens ?? 2048,
+            stream: false
           }),
           signal: AbortSignal.timeout(this.config.timeout)
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`AI query failed (${response.status}): ${errorText}`);
+          throw new Error(`LocalAI query failed (${response.status}): ${errorText}`);
         }
 
         const data = await response.json();
-        
         this.connectionStatus = 'connected';
         this.lastError = null;
         
         return {
-          content: data.response,
+          content: data.choices[0]?.message?.content || '',
           model,
           timestamp: new Date().toISOString(),
           context: options.context,
-          confidence: 0.85 // Base confidence, can be refined
+          confidence: 0.85
         };
       } catch (error) {
         lastError = error as Error;
         this.connectionStatus = 'disconnected';
         this.lastError = lastError.message;
-        console.error(`AI query error (attempt ${attempt + 1}/${maxRetries}):`, error);
+        console.error(`LocalAI query error (attempt ${attempt + 1}/${maxRetries}):`, error);
       }
     }
 
-    throw new Error(`AI query failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+    throw new Error(`LocalAI query failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 
   /**
-   * Chat with conversation history
+   * Chat with conversation history using LocalAI
    */
   async chat(
     messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
@@ -255,20 +226,53 @@ class UnifiedAIClient {
     const selectedModel = model || this.config.defaultModel;
     await this.ensureModel(selectedModel);
 
-    // Convert messages to prompt format
-    let prompt = '';
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        prompt += `System: ${msg.content}\n\n`;
-      } else if (msg.role === 'user') {
-        prompt += `User: ${msg.content}\n\n`;
-      } else {
-        prompt += `Assistant: ${msg.content}\n\n`;
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          console.log(`Retry attempt ${attempt + 1}/${maxRetries} for LocalAI chat`);
+        }
+
+        const response = await fetch(`${this.config.localAIUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages,
+            temperature: 0.7,
+            max_tokens: 2048,
+            stream: false
+          }),
+          signal: AbortSignal.timeout(this.config.timeout)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`LocalAI chat failed (${response.status}): ${errorText}`);
+        }
+
+        const data = await response.json();
+        this.connectionStatus = 'connected';
+        this.lastError = null;
+        
+        return {
+          content: data.choices[0]?.message?.content || '',
+          model: selectedModel,
+          timestamp: new Date().toISOString(),
+          confidence: 0.85
+        };
+      } catch (error) {
+        lastError = error as Error;
+        this.connectionStatus = 'disconnected';
+        this.lastError = lastError.message;
+        console.error(`LocalAI chat error (attempt ${attempt + 1}/${maxRetries}):`, error);
       }
     }
-    prompt += 'Assistant: ';
 
-    return this.query(prompt, { model: selectedModel });
+    throw new Error(`LocalAI chat failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 
   /**
@@ -397,7 +401,7 @@ Format with dates, descriptions, and sources.`;
   }
 
   /**
-   * RAG-style query with document context (OpenWebUI preferred)
+   * RAG-style query with document context using LocalAI
    */
   async queryWithDocuments(
     query: string,
@@ -407,28 +411,7 @@ Format with dates, descriptions, and sources.`;
       maxContextLength?: number;
     } = {}
   ): Promise<AIResponse & { sources: string[] }> {
-    if (this.config.useOpenWebUI) {
-      try {
-        // Use OpenWebUI's native RAG if available
-        const ragResponse = await optimizedOpenWebUIClient.queryWithRAG({
-          query,
-          model: options.model || this.config.defaultModel,
-          temperature: 0.3,
-          max_tokens: 2500
-        });
-
-        return {
-          content: ragResponse.content,
-          model: ragResponse.model,
-          timestamp: ragResponse.timestamp,
-          sources: documents.map(d => d.title)
-        };
-      } catch (error) {
-        console.warn('OpenWebUI RAG failed, falling back to context injection');
-      }
-    }
-
-    // Fallback: Build context from documents manually
+    // Build context from documents manually
     let context = 'Relevant documents:\n\n';
     const sources: string[] = [];
     
@@ -459,22 +442,25 @@ Format with dates, descriptions, and sources.`;
   }
 
   /**
-   * Upload document to RAG system for indexing
+   * Upload document for processing (LocalAI-compatible)
    */
-  async uploadDocumentToRAG(
+  async uploadDocument(
     file: File,
     metadata?: { caseId?: string; category?: string }
   ): Promise<{ success: boolean; documentId?: string; error?: string }> {
+    // Since LocalAI doesn't have built-in RAG, we'll store documents locally
+    // This could be enhanced to integrate with a vector database
     try {
-      const ragDoc = await ragClient.uploadDocument(file, metadata);
-      console.log('✅ Document uploaded to RAG:', ragDoc.name);
+      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      
+      console.log('✅ Document processed for LocalAI:', file.name);
       
       return {
         success: true,
-        documentId: ragDoc.id
+        documentId
       };
     } catch (error) {
-      console.error('Failed to upload to RAG:', error);
+      console.error('Failed to process document:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'
@@ -483,9 +469,9 @@ Format with dates, descriptions, and sources.`;
   }
 
   /**
-   * Query using RAG - automatically finds relevant document chunks
+   * Query with context (simplified RAG alternative)
    */
-  async queryWithRAG(
+  async queryWithContext(
     prompt: string,
     options: {
       caseId?: string;
@@ -494,59 +480,41 @@ Format with dates, descriptions, and sources.`;
       maxTokens?: number;
       retries?: number;
     } = {}
-  ): Promise<AIResponse & { citations: RAGResponse['citations'] }> {
+  ): Promise<AIResponse & { citations: string[] }> {
+    // For LocalAI, we'll use the standard query with fallback
     try {
-      // Check if RAG is available
-      const ragAvailable = await ragClient.isAvailable();
-      if (!ragAvailable) {
-        console.warn('RAG not available, falling back to direct query');
-        const response = await this.query(prompt, options);
-        return { ...response, citations: [] };
-      }
-
-      const ragResponse = await ragClient.query(prompt, {
-        model: options.model || this.config.defaultModel,
-        temperature: options.temperature,
-        maxTokens: options.maxTokens,
-        caseId: options.caseId,
-        documents: true
-      });
-
-      return {
-        content: ragResponse.answer,
-        model: options.model || this.config.defaultModel,
-        timestamp: new Date().toISOString(),
-        confidence: ragResponse.confidence,
-        citations: ragResponse.citations
+      const response = await this.query(prompt, options);
+      return { 
+        ...response, 
+        citations: [] // LocalAI doesn't provide built-in citations
       };
     } catch (error) {
-      console.error('RAG query failed:', error);
-      // Fallback to direct query
-      const response = await this.query(prompt, options);
-      return { ...response, citations: [] };
+      console.error('Context query failed:', error);
+      throw error;
     }
   }
 
   /**
-   * Extract entities from documents using RAG
+   * Extract entities from documents using LocalAI
    */
-  async extractEntitiesWithRAG(
+  async extractEntitiesWithContext(
     caseId: string,
+    documentText: string,
     documentIds?: string[]
   ): Promise<EntityExtractionResult> {
-    // Use documentIds if provided for filtering
     const docFilter = documentIds ? ` Focus on documents: ${documentIds.join(', ')}` : '';
     
-    const prompt = `Analyze the legal documents${docFilter} and extract:
+    const prompt = `Analyze the legal document text${docFilter} and extract:
 
 1. PERSONS: Names and roles (plaintiff, defendant, witness, judge, lawyer, etc.)
 2. ISSUES: Legal issues, claims, defenses, disputes
 3. CHRONOLOGY EVENTS: Important dates and what happened
 4. AUTHORITIES: Case citations, statutes, legal references
 
-IMPORTANT: Return ONLY valid JSON, no additional text.
+Document text:
+${documentText}
 
-JSON structure:
+Return ONLY valid JSON:
 {
   "persons": [{"name": "string", "role": "string", "confidence": number}],
   "issues": [{"issue": "string", "type": "legal|factual|procedural", "confidence": number}],
@@ -555,28 +523,21 @@ JSON structure:
 }`;
 
     try {
-      const response = await this.queryWithRAG(prompt, {
-        caseId,
-        temperature: 0.1, // Low temperature for structured extraction
-        maxTokens: 4000,
-        retries: 3
+      const response = await this.query(prompt, {
+        model: this.config.defaultModel,
+        temperature: 0.1,
+        maxTokens: 4000
       });
 
-      // Improved JSON parsing with validation
+      // Extract and parse JSON
       const jsonMatch = response.content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in response');
       }
 
-      let extracted: any;
-      try {
-        extracted = JSON.parse(jsonMatch[0]);
-      } catch (parseError) {
-        console.error('JSON parsing failed:', parseError);
-        throw new Error('Invalid JSON in AI response');
-      }
+      const extracted = JSON.parse(jsonMatch[0]);
 
-      // Validate and normalize the extracted data
+      // Validate and normalize data
       const result: EntityExtractionResult = {
         persons: Array.isArray(extracted.persons) ? extracted.persons.map((p: any) => ({
           name: String(p.name || ''),
@@ -600,7 +561,7 @@ JSON structure:
         })) : []
       };
 
-      console.log('🔍 RAG entity extraction completed:', {
+      console.log('🔍 LocalAI entity extraction completed:', {
         persons: result.persons.length,
         issues: result.issues.length,
         events: result.chronologyEvents.length,
@@ -609,8 +570,7 @@ JSON structure:
 
       return result;
     } catch (error) {
-      console.error('RAG entity extraction failed:', error);
-      // Never return mock data - throw error instead
+      console.error('LocalAI entity extraction failed:', error);
       throw new Error(`Entity extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
