@@ -5,6 +5,7 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { aiAnalyzer } from '../utils/aiAnalysis';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { getSecurityPreferences } from './SecuritySettings';
+import { AIStatusIndicator } from './AIStatusIndicator';
 
 interface AutoGeneratorProps {
   caseId: string;
@@ -27,6 +28,8 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
   const [generationProgress, setGenerationProgress] = useState(0);
   const [lastGenerationStats, setLastGenerationStats] = useState<GenerationStats | null>(null);
   const [currentStage, setCurrentStage] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('llama3.2:3b');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Use prop documents if provided, otherwise load from storage
@@ -81,13 +84,14 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
 
   const runComprehensiveGeneration = async () => {
     if (documents.length === 0) {
-      alert('No documents available for analysis. Please upload documents first.');
+      setError('No documents available for analysis. Please upload documents first.');
       return;
     }
 
     setIsGenerating(true);
     setGenerationProgress(0);
     setCurrentStage('Initializing...');
+    setError(null);
     const startTime = Date.now();
 
     try {
@@ -350,6 +354,18 @@ export const AutoGenerator: React.FC<AutoGeneratorProps> = ({ caseId, documents:
           </>
         )}
       </div>
+
+      {error && (
+        <div className="error-message" style={{
+          padding: '12px',
+          backgroundColor: '#fee2e2',
+          color: '#dc2626',
+          borderRadius: '8px',
+          marginBottom: '20px'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {isGenerating && (
         <div className="generation-progress">

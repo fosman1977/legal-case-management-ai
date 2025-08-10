@@ -32,14 +32,26 @@ interface EntityExtractionResult {
 class UnifiedAIClient {
   private config: UnifiedAIConfig;
   private modelCache: Map<string, boolean> = new Map();
+  private connectionStatus: 'connected' | 'disconnected' | 'connecting' = 'disconnected';
+  private lastError: string | null = null;
 
   constructor(config: Partial<UnifiedAIConfig> = {}) {
     this.config = {
       ollamaUrl: config.ollamaUrl || 'http://localhost:11436',
       openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
-      defaultModel: config.defaultModel || 'qwen2.5:0.5b', // Using smaller model for faster response
+      defaultModel: config.defaultModel || process.env.VITE_AI_MODEL || 'llama3.2:3b', // Better quality for legal analysis
       timeout: config.timeout || 300000, // Increased to 5 minutes for initial model load and large documents
       useOpenWebUI: config.useOpenWebUI !== undefined ? config.useOpenWebUI : false // Disabled by default for now
+    };
+  }
+
+  /**
+   * Get current connection status
+   */
+  getConnectionStatus(): { status: 'connected' | 'disconnected' | 'connecting'; lastError: string | null } {
+    return {
+      status: this.connectionStatus,
+      lastError: this.lastError
     };
   }
 
@@ -54,11 +66,21 @@ class UnifiedAIClient {
 
     // Fallback to direct Ollama
     try {
+      this.connectionStatus = 'connecting';
       const response = await fetch(`${this.config.ollamaUrl}/api/version`, {
         signal: AbortSignal.timeout(5000)
       });
-      return response.ok;
-    } catch {
+      if (response.ok) {
+        this.connectionStatus = 'connected';
+        this.lastError = null;
+        return true;
+      }
+      this.connectionStatus = 'disconnected';
+      this.lastError = 'Ollama service not responding';
+      return false;
+    } catch (error) {
+      this.connectionStatus = 'disconnected';
+      this.lastError = error instanceof Error ? error.message : 'Connection failed';
       return false;
     }
   }
@@ -156,6 +178,7 @@ class UnifiedAIClient {
       context?: string;
       temperature?: number;
       maxTokens?: number;
+      retries?: number;
     } = {}
   ): Promise<AIResponse> {
     const model = options.model || this.config.defaultModel;
@@ -165,38 +188,61 @@ class UnifiedAIClient {
       ? `Context:\n${options.context}\n\nQuestion: ${prompt}`
       : prompt;
 
-    try {
-      const response = await fetch(`${this.config.ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const maxRetries = options.retries ?? 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Exponential backoff: 1s, 2s, 4s
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          console.log(`Retry attempt ${attempt + 1}/${maxRetries} for AI query`);
+        }
+
+        const response = await fetch(`${this.config.ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            prompt: fullPrompt,
+            stream: false,
+            options: {
+              temperature: options.temperature ?? 0.7,
+              num_predict: options.maxTokens ?? 2048,
+              top_k: 40,
+              top_p: 0.9,
+              repeat_penalty: 1.1
+            }
+          }),
+          signal: AbortSignal.timeout(this.config.timeout)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`AI query failed (${response.status}): ${errorText}`);
+        }
+
+        const data = await response.json();
+        
+        this.connectionStatus = 'connected';
+        this.lastError = null;
+        
+        return {
+          content: data.response,
           model,
-          prompt: fullPrompt,
-          stream: false,
-          options: {
-            temperature: options.temperature || 0.7,
-            num_predict: options.maxTokens || 2048
-          }
-        }),
-        signal: AbortSignal.timeout(this.config.timeout)
-      });
-
-      if (!response.ok) {
-        throw new Error('AI query failed');
+          timestamp: new Date().toISOString(),
+          context: options.context,
+          confidence: 0.85 // Base confidence, can be refined
+        };
+      } catch (error) {
+        lastError = error as Error;
+        this.connectionStatus = 'disconnected';
+        this.lastError = lastError.message;
+        console.error(`AI query error (attempt ${attempt + 1}/${maxRetries}):`, error);
       }
-
-      const data = await response.json();
-      
-      return {
-        content: data.response,
-        model,
-        timestamp: new Date().toISOString(),
-        context: options.context
-      };
-    } catch (error) {
-      console.error('AI query error:', error);
-      throw new Error('Failed to get AI response');
     }
+
+    throw new Error(`AI query failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 
   /**
@@ -446,6 +492,7 @@ Format with dates, descriptions, and sources.`;
       model?: string;
       temperature?: number;
       maxTokens?: number;
+      retries?: number;
     } = {}
   ): Promise<AIResponse & { citations: RAGResponse['citations'] }> {
     try {
@@ -487,18 +534,23 @@ Format with dates, descriptions, and sources.`;
     caseId: string,
     documentIds?: string[]
   ): Promise<EntityExtractionResult> {
-    const prompt = `Analyze the legal documents and extract:
+    // Use documentIds if provided for filtering
+    const docFilter = documentIds ? ` Focus on documents: ${documentIds.join(', ')}` : '';
+    
+    const prompt = `Analyze the legal documents${docFilter} and extract:
 
 1. PERSONS: Names and roles (plaintiff, defendant, witness, judge, lawyer, etc.)
 2. ISSUES: Legal issues, claims, defenses, disputes
 3. CHRONOLOGY EVENTS: Important dates and what happened
 4. AUTHORITIES: Case citations, statutes, legal references
 
-Return ONLY a JSON object with this exact structure:
+IMPORTANT: Return ONLY valid JSON, no additional text.
+
+JSON structure:
 {
   "persons": [{"name": "string", "role": "string", "confidence": number}],
-  "issues": [{"issue": "string", "type": "string", "confidence": number}],
-  "chronologyEvents": [{"date": "string", "event": "string", "confidence": number}],
+  "issues": [{"issue": "string", "type": "legal|factual|procedural", "confidence": number}],
+  "chronologyEvents": [{"date": "YYYY-MM-DD or descriptive", "event": "string", "confidence": number}],
   "authorities": [{"citation": "string", "relevance": "string", "confidence": number}]
 }`;
 
@@ -506,32 +558,60 @@ Return ONLY a JSON object with this exact structure:
       const response = await this.queryWithRAG(prompt, {
         caseId,
         temperature: 0.1, // Low temperature for structured extraction
-        maxTokens: 4000
+        maxTokens: 4000,
+        retries: 3
       });
 
-      // Parse the JSON response
+      // Improved JSON parsing with validation
       const jsonMatch = response.content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in response');
       }
 
-      const extracted = JSON.parse(jsonMatch[0]);
+      let extracted: any;
+      try {
+        extracted = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        console.error('JSON parsing failed:', parseError);
+        throw new Error('Invalid JSON in AI response');
+      }
+
+      // Validate and normalize the extracted data
+      const result: EntityExtractionResult = {
+        persons: Array.isArray(extracted.persons) ? extracted.persons.map((p: any) => ({
+          name: String(p.name || ''),
+          role: String(p.role || 'unknown'),
+          confidence: Number(p.confidence) || 0.5
+        })) : [],
+        issues: Array.isArray(extracted.issues) ? extracted.issues.map((i: any) => ({
+          issue: String(i.issue || ''),
+          type: ['legal', 'factual', 'procedural'].includes(i.type) ? i.type : 'factual',
+          confidence: Number(i.confidence) || 0.5
+        })) : [],
+        chronologyEvents: Array.isArray(extracted.chronologyEvents) ? extracted.chronologyEvents.map((e: any) => ({
+          date: String(e.date || ''),
+          event: String(e.event || ''),
+          confidence: Number(e.confidence) || 0.5
+        })) : [],
+        authorities: Array.isArray(extracted.authorities) ? extracted.authorities.map((a: any) => ({
+          citation: String(a.citation || ''),
+          relevance: String(a.relevance || ''),
+          confidence: Number(a.confidence) || 0.5
+        })) : []
+      };
+
       console.log('🔍 RAG entity extraction completed:', {
-        persons: extracted.persons?.length || 0,
-        issues: extracted.issues?.length || 0,
-        events: extracted.chronologyEvents?.length || 0,
-        authorities: extracted.authorities?.length || 0
+        persons: result.persons.length,
+        issues: result.issues.length,
+        events: result.chronologyEvents.length,
+        authorities: result.authorities.length
       });
 
-      return extracted;
+      return result;
     } catch (error) {
       console.error('RAG entity extraction failed:', error);
-      return {
-        persons: [],
-        issues: [],
-        chronologyEvents: [],
-        authorities: []
-      };
+      // Never return mock data - throw error instead
+      throw new Error(`Entity extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }
