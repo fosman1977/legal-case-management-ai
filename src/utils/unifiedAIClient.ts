@@ -39,7 +39,7 @@ class UnifiedAIClient {
     this.config = {
       ollamaUrl: config.ollamaUrl || 'http://localhost:11436',
       openWebUIUrl: config.openWebUIUrl || 'http://localhost:3002',
-      defaultModel: config.defaultModel || process.env.VITE_AI_MODEL || 'llama3.2:3b', // Better quality for legal analysis
+      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'llama3.2:3b', // Better quality for legal analysis
       timeout: config.timeout || 300000, // Increased to 5 minutes for initial model load and large documents
       useOpenWebUI: config.useOpenWebUI !== undefined ? config.useOpenWebUI : false // Disabled by default for now
     };

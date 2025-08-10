@@ -29,7 +29,7 @@ interface OllamaModel {
 
 export class OllamaClient {
   // Use direct connection with mode: 'no-cors' for development
-  private baseUrl: string = 'http://127.0.0.1:11434';
+  private baseUrl: string = 'http://127.0.0.1:11436';
   
   private requestCache = new Map<string, { response: string; timestamp: number }>();
   private cacheTimeout = 10 * 60 * 1000; // 10 minutes cache

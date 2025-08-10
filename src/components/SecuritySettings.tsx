@@ -27,7 +27,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = ({ caseId }) =>
 
   const fetchAvailableModels = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:11434/api/tags');
+      const response = await fetch('http://127.0.0.1:11436/api/tags');
       if (response.ok) {
         const data = await response.json();
         const models = data.models?.map((model: any) => model.name) || [];

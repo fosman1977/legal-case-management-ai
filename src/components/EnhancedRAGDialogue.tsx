@@ -50,7 +50,7 @@ export const EnhancedRAGDialogue: React.FC<EnhancedRAGDialogueProps> = ({ caseId
       
       // Try to get models from Ollama directly
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
+        const response = await fetch('http://localhost:11436/api/tags');
         if (response.ok) {
           const data = await response.json();
           const modelNames = data.models?.map((m: any) => m.name) || ['llama3.2:3b'];

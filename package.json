@@ -48,7 +48,8 @@
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "react-markdown": "^8.0.5",
-    "react-router-dom": "^6.8.1"
+    "react-router-dom": "^6.8.1",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",

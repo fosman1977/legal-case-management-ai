@@ -1,8 +1,14 @@
-// Import PDF.js
+// Import PDF.js and Tesseract for OCR
 import * as pdfjsLib from 'pdfjs-dist';
+import Tesseract from 'tesseract.js';
 
-// Configure PDF.js worker - use CDN for simplicity
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Configure PDF.js worker - use CDN for simplicity with fallback
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+} catch (error) {
+  console.warn('Failed to set PDF.js worker from CDN, using local fallback');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+}
 
 // Enhanced text extraction interfaces
 interface TextItem {
@@ -61,10 +67,13 @@ export class PDFTextExtractor {
     const loadingTask = pdfjsLib.getDocument({
       data: arrayBuffer,
       isEvalSupported: false,
-      disableFontFace: true,
-      disableRange: true,
-      disableStream: true,
-      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`
+      disableFontFace: false, // Enable fonts for better text extraction
+      disableRange: false,    // Enable range requests for better performance
+      disableStream: false,   // Enable streaming for large PDFs
+      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`,
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+      cMapPacked: true,
+      verbosity: 0 // Reduce console noise
     });
     
     const pdf = await loadingTask.promise;
@@ -117,24 +126,41 @@ export class PDFTextExtractor {
         // Convert lines to text with proper spacing
         let pageText = '';
         for (const line of lines) {
-          const lineText = line
-            .sort((a, b) => a.transform[4] - b.transform[4]) // Sort by X position
-            .map(item => {
-              // Add spacing between words if there's a significant gap
-              return item.str;
-            })
-            .join(' ')
-            .replace(/\s+/g, ' ') // Normalize whitespace
-            .trim();
+          // Sort items in line by X position
+          const sortedLine = line.sort((a, b) => a.transform[4] - b.transform[4]);
+          
+          let lineText = '';
+          let lastX = -1;
+          
+          for (let i = 0; i < sortedLine.length; i++) {
+            const item = sortedLine[i];
+            const currentX = item.transform[4];
+            
+            // Add appropriate spacing based on position gap
+            if (lastX !== -1) {
+              const gap = currentX - lastX;
+              if (gap > 20) {
+                lineText += '   '; // Large gap = multiple spaces
+              } else if (gap > 5) {
+                lineText += ' '; // Small gap = single space
+              }
+            }
+            
+            lineText += item.str;
+            lastX = currentX + item.width;
+          }
+          
+          lineText = lineText.replace(/\s+/g, ' ').trim();
           
           if (lineText) {
             pageText += lineText + '\n';
           }
         }
         
-        // Add page separator
+        // Add page content with better formatting
         if (pageText.trim()) {
-          fullText += `\n\n=== Page ${pageNum} ===\n${pageText}`;
+          const cleanPageText = this.cleanPageText(pageText);
+          fullText += pageNum === 1 ? cleanPageText : `\n\n--- Page ${pageNum} ---\n${cleanPageText}`;
         }
         
         console.log(`📄 Enhanced: Extracted ${pageText.length} characters from page ${pageNum}`);
@@ -198,20 +224,39 @@ export class PDFTextExtractor {
   }
 
   /**
+   * Clean and normalize page text
+   */
+  private static cleanPageText(text: string): string {
+    return text
+      // Fix common PDF text extraction issues
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
+      .replace(/(\w)([([])/g, '$1 $2') // Space before brackets
+      .replace(/([)\]])(\w)/g, '$1 $2') // Space after brackets
+      // Clean up hyphenation and line breaks
+      .replace(/-\n/g, '') // Remove hyphen line breaks
+      .replace(/\n([a-z])/g, ' $1') // Join broken words
+      // Normalize spacing
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /**
    * Clean and normalize extracted text
    */
   private static cleanExtractedText(text: string): string {
     return text
+      // Remove page separators from final text
+      .replace(/--- Page \d+ ---\n/g, '\n')
       // Remove excessive whitespace
       .replace(/[ \t]{2,}/g, ' ')
       // Normalize line breaks
       .replace(/\n{3,}/g, '\n\n')
       // Remove page break artifacts
       .replace(/[\u000C\u2028\u2029]/g, '\n')
-      // Clean up common PDF artifacts
-      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
-      .replace(/(\w)([([])/g, '$1 $2') // Space before brackets
-      .replace(/([)\]])(\w)/g, '$1 $2') // Space after brackets
+      // Fix common PDF extraction artifacts
+      .replace(/([.!?])\s*([A-Z])/g, '$1 $2') // Ensure space after sentence endings
+      .replace(/(\w)([.!?])([A-Z])/g, '$1$2 $3') // Space after punctuation
       // Remove redundant spaces
       .replace(/\s+/g, ' ')
       .trim();
@@ -294,28 +339,98 @@ export class PDFTextExtractor {
     const isScanned = await this.isLikelyScannedPDF(file);
     
     if (isScanned) {
-      console.log('📸 Detected scanned PDF - OCR extraction would be needed');
+      console.log('📸 Detected scanned PDF - attempting OCR extraction');
       
-      // For now, return a helpful message about scanned PDFs
-      // In a real implementation, you would integrate with Tesseract.js or similar
-      return `[SCANNED PDF DETECTED]
-
-This appears to be a scanned PDF (image-based) rather than a text-based PDF.
-
-File: ${file.name}
-Size: ${Math.round(file.size / 1024)}KB
-
-To extract text from scanned PDFs, OCR (Optical Character Recognition) would be required.
-Consider:
-1. Converting the document to text format before upload
-2. Using an OCR service to process the document
-3. Re-scanning the original document with text recognition enabled
-
-For now, you can manually enter the key information from this document.`;
+      try {
+        return await this.extractWithOCR(file);
+      } catch (ocrError) {
+        console.error('OCR extraction failed:', ocrError);
+        return `[Scanned PDF: ${file.name}] - This appears to be a scanned PDF. Text extraction failed. Original error: ${ocrError instanceof Error ? ocrError.message : 'Unknown OCR error'}`;
+      }
     }
     
     // If not scanned but still failed, return standard error message
     return `[PDF File: ${file.name}, Size: ${Math.round(file.size / 1024)}KB - Text extraction failed. The PDF may be corrupted or use unsupported features.]`;
+  }
+
+  /**
+   * Extract text using OCR for scanned PDFs
+   */
+  private static async extractWithOCR(file: File): Promise<string> {
+    console.log('🔍 Starting OCR extraction for scanned PDF...');
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+      
+      let fullText = '';
+      
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        try {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+          
+          // Create canvas to render PDF page
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d')!;
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          
+          // Render PDF page to canvas
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+          
+          await page.render(renderContext).promise;
+          
+          // Convert canvas to image data for OCR
+          const imageData = canvas.toDataURL('image/png');
+          
+          console.log(`📸 Running OCR on page ${pageNum}/${numPages}...`);
+          
+          // Run Tesseract OCR
+          const { data: { text } } = await Tesseract.recognize(
+            imageData,
+            'eng',
+            {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+                }
+              }
+            }
+          );
+          
+          if (text && text.trim()) {
+            const cleanedText = this.cleanPageText(text);
+            fullText += pageNum === 1 ? cleanedText : `\n\n--- Page ${pageNum} ---\n${cleanedText}`;
+            console.log(`✅ OCR extracted ${text.length} characters from page ${pageNum}`);
+          }
+          
+          page.cleanup();
+          
+        } catch (pageError) {
+          console.warn(`⚠️ OCR failed for page ${pageNum}:`, pageError);
+          fullText += `\n\n--- Page ${pageNum} ---\n[OCR extraction failed for this page]\n`;
+        }
+      }
+      
+      pdf.destroy();
+      
+      if (fullText.trim()) {
+        console.log(`✅ OCR extraction completed: ${fullText.length} characters total`);
+        return this.cleanExtractedText(fullText);
+      } else {
+        throw new Error('OCR extracted no readable text');
+      }
+      
+    } catch (error) {
+      console.error('OCR extraction failed:', error);
+      throw new Error(`OCR extraction failed: ${error instanceof Error ? error.message : 'Unknown OCR error'}`);
+    }
   }
 
   /**
