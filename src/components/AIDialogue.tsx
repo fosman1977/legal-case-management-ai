@@ -3,7 +3,7 @@ import { CaseDocument, ChronologyEvent, Person, Issue, KeyPoint, LegalAuthority 
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
-import { PDFTextExtractor } from '../utils/pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 import { fileSystemManager } from '../utils/fileSystemManager';
 
 interface AIDialogueProps {

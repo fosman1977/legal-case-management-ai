@@ -1,0 +1,12 @@
+# Tesseract OSD (Orientation & Script Detection)
+
+This is a placeholder file. To get the actual Tesseract model:
+
+1. Visit: https://github.com/tesseract-ocr/tessdata_best/raw/main/osd.traineddata
+2. Download the file
+3. Replace this placeholder with the actual .traineddata file
+
+Description: Auto-detects text orientation and script
+Size: ~10MB
+
+For air-gapped deployment, download all models while connected to internet.

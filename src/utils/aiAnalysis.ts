@@ -1,6 +1,6 @@
 import { CaseDocument, AIAnalysisResult, ChronologyEvent, Person, Issue, KeyPoint, LegalAuthority } from '../types';
 import { indexedDBManager } from './indexedDB';
-import { PDFTextExtractor } from './pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 import { unifiedAIClient } from './unifiedAIClient';
 
 class AIDocumentAnalyzer {

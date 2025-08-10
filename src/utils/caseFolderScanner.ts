@@ -1,6 +1,6 @@
 // Case folder scanner for existing OneDrive files
 import { CaseDocument } from '../types';
-import { PDFTextExtractor } from './pdfExtractor';
+import { UniversalDocumentExtractor } from '../services/universalDocumentExtractor';
 
 export interface ScannedFile {
   name: string;
@@ -102,11 +102,54 @@ export class CaseFolderScanner {
             ...suggestion
           };
 
-          // Extract text preview for better AI analysis
+          // Universal document extraction with legal analysis
           try {
-            if (PDFTextExtractor.isPDF(file)) {
-              const text = await PDFTextExtractor.extractText(file);
-              scannedFile.extractedText = text.substring(0, 500); // Preview only
+            if (UniversalDocumentExtractor.isSupported(file)) {
+              console.log(`🔍 Universal extraction for: ${currentPath}`);
+              
+              // Use universal extraction with all features
+              const result = await UniversalDocumentExtractor.extract(file, {
+                extractTables: true,
+                extractEntities: true,
+                extractImages: false, // Skip images for performance in bulk scan
+                maxPages: 50 // Process more pages for comprehensive analysis
+              });
+              
+              // Store preview text
+              scannedFile.extractedText = result.text.substring(0, 500);
+              
+              // Log rich extraction data
+              console.log(`📊 Document Analysis for ${currentPath}:`, {
+                format: result.format.toUpperCase(),
+                method: result.method,
+                processingTime: result.processingTime + 'ms',
+                pages: result.metadata.pages,
+                wordCount: result.metadata.wordCount,
+                entities: result.entities?.length || 0,
+                tables: result.tables?.length || 0,
+                documentType: result.legalMetadata?.documentType,
+                warnings: result.warnings?.length || 0
+              });
+              
+              // Enhanced categorization based on legal metadata
+              if (result.legalMetadata?.documentType && result.entities) {
+                const enhancedSuggestion = this.categorizeFromLegalMetadata(result.legalMetadata, result.entities);
+                if (enhancedSuggestion.confidence === 'high') {
+                  scannedFile.suggestedCategory = enhancedSuggestion.suggestedCategory;
+                  scannedFile.suggestedType = enhancedSuggestion.suggestedType;
+                  scannedFile.confidence = enhancedSuggestion.confidence;
+                }
+              }
+              
+              // Store additional metadata for later use
+              (scannedFile as any).format = result.format;
+              (scannedFile as any).legalMetadata = result.legalMetadata;
+              (scannedFile as any).entities = result.entities;
+              (scannedFile as any).tables = result.tables;
+              (scannedFile as any).quality = result.quality;
+              (scannedFile as any).documentMetadata = result.metadata;
+              (scannedFile as any).warnings = result.warnings;
+              
             } else if (this.isTextFile(file)) {
               const text = await this.readTextFile(file);
               scannedFile.extractedText = text.substring(0, 500);
@@ -340,13 +383,26 @@ export class CaseFolderScanner {
       let fullContent = '';
       try {
         const fileObj = await file.handle.getFile();
-        if (PDFTextExtractor.isPDF(fileObj)) {
-          fullContent = await PDFTextExtractor.extractText(fileObj);
+        
+        // Use Universal Document Extractor for supported formats
+        if (UniversalDocumentExtractor.isSupported(fileObj)) {
+          console.log(`🔍 Reading full content using Universal Extractor for: ${file.name}`);
+          const result = await UniversalDocumentExtractor.extract(fileObj, {
+            extractTables: false, // Skip tables for full content reading
+            extractEntities: false, // Skip entities for performance
+            extractImages: false, // Skip images
+            maxPages: 100 // Allow more pages for full content
+          });
+          fullContent = result.text;
+          console.log(`✅ Extracted ${fullContent.length} characters from ${file.name}`);
+          
         } else if (this.isTextFile(fileObj)) {
           fullContent = await this.readTextFile(fileObj);
         }
+        
       } catch (error) {
         console.warn(`Failed to read full content of ${file.name}:`, error);
+        // Fallback to previously extracted text preview
         fullContent = file.extractedText || '';
       }
 
@@ -379,6 +435,105 @@ export class CaseFolderScanner {
     }
 
     return documents;
+  }
+
+  /**
+   * Enhanced categorization based on legal metadata and entities
+   */
+  private categorizeFromLegalMetadata(
+    legalMetadata: any, 
+    entities: any[]
+  ): {
+    suggestedCategory: string;
+    suggestedType: string;
+    confidence: 'high' | 'medium' | 'low';
+  } {
+    const documentType = legalMetadata?.documentType || 'legal_document';
+    
+    // High confidence categorization based on document type
+    switch (documentType) {
+      case 'witness_statement':
+        return { 
+          suggestedCategory: 'claimant', 
+          suggestedType: 'witness_statement', 
+          confidence: 'high' 
+        };
+        
+      case 'skeleton_argument':
+        return { 
+          suggestedCategory: 'pleadings', 
+          suggestedType: 'skeleton', 
+          confidence: 'high' 
+        };
+        
+      case 'particulars_of_claim':
+        return { 
+          suggestedCategory: 'pleadings', 
+          suggestedType: 'particulars', 
+          confidence: 'high' 
+        };
+        
+      case 'defence':
+        return { 
+          suggestedCategory: 'pleadings', 
+          suggestedType: 'defence', 
+          confidence: 'high' 
+        };
+        
+      case 'judgment':
+        return { 
+          suggestedCategory: 'orders_and_directions', 
+          suggestedType: 'judgment', 
+          confidence: 'high' 
+        };
+        
+      case 'order':
+        return { 
+          suggestedCategory: 'orders_and_directions', 
+          suggestedType: 'court_order', 
+          confidence: 'high' 
+        };
+        
+      case 'expert_report':
+        return { 
+          suggestedCategory: 'evidence', 
+          suggestedType: 'expert_report', 
+          confidence: 'high' 
+        };
+        
+      case 'bundle':
+        return { 
+          suggestedCategory: 'bundles', 
+          suggestedType: 'trial_bundle', 
+          confidence: 'high' 
+        };
+        
+      default:
+        // Fallback to entity analysis
+        const hasJudge = entities.some(e => e.type === 'judge');
+        const hasCourt = entities.some(e => e.type === 'court');
+        const hasParties = entities.filter(e => e.type === 'person').length >= 2;
+        
+        if (hasJudge && hasCourt) {
+          return { 
+            suggestedCategory: 'orders_and_directions', 
+            suggestedType: 'court_order', 
+            confidence: 'medium' 
+          };
+        } else if (hasParties) {
+          return { 
+            suggestedCategory: 'pleadings', 
+            suggestedType: 'statement_of_case', 
+            confidence: 'medium' 
+          };
+        } else {
+          return { 
+            suggestedCategory: 'evidence', 
+            suggestedType: 'document', 
+            confidence: 'low' 
+          };
+        }
+    }
   }
 
   /**

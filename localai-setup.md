@@ -1,6 +1,6 @@
 # LocalAI Setup Guide
 
-This legal case management app now uses **LocalAI** as its primary AI backend, replacing Ollama.
+This legal case management app uses **LocalAI** as its exclusively air-gapped AI backend, providing complete data isolation for sensitive legal work.
 
 ## Quick Start
 
@@ -40,11 +40,11 @@ EOF
    npm run dev
    ```
 
-2. Open http://localhost:5173
-3. Go to Security Settings to:
+2. Open http://localhost:5174
+3. Go to AI Settings to:
    - Check LocalAI connection status
    - Select available models
-   - Configure anonymization settings
+   - Configure AI processing options
 
 ## Features
 
@@ -92,26 +92,40 @@ EOF
 
 ## Model Recommendations for Legal Work
 
-For optimal legal document analysis, consider:
+Based on our research, the best models for legal document analysis are:
 
-- **Small Models** (faster, less accurate): `gpt-3.5-turbo`, `llama-7b`
-- **Large Models** (slower, more accurate): `gpt-4`, `llama-13b`
-- **Legal-Specific**: Models fine-tuned for legal tasks if available
+### Consumer Hardware (8-16GB RAM)
+- **Llama 3.1-8B-Instruct** (4.7GB) - **RECOMMENDED** - Best balance of performance and resources
+- **Qwen 2.5-14B-Instruct** (8.2GB) - Enhanced reasoning capabilities
 
-## Migration from Ollama
+### Professional Hardware (32GB+ RAM)
+- **Llama 3.3-70B-Instruct** (~40GB) - Professional-grade legal analysis
+- **Qwen 2.5-72B-Instruct** (~41GB) - Superior performance in structured analysis
 
-If you were previously using Ollama:
+### Enterprise Hardware (64GB+ RAM)
+- **Command R+ 104B** (~62GB) - Built for enterprise use with excellent RAG capabilities
 
-1. Stop Ollama containers:
-   ```bash
-   docker stop minimal-ollama minimal-open-webui
-   ```
+## Air-Gap Compliance
 
-2. Start LocalAI:
-   ```bash
-   docker-compose -f docker-compose.minimal.yml up -d
-   ```
+This system is designed for complete air-gap operation:
 
-3. Update any custom configurations to use port 8080 instead of 11436
+- **No External API Calls**: All processing happens locally
+- **No Cloud Dependencies**: Everything runs on your machine
+- **Complete Data Isolation**: Perfect for confidential legal work
+- **Offline Capable**: Works without internet connection
 
-The application will automatically detect and use LocalAI once it's running.
+### Verifying Air-Gap Status
+```bash
+# Check that only local connections are made
+netstat -an | grep :8080
+
+# Verify no external network calls (should show only local traffic)
+sudo lsof -i -P | grep localai
+```
+
+## Upcoming Features
+
+- **Setup Wizard**: One-click model downloads and configuration
+- **Model Manager**: Easy switching between different models
+- **PDF-Extract-Kit Integration**: Enhanced PDF processing capabilities
+- **Performance Optimization**: Automatic hardware detection and model recommendations

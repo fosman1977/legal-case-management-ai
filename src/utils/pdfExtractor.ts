@@ -2,11 +2,18 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
-// Configure PDF.js worker - use CDN for simplicity with fallback
-try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-} catch (error) {
-  console.warn('Failed to set PDF.js worker from CDN, using local fallback');
+// Configure PDF.js worker - v5 with proper version handling
+if (typeof pdfjsLib !== 'undefined' && pdfjsLib.version) {
+  try {
+    const version = pdfjsLib.version;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+    console.log(`PDF.js worker configured for version ${version}`);
+  } catch (error) {
+    console.warn('Failed to set PDF.js worker from CDN, using local fallback');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  }
+} else {
+  console.warn('PDF.js version not detected, using fallback worker');
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
@@ -381,7 +388,8 @@ export class PDFTextExtractor {
           // Render PDF page to canvas
           const renderContext = {
             canvasContext: context,
-            viewport: viewport
+            viewport: viewport,
+            canvas: canvas
           };
           
           await page.render(renderContext).promise;

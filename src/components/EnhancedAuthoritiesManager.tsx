@@ -3,7 +3,7 @@ import { LegalAuthority } from '../types';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
-import { PDFTextExtractor } from '../utils/pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
 import { useAIUpdates } from '../hooks/useAISync';
 

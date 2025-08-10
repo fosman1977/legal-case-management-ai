@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CaseDocument, LegalAuthority } from '../types';
 import { storage } from '../utils/storage';
-import { PDFTextExtractor } from '../utils/pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
 import { useAISync } from '../hooks/useAISync';
 

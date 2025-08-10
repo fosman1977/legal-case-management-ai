@@ -19,7 +19,7 @@ A professional desktop application for legal case preparation with integrated AI
 - 🎙️ **Audio/Video Notes** - Record client meetings with AI transcription
 - 📋 **Court Orders Management** - Track orders with automatic deadline extraction
 - 📅 **Global Procedural Calendar** - All case deadlines in one unified view
-- 🤖 **AI Integration** - OpenWebUI chat for document analysis and legal research
+- 🤖 **AI Integration** - LocalAI for fully air-gapped document analysis and legal research
 
 ### Professional Tools
 - 📄 **Auto-Generation** - Create skeletons, pleadings, and legal documents
@@ -49,8 +49,8 @@ cd legal-case-management-ai
 # Install dependencies
 npm install
 
-# Start AI services (optional)
-npm run ai
+# Start LocalAI services (required for AI features)
+docker compose -f docker-compose.minimal.yml up -d
 
 # Run development version
 npm run dev
@@ -65,9 +65,9 @@ npm run build-electron
    npm run electron-dev
    ```
 
-2. **Access AI features** (optional)
-   - Start AI services: `npm run ai`
-   - Open AI Chat: http://localhost:3002
+2. **Access AI features**
+   - Start LocalAI services: `docker compose -f docker-compose.minimal.yml up -d`
+   - AI backend available at: http://localhost:8080
 
 3. **Create your first case**
    - Click "New Case" in the dashboard
@@ -129,10 +129,10 @@ npm run build              # Build React app
 npm run build-electron     # Build desktop app
 npm run dist              # Create installer
 
-# AI Services
-npm run ai                # Start AI services
-npm run ai-stop           # Stop AI services
-npm run ai-logs           # View AI logs
+# LocalAI Services
+docker compose -f docker-compose.minimal.yml up -d    # Start LocalAI
+docker compose -f docker-compose.minimal.yml down     # Stop LocalAI
+docker logs localai                                    # View LocalAI logs
 
 # Maintenance
 npm run test              # Run tests
@@ -145,20 +145,20 @@ npm run lint              # Check code quality
 - **Styling**: CSS3 with CSS Variables
 - **Icons**: Lucide React
 - **Routing**: React Router 6
-- **AI Services**: OpenWebUI + Ollama
+- **AI Services**: LocalAI (air-gapped)
 - **Database**: LocalStorage + IndexedDB
 
 ## 🤖 AI Integration
 
-### OpenWebUI Setup
-The system integrates with OpenWebUI for advanced AI capabilities:
+### LocalAI Setup
+The system uses LocalAI for completely air-gapped AI capabilities:
 
 ```bash
-# Start AI services
-npm run ai
+# Start LocalAI services
+docker compose -f docker-compose.minimal.yml up -d
 
-# Access AI interface
-open http://localhost:3002
+# Check service status
+curl http://localhost:8080/v1/models
 ```
 
 ### AI Features
@@ -168,10 +168,10 @@ open http://localhost:3002
 - **Deadline Extraction** - Automatically find due dates in court orders
 - **Legal Research** - AI-assisted case law and statute lookup
 
-### Supported Models
-- **Llama 3.2** - General purpose legal analysis
-- **Nomic Embed** - Document similarity and search
-- **Code Llama** - Legal document generation
+### Recommended Models
+- **Llama 3.1-8B-Instruct** - Optimal for consumer hardware (recommended)
+- **Qwen 2.5-14B-Instruct** - Enhanced reasoning for more powerful systems
+- **Llama 3.3-70B-Instruct** - Professional-grade analysis (high-end hardware)
 - **Custom Models** - Add your own fine-tuned legal models
 
 ## 🔒 Security & Privacy
@@ -179,14 +179,14 @@ open http://localhost:3002
 ### Data Storage
 - **Local First** - All data stored on your device
 - **No Cloud Sync** - Documents never leave your machine
-- **Encrypted Storage** - Sensitive data encrypted at rest
-- **Secure Communication** - TLS for all AI API calls
+- **Air-Gapped AI** - All AI processing happens locally
+- **Complete Isolation** - No external API calls or data transmission
 
 ### Privacy Features
-- **Offline Mode** - Core features work without internet
-- **Data Anonymization** - Remove sensitive info for AI analysis
+- **Offline Mode** - All features work without internet connection
+- **Air-Gapped Operation** - Complete network isolation available
+- **Local AI Processing** - No data ever sent to external services
 - **Audit Trail** - Track all document access and modifications
-- **User Controls** - Granular privacy settings
 
 ## 📦 Deployment
 
@@ -253,18 +253,19 @@ Common issues and solutions:
 lsof -ti:5173 | xargs kill -9
 ```
 
-**Docker services won't start**
+**LocalAI services won't start**
 ```bash
 # Reset Docker
 docker system prune -a
-npm run ai
+docker compose -f docker-compose.minimal.yml up -d
 ```
 
 **AI features not working**
 ```bash
-# Check AI services status
-docker ps
-npm run ai-logs
+# Check LocalAI service status
+docker ps | grep localai
+docker logs localai
+curl http://localhost:8080/v1/models
 ```
 
 ## 🎯 Roadmap

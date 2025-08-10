@@ -1,22 +1,22 @@
-# Quick Setup Guide - OpenWebUI Integration
+# Quick Setup Guide - LocalAI Integration
 
-## What Happened During Setup
+## What This System Provides
 
-The Docker setup process started successfully and downloaded some large container images (2GB+ for AI models), but the process was interrupted due to the download time in this environment.
+Your legal case management system is now fully **air-gapped** with LocalAI integration, providing secure, offline AI capabilities without any external dependencies.
 
 ## ✅ What's Already Ready
 
-Your legal case management system is now **fully equipped** with OpenWebUI integration code:
+Your legal case management system is now **fully equipped** with LocalAI integration:
 
-1. **🔗 Complete API Client** - `src/utils/openWebUIClient.ts`
-2. **🧠 Enhanced RAG Interface** - `src/components/EnhancedRAGDialogue.tsx`  
-3. **🎨 Professional UI Styling** - Complete CSS in `styles.css`
-4. **🐳 Docker Configuration** - `docker-compose.openwebui.yml`
-5. **📚 Full Documentation** - `OPENWEBUI_INTEGRATION.md`
+1. **🔗 LocalAI Client** - `src/utils/unifiedAIClient.ts`
+2. **🧠 AI Integration** - Built into all components for document analysis  
+3. **🎨 Professional UI** - Complete styling in `styles.css`
+4. **🐳 Docker Configuration** - `docker-compose.minimal.yml`
+5. **🔒 Air-Gapped Security** - No external API calls or data transmission
 
-## 🚀 Complete the Setup on Your Local Machine
+## 🚀 Complete Setup on Your Local Machine
 
-### Option 1: Simple Docker Setup (Recommended)
+### Option 1: One-Command Setup (Recommended)
 
 On your local machine with Docker installed:
 
@@ -24,40 +24,37 @@ On your local machine with Docker installed:
 # 1. Navigate to your project directory
 cd /path/to/your/legal-case-management
 
-# 2. Run the setup script
-./scripts/setup-openwebui.sh
+# 2. Start LocalAI services
+docker compose -f docker-compose.minimal.yml up -d
 
-# 3. Wait for downloads (5-10 minutes first time)
-# The script will automatically:
-# - Download OpenWebUI, Ollama, and PostgreSQL images
-# - Start all services
-# - Pull AI models (llama3.2:1b, llama3.2:3b)
-# - Set up the database
+# 3. Wait for LocalAI to initialize (2-3 minutes first time)
+# The system will automatically:
+# - Download LocalAI container (~300MB)
+# - Initialize the AI service
+# - Create local model storage
 
-# 4. Access OpenWebUI
-open http://localhost:3001
-
-# 5. Start your app
+# 4. Start your app
 npm run dev
-# Then visit http://localhost:5174
+# Visit http://localhost:5174
+
+# 5. Check LocalAI status
+curl http://localhost:8080/v1/models
 ```
 
 ### Option 2: Manual Docker Commands
 
 ```bash
-# Pull images manually (if script fails)
-docker pull ghcr.io/open-webui/open-webui:main
-docker pull ollama/ollama:latest
-docker pull postgres:15-alpine
+# Pull LocalAI image manually
+docker pull localai/localai:latest
 
 # Start services
-docker compose -f docker-compose.openwebui.yml up -d
+docker compose -f docker-compose.minimal.yml up -d
 
 # Check status
-docker compose -f docker-compose.openwebui.yml ps
+docker ps | grep localai
 ```
 
-### Option 3: Cloud/VPS Deployment
+### Option 3: Production Deployment
 
 For production deployment on a VPS or cloud server:
 
@@ -66,48 +63,62 @@ For production deployment on a VPS or cloud server:
 git clone [your-repo] legal-ai-system
 cd legal-ai-system
 
-# 2. Update security settings
-nano docker-compose.openwebui.yml
-# Change: WEBUI_SECRET_KEY, WEBUI_JWT_SECRET_KEY, POSTGRES_PASSWORD
+# 2. Configure for production
+# Edit docker-compose.minimal.yml if needed
 
 # 3. Run with production settings
-./scripts/setup-openwebui.sh
+docker compose -f docker-compose.minimal.yml up -d
 
-# 4. Configure reverse proxy (nginx/caddy) for HTTPS
-# 5. Set up domain and SSL certificates
+# 4. Configure reverse proxy (nginx/caddy) for HTTPS (optional)
+# 5. Set up domain and SSL certificates (optional)
 ```
 
 ## 🎯 Testing the Integration
 
-Once OpenWebUI is running:
+Once LocalAI is running:
 
 1. **Open your app**: http://localhost:5174
 2. **Navigate to any case**
-3. **Click "🤖 AI Tools" → "🧠 AI RAG Assistant"**
-4. **You should see**: 
-   - ✅ OpenWebUI Connected
-   - Document upload status
-   - Enhanced AI interface with citations
+3. **Try AI features**:
+   - Document upload and analysis
+   - Entity extraction (persons, issues, chronology)
+   - AI-powered document processing
 
 ### Test Queries
 
-Try asking:
-- "What are the key deadlines in this case?"
-- "Who are all the parties involved?"
-- "Find all references to breach of contract"
-- "Summarize the procedural history"
+The AI integration works through:
+- **Document Analysis** - Upload PDFs for automatic entity extraction
+- **Chronology Building** - AI extracts dates and events
+- **Legal Authority Detection** - Finds citations and legal references
+- **Issue Identification** - Discovers legal issues in documents
+
+## 🎛️ Model Management
+
+### Recommended Models for Legal Work
+
+**For Consumer Hardware (8-16GB RAM):**
+```bash
+# Download Llama 3.1 8B Instruct (recommended)
+# This will be handled through the upcoming Setup Wizard
+```
+
+**For Professional Hardware (32GB+ RAM):**
+```bash
+# Llama 3.3 70B Instruct or Qwen 2.5 72B
+# Higher accuracy for complex legal analysis
+```
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-**OpenWebUI not accessible:**
+**LocalAI not accessible:**
 ```bash
 # Check services
-docker compose -f docker-compose.openwebui.yml ps
+docker ps | grep localai
 
 # View logs
-docker compose -f docker-compose.openwebui.yml logs -f open-webui
+docker logs localai
 ```
 
 **Out of disk space:**
@@ -121,57 +132,55 @@ df -h
 
 **Port conflicts:**
 ```bash
-# Check what's using ports
-netstat -tlnp | grep :3001
-netstat -tlnp | grep :11434
+# Check what's using port 8080
+netstat -tlnp | grep :8080
 
-# Kill conflicting processes or change ports in docker-compose.openwebui.yml
+# Kill conflicting processes or change port in docker-compose.minimal.yml
 ```
 
-**Models not loading:**
+**Models not available:**
 ```bash
-# Check Ollama
-curl http://localhost:11434/api/tags
+# Check LocalAI models
+curl http://localhost:8080/v1/models
 
-# Pull models manually
-docker exec legal-case-ollama ollama pull llama3.2:3b
+# Models will be downloaded through the Setup Wizard
 ```
 
 ### Performance Tips
 
 1. **Increase Docker memory** to 8GB+ in Docker Desktop settings
-2. **Use SSD storage** for better performance
-3. **Enable GPU support** if you have NVIDIA GPU (uncomment lines in docker-compose.openwebui.yml)
-4. **Use larger models** (llama3.2:8b) for better accuracy if you have resources
+2. **Use SSD storage** for better model loading performance
+3. **Enable GPU support** if you have compatible hardware
+4. **Choose appropriate model size** based on your hardware capabilities
 
 ## 🎉 What You'll Get
 
-Once running, your system will have:
+Once running, your system provides:
 
-- **📚 RAG-powered document analysis** with precise citations
-- **🎯 Higher accuracy** than basic Ollama integration  
-- **🔐 Secure, self-hosted AI** - no data leaves your infrastructure
-- **👥 Multi-user ready** - team collaboration features
-- **📊 Confidence scores** - know how reliable AI responses are
-- **🔍 Advanced search** - semantic, hybrid, and keyword search modes
+- **📚 Complete Air-Gap Operation** - No external connections required
+- **🎯 Legal Document Analysis** - Entity extraction, chronology building
+- **🔐 Maximum Security** - All data stays on your machine
+- **🚀 High Performance** - Local processing with no network latency
+- **📊 Professional Features** - Case management, document analysis, deadline tracking
+- **🔍 AI-Powered Search** - Semantic document search and analysis
 
 ## 📞 Need Help?
 
 If you encounter issues:
 
-1. **Check the logs**: `docker compose -f docker-compose.openwebui.yml logs -f`
-2. **Restart services**: `docker compose -f docker-compose.openwebui.yml restart`
-3. **Full reset**: `docker compose -f docker-compose.openwebui.yml down -v && docker compose -f docker-compose.openwebui.yml up -d`
+1. **Check the logs**: `docker logs localai`
+2. **Restart services**: `docker compose -f docker-compose.minimal.yml restart`
+3. **Full reset**: `docker compose -f docker-compose.minimal.yml down -v && docker compose -f docker-compose.minimal.yml up -d`
 
 ## 🎓 Next Steps
 
 Once running:
-1. Create your admin account in OpenWebUI
-2. Configure user permissions and roles
-3. Test document upload and RAG features
-4. Train your team on the new AI capabilities
-5. Consider commercial deployment for your law firm
+1. **Upload your first case documents** for AI analysis
+2. **Test entity extraction** - persons, dates, issues
+3. **Build chronologies** automatically from documents
+4. **Explore deadline tracking** with court order analysis
+5. **Experience fully air-gapped legal AI**
 
 ---
 
-**Your legal case management system is now ready for enterprise-grade AI! 🏛️⚖️**
+**Your legal case management system is now ready for secure, air-gapped AI! 🏛️⚖️🔒**

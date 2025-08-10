@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CaseDocument } from '../types';
-import { PDFTextExtractor } from '../utils/pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 import { storage } from '../utils/storage';
 import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';

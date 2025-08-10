@@ -22,7 +22,10 @@ export default defineConfig({
                     'pdfjs': ['pdfjs-dist']
                 }
             }
-        }
-    }
+        },
+        // Copy PDF.js worker to dist
+        copyPublicDir: true
+    },
+    publicDir: 'public'
 });
   

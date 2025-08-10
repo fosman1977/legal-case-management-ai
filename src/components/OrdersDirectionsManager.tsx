@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAISync } from '../hooks/useAISync';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
-import { PDFTextExtractor } from '../utils/pdfExtractor';
+import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 
 interface CourtOrder {
   id: string;
