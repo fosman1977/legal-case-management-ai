@@ -211,7 +211,7 @@ export const EnhancedDocumentProcessor: React.FC<EnhancedDocumentProcessorProps>
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .enhanced-document-processor {
           max-width: 800px;
           margin: 0 auto;

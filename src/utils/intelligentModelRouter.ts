@@ -469,7 +469,7 @@ class IntelligentModelRouter {
     return groups
       .sort((a, b) => {
         // High priority first, then by estimated time
-        const priorityOrder = { quality: 3, balanced: 2, fast: 1 };
+        const priorityOrder: { [key: string]: number } = { quality: 3, balanced: 2, fast: 1 };
         const aPriority = priorityOrder[a.documents[0].classification.priority] || 2;
         const bPriority = priorityOrder[b.documents[0].classification.priority] || 2;
         
@@ -500,7 +500,7 @@ class IntelligentModelRouter {
 
   private calculateCostEstimate(model: string, tokens: number): number {
     // Cost estimates per 1K tokens (rough approximation)
-    const costPer1KTokens = {
+    const costPer1KTokens: { [key: string]: number } = {
       'tinyllama': 0.0001,      // Very cheap
       'gpt-3.5-turbo': 0.0015,  // OpenAI pricing
       'mistral-7b-instruct': 0.0008  // Estimate for local model

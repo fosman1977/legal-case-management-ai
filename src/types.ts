@@ -142,4 +142,14 @@ export interface AIAnalysisResult {
   authorities: Omit<LegalAuthority, 'id' | 'caseId'>[];
   confidence: number;
   processingTime: number;
+  summary?: string;
+  metadata?: {
+    analysisDate?: string;
+    version?: string;
+    modelUsed?: string;
+    enhancedExtraction?: boolean;
+    extractionQuality?: any;
+    processingStats?: any;
+    [key: string]: any;
+  };
 }

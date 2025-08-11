@@ -74,18 +74,20 @@ class AIDocumentAnalyzer {
       
       // Convert enhanced result to legacy format for backward compatibility
       const legacyResult: AIAnalysisResult = {
-        summary: result.summary,
-        keyPoints: result.keyPoints,
+        chronologyEvents: result.chronologyEvents,
         persons: result.persons,
         issues: result.issues,
-        chronologyEvents: result.chronologyEvents,
-        legalAuthorities: result.legalAuthorities,
+        keyPoints: result.keyPoints,
+        authorities: result.authorities,
         confidence: result.confidence,
+        processingTime: result.processingStats.processingTime,
+        summary: result.summary,
         metadata: {
-          ...result.metadata,
           enhancedExtraction: true,
           extractionQuality: result.extractionQuality,
-          processingStats: result.processingStats
+          processingStats: result.processingStats,
+          analysisDate: new Date().toISOString(),
+          version: '2.0-optimized'
         }
       };
       
@@ -120,7 +122,7 @@ class AIDocumentAnalyzer {
    */
   private async performAIAnalysis(
     documents: CaseDocument[], 
-    model: string,
+    _model: string,
     progressCallback?: (stage: string, progress: number) => void
   ): Promise<AIAnalysisResult> {
     const startTime = Date.now();

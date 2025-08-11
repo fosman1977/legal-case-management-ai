@@ -318,7 +318,7 @@ export const EnhancedOCRProgress: React.FC<EnhancedOCRProgressProps> = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .enhanced-ocr-progress {
           background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
           border: 1px solid #dee2e6;

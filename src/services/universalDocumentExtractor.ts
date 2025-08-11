@@ -3,15 +3,15 @@
  * Supports PDF, Word, and other document formats with enhanced legal analysis
  */
 
-import { PDFTextExtractor } from './enhancedBrowserPdfExtractor';
 // @ts-ignore - mammoth doesn't have perfect TypeScript definitions
 import * as mammoth from 'mammoth';
 import { fileTypeFromBuffer } from 'file-type';
+import { ProductionDocumentExtractor, ExtractionOptions } from './productionDocumentExtractor';
 
 interface UniversalExtractionResult {
   text: string;
   format: 'pdf' | 'docx' | 'doc' | 'txt' | 'rtf' | 'unknown';
-  method: 'native' | 'ocr' | 'hybrid' | 'word' | 'text';
+  method: 'native' | 'ocr' | 'hybrid' | 'word' | 'text' | 'streaming';
   processingTime: number;
   metadata: {
     fileName: string;
@@ -346,19 +346,32 @@ export class UniversalDocumentExtractor {
   }
 
   /**
-   * Extract from PDF using enhanced PDF extractor
+   * Extract from PDF using optimized PDF extractor
    */
   private static async extractFromPDF(
     file: File,
     options: any
   ): Promise<UniversalExtractionResult> {
-    console.log('📑 Using enhanced PDF extraction...');
+    console.log('📑 Using optimized PDF extraction with full document processing...');
     
-    const pdfResult = await PDFTextExtractor.extract(file, {
-      extractTables: options.extractTables,
-      extractEntities: options.extractEntities,
-      maxPages: options.maxPages
-    });
+    // Determine extraction mode based on options
+    const extractionOptions: ExtractionOptions = {
+      mode: options.quickPreview ? 'preview' : 'full',
+      maxPages: options.maxPages || Infinity,
+      enableOCR: options.enableOCR !== false,
+      enableTables: options.extractTables !== false,
+      enableEntities: options.extractEntities !== false,
+      enableStreaming: options.streaming || false,
+      parallel: true,
+      onProgress: options.onProgress || undefined,
+      abortSignal: options.abortSignal || undefined
+    };
+    
+    // Initialize production extractor if needed
+    await ProductionDocumentExtractor.initialize();
+    
+    // Use production extractor for maximum performance
+    const pdfResult = await ProductionDocumentExtractor.extract(file, extractionOptions);
     
     return {
       text: pdfResult.text,

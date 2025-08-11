@@ -84,6 +84,7 @@ class AdvancedCacheSystem {
   // Level 4: Predictive cache
   private userPatterns: Map<string, Array<{ action: string; timestamp: number; context: any }>> = new Map();
   private predictiveCache: Map<string, CachedResult> = new Map();
+  private lastSemanticVectorsSave: number = 0;
   private predictionModels: Map<string, any> = new Map();
 
   // Cache statistics
@@ -662,16 +663,14 @@ class AdvancedCacheSystem {
 
   private saveSemanticVectors(): void {
     // Save semantic vectors to localStorage (throttled)
-    if (!this.saveSemanticVectors.lastSave || 
-        Date.now() - this.saveSemanticVectors.lastSave > 30000) {
-      
+    if (Date.now() - this.lastSemanticVectorsSave > 30000) {
       const vectorsObject: any = {};
       for (const [key, vector] of this.semanticVectors.entries()) {
         vectorsObject[key] = Array.from(vector);
       }
       
       localStorage.setItem('semanticVectors', JSON.stringify(vectorsObject));
-      this.saveSemanticVectors.lastSave = Date.now();
+      this.lastSemanticVectorsSave = Date.now();
     }
   }
 
@@ -842,9 +841,6 @@ class AdvancedCacheSystem {
     console.log('🗑️ All caches cleared');
   }
 }
-
-// Add static property for throttling
-(AdvancedCacheSystem.prototype.saveSemanticVectors as any).lastSave = 0;
 
 // Export singleton instance
 export const advancedCacheSystem = new AdvancedCacheSystem();

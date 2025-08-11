@@ -1,0 +1,7 @@
+name: tinyllama
+backend: llama-cpp
+parameters:
+  model: tinyllama.gguf
+  context_size: 2048
+  threads: 4
+  temperature: 0.7
