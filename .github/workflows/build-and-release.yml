@@ -40,7 +40,12 @@ jobs:
       - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
+          npm install --no-optional
           npm install
+        
+      - name: Fix Rollup native dependencies
+        run: |
+          npm install @rollup/rollup-linux-x64-gnu @rollup/rollup-linux-x64-musl @rollup/rollup-darwin-x64 @rollup/rollup-darwin-arm64 @rollup/rollup-win32-x64-msvc --save-optional || true
         
       - name: Build Electron TypeScript
         run: npm run build:electron
