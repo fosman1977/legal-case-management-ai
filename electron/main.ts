@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell, ipcMain, dialog, Tray, nativeTheme, protocol } from 'electron';
+import { app, BrowserWindow, Menu, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -248,7 +248,7 @@ parameters:
 }
 
 let mainWindow: BrowserWindow;
-let tray: Tray | null = null;
+// let tray: Tray | null = null; // Disabled for simplified build
 let localAI: LocalAIManager;
 let isQuitting = false;
 
@@ -259,7 +259,7 @@ const createWindow = (): void => {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    icon: path.join(__dirname, '../assets/icon.png'),
+    // icon: path.join(__dirname, '../assets/icon.png'), // Icon optional for now
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -442,28 +442,11 @@ const createMenu = () => {
 };
 
 // Setup functions
-const setupTray = () => {
-  const iconName = nativeTheme.shouldUseDarkColors ? 'tray-dark.png' : 'tray-light.png';
-  const iconPath = path.join(__dirname, '../assets', iconName);
-  
-  // Fallback to a simple icon if custom ones don't exist
-  const fallbackIcon = path.join(__dirname, '../assets/icon.png');
-  const trayIconPath = fs.existsSync(iconPath) ? iconPath : fallbackIcon;
-  
-  if (fs.existsSync(trayIconPath)) {
-    tray = new Tray(trayIconPath);
-    
-    const contextMenu = Menu.buildFromTemplate([
-      { label: 'Show Legal Case Manager', click: () => mainWindow?.show() },
-      { label: 'LocalAI Status', click: () => showLocalAIStatus() },
-      { type: 'separator' },
-      { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
-    ]);
-
-    tray.setToolTip('Legal Case Manager AI');
-    tray.setContextMenu(contextMenu);
-  }
-};
+// const setupTray = () => {
+//   // Skip tray setup for now to avoid missing icon issues
+//   console.log('Tray setup skipped - no icons available');
+//   // TODO: Add proper tray icons and re-enable tray functionality
+// };
 
 const setupAutoUpdater = () => {
   // Configure auto-updater
@@ -553,26 +536,26 @@ const checkFirstTimeSetup = async () => {
   }
 };
 
-const showLocalAIStatus = () => {
-  const status = localAI.getStatus();
-  const message = status.isRunning 
-    ? `LocalAI is running on port ${status.port}\nModel: ${status.selectedModel}`
-    : 'LocalAI is not running';
+// const showLocalAIStatus = () => {
+//   const status = localAI.getStatus();
+//   const message = status.isRunning 
+//     ? `LocalAI is running on port ${status.port}\nModel: ${status.selectedModel}`
+//     : 'LocalAI is not running';
   
-  dialog.showMessageBox(mainWindow!, {
-    type: 'info',
-    title: 'LocalAI Status',
-    message,
-    buttons: ['OK']
-  });
-};
+//   dialog.showMessageBox(mainWindow!, {
+//     type: 'info',
+//     title: 'LocalAI Status',
+//     message,
+//     buttons: ['OK']
+//   });
+// };
 
 // App event handlers
 app.whenReady().then(() => {
   localAI = new LocalAIManager();
   createWindow();
   createMenu();
-  setupTray();
+  // setupTray(); // Disabled until proper icons are available
   setupAutoUpdater();
   registerIpcHandlers();
 
@@ -614,10 +597,10 @@ const registerIpcHandlers = () => {
     return localAI.getAvailableModels();
   });
 
-  ipcMain.handle('localai:download-model', async (event, modelName) => {
+  ipcMain.handle('localai:download-model', async (_event, modelName) => {
     return new Promise((resolve) => {
       localAI.downloadModel(modelName, (progress) => {
-        event.sender.send('localai:download-progress', { modelName, progress });
+        _event.sender.send('localai:download-progress', { modelName, progress });
       }).then(resolve);
     });
   });
@@ -634,12 +617,12 @@ const registerIpcHandlers = () => {
     return result.filePaths;
   });
 
-  ipcMain.handle('show-open-dialog', async (event, options) => {
+  ipcMain.handle('show-open-dialog', async (_event, options) => {
     const result = await dialog.showOpenDialog(mainWindow, options);
     return result;
   });
 
-  ipcMain.handle('show-save-dialog', async (event, options) => {
+  ipcMain.handle('show-save-dialog', async (_event, options) => {
     const result = await dialog.showSaveDialog(mainWindow, options);
     return result;
   });
