@@ -48,13 +48,9 @@ jobs:
           npm install @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc --save-optional
         continue-on-error: true
         
-      - name: Build Electron TypeScript
-        run: npm run build:electron
-        timeout-minutes: 10
-        
-      - name: Build web assets
+      - name: Build application (includes Electron TypeScript)
         run: npm run build
-        timeout-minutes: 15
+        timeout-minutes: 30
         
       - name: Import Code-Signing Certificates (macOS)
         if: matrix.os == 'macos-latest'
