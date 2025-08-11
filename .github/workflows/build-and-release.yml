@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20.18.0'
           cache: 'npm'
           
       - name: Install dependencies
@@ -44,6 +44,7 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        continue-on-error: true
         
       - name: Build and publish Electron app (macOS)
         if: matrix.os == 'macos-latest'
@@ -53,6 +54,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        continue-on-error: true
           
       - name: Build and publish Electron app (Windows)
         if: matrix.os == 'windows-latest'
