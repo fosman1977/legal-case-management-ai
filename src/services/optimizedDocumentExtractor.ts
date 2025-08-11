@@ -663,8 +663,8 @@ export class OptimizedDocumentExtractor {
    * Detect table regions using column alignment analysis
    */
   private static detectTableRegions(rows: any[][]): any[] {
-    const regions = [];
-    let currentRegion = [];
+    const regions: any[] = [];
+    let currentRegion: any[] = [];
     let prevColumnCount = 0;
 
     for (const row of rows) {
@@ -761,7 +761,7 @@ export class OptimizedDocumentExtractor {
     const markdown = this.generateTableMarkdown(headers, rows);
 
     // Determine table type
-    const type = this.classifyTableType(headers, rows);
+    const type = this.classifyTableType(headers, rows) as 'financial' | 'schedule' | 'comparison' | 'general';
 
     return {
       pageNumber: pageNum,
@@ -987,7 +987,7 @@ export class OptimizedDocumentExtractor {
             relationType = 'affiliated_with';
           } else if (entity1.type === 'person' && entity2.type === 'court') {
             relationType = 'appears_before';
-          } else if (entity1.type === 'caseNumber' && entity2.type === 'court') {
+          } else if (entity1.type === 'case_number' && entity2.type === 'court') {
             relationType = 'filed_in';
           }
 
@@ -1180,7 +1180,7 @@ export class OptimizedDocumentExtractor {
 
     // Find case number
     const caseNumberEntity = results.entities.find((e: ExtractedEntity) => 
-      e.type === 'caseNumber' && e.confidence > 0.7
+      e.type === 'case_number' && e.confidence > 0.7
     );
     if (caseNumberEntity) {
       metadata.caseNumber = caseNumberEntity.value;
@@ -1247,7 +1247,8 @@ export class OptimizedDocumentExtractor {
   }
 
   private static getExtractionSettings(options: ExtractionMode): any {
-    const presets = CONFIG.PROGRESSIVE_MODES[options.mode?.toUpperCase()] || 
+    const modeKey = options.mode?.toUpperCase() as keyof typeof CONFIG.PROGRESSIVE_MODES;
+    const presets = CONFIG.PROGRESSIVE_MODES[modeKey] || 
                     CONFIG.PROGRESSIVE_MODES.STANDARD;
     
     return {
