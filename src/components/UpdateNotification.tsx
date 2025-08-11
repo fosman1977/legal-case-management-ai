@@ -179,7 +179,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
         {renderContent()}
       </div>
       
-      <style jsx>{`
+      <style>{`
         .update-notification-overlay {
           position: fixed;
           top: 0;

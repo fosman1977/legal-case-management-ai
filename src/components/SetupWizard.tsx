@@ -516,7 +516,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .setup-wizard-overlay {
           position: fixed;
           top: 0;
