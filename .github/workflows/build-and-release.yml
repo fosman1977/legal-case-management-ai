@@ -39,9 +39,9 @@ jobs:
           
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
-          npm install --prefer-offline --no-audit --progress=false
-        timeout-minutes: 15
+          rm -rf node_modules
+          npm ci --prefer-offline --no-audit --progress=false
+        timeout-minutes: 20
         
       - name: Install Rollup native dependencies
         run: |
