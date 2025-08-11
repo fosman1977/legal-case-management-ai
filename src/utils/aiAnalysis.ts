@@ -2,6 +2,7 @@ import { CaseDocument, AIAnalysisResult, ChronologyEvent, Person, Issue, KeyPoin
 import { indexedDBManager } from './indexedDB';
 import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 import { unifiedAIClient } from './unifiedAIClient';
+import { optimizedAIAnalyzer, EnhancedAIAnalysisResult } from './optimizedAIAnalysis';
 
 class AIDocumentAnalyzer {
   private useLocalAI: boolean = true;
@@ -33,7 +34,7 @@ class AIDocumentAnalyzer {
   }
 
   /**
-   * Analyze documents using LocalAI
+   * Analyze documents using optimized AI pipeline
    */
   async analyzeDocuments(
     documents: CaseDocument[],
@@ -42,29 +43,75 @@ class AIDocumentAnalyzer {
     const startTime = Date.now();
 
     try {
-      console.log(`🤖 Starting AI analysis of ${documents.length} documents...`);
+      console.log(`🚀 Starting optimized AI analysis of ${documents.length} documents...`);
       
-      if (progressCallback) {
-        progressCallback('Analyzing documents with AI...', 20);
-      }
+      // Configure optimized analyzer
+      optimizedAIAnalyzer.configure({
+        parallelProcessing: true,
+        useStructuredData: true,
+        confidenceThreshold: 0.6,
+        enableProgressCallbacks: true
+      });
 
-      // Perform direct AI analysis without anonymization
-      const result = await this.performAIAnalysis(documents, this.localAIModel, progressCallback);
+      // Use optimized analyzer with enhanced progress callbacks
+      const result = await optimizedAIAnalyzer.analyzeDocuments(documents, {
+        analysisType: this.fastMode ? 'quick' : 'full',
+        onProgress: (progress) => {
+          // Convert optimized progress to legacy format
+          const stageNames = {
+            'extracting': 'Extracting document content...',
+            'structuring': 'Processing structured data...',
+            'analyzing': 'Performing AI analysis...',
+            'entities': 'Extracting entities...',
+            'summarizing': 'Generating summary...',
+            'complete': 'Analysis complete!'
+          };
+          
+          const stageName = stageNames[progress.stage] || progress.status;
+          progressCallback?.(stageName, progress.percentage);
+        }
+      });
+      
+      // Convert enhanced result to legacy format for backward compatibility
+      const legacyResult: AIAnalysisResult = {
+        summary: result.summary,
+        keyPoints: result.keyPoints,
+        persons: result.persons,
+        issues: result.issues,
+        chronologyEvents: result.chronologyEvents,
+        legalAuthorities: result.legalAuthorities,
+        confidence: result.confidence,
+        metadata: {
+          ...result.metadata,
+          enhancedExtraction: true,
+          extractionQuality: result.extractionQuality,
+          processingStats: result.processingStats
+        }
+      };
       
       // Save to cache and IndexedDB
-      await this.saveAnalysisResult(result);
+      await this.saveAnalysisResult(legacyResult);
       
       const analysisTime = Date.now() - startTime;
-      console.log(`✅ AI Analysis complete in ${(analysisTime / 1000).toFixed(2)}s`);
-      
-      if (progressCallback) {
-        progressCallback('Analysis complete!', 100);
-      }
+      console.log(`✅ Optimized AI Analysis complete in ${(analysisTime / 1000).toFixed(2)}s`);
+      console.log(`   - Documents processed: ${result.processingStats.documentsProcessed}`);
+      console.log(`   - Entities extracted: ${result.processingStats.entitiesExtracted}`);
+      console.log(`   - Tables analyzed: ${result.processingStats.tablesAnalyzed}`);
+      console.log(`   - Overall quality: ${(result.extractionQuality.overall * 100).toFixed(1)}%`);
 
-      return result;
+      return legacyResult;
     } catch (error) {
-      console.error('❌ AI analysis failed:', error);
-      throw error;
+      console.error('❌ Optimized AI analysis failed, falling back to legacy:', error);
+      
+      // Fallback to legacy analysis
+      try {
+        const fallbackResult = await this.performAIAnalysis(documents, this.localAIModel, progressCallback);
+        await this.saveAnalysisResult(fallbackResult);
+        return fallbackResult;
+      } catch (fallbackError) {
+        console.error('❌ Fallback analysis also failed:', fallbackError);
+        throw error;
+      }
     }
   }
 
