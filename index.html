@@ -4,10 +4,63 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self'; 
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: chrome-extension: moz-extension:;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob: chrome-extension: moz-extension:;
+      font-src 'self' data: chrome-extension: moz-extension:;
+      connect-src 'self' http: https: ws: wss: chrome-extension: moz-extension:;
+      object-src 'none';
+      base-uri 'self';
+    ">
     <title>Legal Case Management AI</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Disable TrustedTypes enforcement for development
+      if (typeof window !== 'undefined') {
+        // Method 1: Create permissive default policy
+        if (window.trustedTypes && window.trustedTypes.createPolicy) {
+          try {
+            window.trustedTypes.createPolicy('default', {
+              createHTML: (string) => string,
+              createScript: (string) => string,  
+              createScriptURL: (string) => string
+            });
+            console.log('✅ TrustedTypes default policy created');
+          } catch (e) {
+            console.log('TrustedTypes policy already exists:', e.message);
+          }
+        }
+        
+        // Method 2: Override problematic functions
+        const originalInnerHTMLSetter = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set;
+        Object.defineProperty(Element.prototype, 'innerHTML', {
+          set: function(value) {
+            if (window.trustedTypes && window.trustedTypes.defaultPolicy && typeof value === 'string') {
+              value = window.trustedTypes.defaultPolicy.createHTML(value);
+            }
+            return originalInnerHTMLSetter.call(this, value);
+          },
+          get: function() {
+            return this.innerHTML;
+          }
+        });
+        
+        // Method 3: Override eval globally
+        const originalEval = window.eval;
+        window.eval = function(code) {
+          if (window.trustedTypes && window.trustedTypes.defaultPolicy && typeof code === 'string') {
+            code = window.trustedTypes.defaultPolicy.createScript(code);
+          }
+          return originalEval.call(window, code);
+        };
+        
+        console.log('🛡️  TrustedTypes overrides applied');
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

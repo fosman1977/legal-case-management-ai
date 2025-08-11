@@ -14,6 +14,9 @@ export default defineConfig({
     optimizeDeps: {
         include: ['pdfjs-dist']
     },
+    define: {
+        global: 'globalThis', // Fix global is not defined
+    },
     build: {
         rollupOptions: {
             external: [],

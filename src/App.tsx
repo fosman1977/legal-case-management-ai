@@ -6,6 +6,7 @@ import { CaseList } from './components/CaseList';
 import { CaseForm } from './components/CaseForm';
 import { CaseDetail } from './components/CaseDetail';
 import { GlobalProceduralCalendar } from './components/GlobalProceduralCalendar';
+import { LocalAIConnector } from './components/LocalAIConnector';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -13,6 +14,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingCase, setEditingCase] = useState<Case | undefined>();
   const [showGlobalCalendar, setShowGlobalCalendar] = useState(false);
+  const [showLocalAI, setShowLocalAI] = useState(false);
 
   useEffect(() => {
     loadCases();
@@ -93,12 +95,28 @@ export default function App() {
             >
               📅 Global Calendar
             </button>
+            <button 
+              className="btn btn-primary ai-btn"
+              onClick={() => setShowLocalAI(true)}
+              title="Connect to LocalAI for air-gapped AI processing"
+            >
+              🤖 LocalAI
+            </button>
           </div>
         </div>
       </header>
 
       {showGlobalCalendar && (
         <GlobalProceduralCalendar onClose={() => setShowGlobalCalendar(false)} />
+      )}
+
+      {showLocalAI && (
+        <div className="modal-overlay" onClick={() => setShowLocalAI(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowLocalAI(false)}>×</button>
+            <LocalAIConnector />
+          </div>
+        </div>
       )}
 
       <div className="app-content">
