@@ -43,6 +43,11 @@ jobs:
           npm install --prefer-offline --no-audit --progress=false
         timeout-minutes: 15
         
+      - name: Install Rollup native dependencies
+        run: |
+          npm install @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc --save-optional
+        continue-on-error: true
+        
       - name: Build Electron TypeScript
         run: npm run build:electron
         timeout-minutes: 10
