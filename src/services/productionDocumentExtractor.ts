@@ -56,6 +56,33 @@ export interface ProgressUpdate {
   };
 }
 
+export interface EnhancedProgressUpdate {
+  stage: 'initializing' | 'extracting' | 'ocr_processing' | 'entity_extraction' | 'table_detection' | 'finalizing' | 'completed' | 'error';
+  progress: number;
+  currentPage?: number;
+  totalPages?: number;
+  ocrPagesProcessed?: number;
+  ocrPagesTotal?: number;
+  ocrWorkersActive?: number;
+  ocrWorkersTotal?: number;
+  currentOperation?: string;
+  textExtracted?: number;
+  ocrTextExtracted?: number;
+  tablesFound?: number;
+  entitiesFound?: number;
+  processingSpeed?: number; // pages per second
+  estimatedTimeRemaining?: number; // seconds
+  quality?: {
+    textQuality: number;
+    structureQuality: number;
+    confidence: number;
+  };
+  error?: string;
+  fileName?: string;
+  fileSize?: number;
+  startTime?: number;
+}
+
 export interface ExtractedTable {
   pageNumber: number;
   headers: string[];
