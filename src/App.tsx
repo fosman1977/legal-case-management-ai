@@ -7,6 +7,7 @@ import { CaseForm } from './components/CaseForm';
 import { CaseDetail } from './components/CaseDetail';
 import { GlobalProceduralCalendar } from './components/GlobalProceduralCalendar';
 import { LocalAIConnector } from './components/LocalAIConnector';
+import { SetupWizard } from './components/SetupWizard';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -15,9 +16,27 @@ export default function App() {
   const [editingCase, setEditingCase] = useState<Case | undefined>();
   const [showGlobalCalendar, setShowGlobalCalendar] = useState(false);
   const [showLocalAI, setShowLocalAI] = useState(false);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
 
   useEffect(() => {
     loadCases();
+    
+    // Listen for setup wizard trigger from Electron
+    // @ts-ignore - Electron IPC
+    if (window.electronAPI?.on) {
+      // @ts-ignore - Electron IPC
+      window.electronAPI.on('show-setup-wizard', () => {
+        setShowSetupWizard(true);
+      });
+    }
+    
+    return () => {
+      // @ts-ignore - Electron IPC
+      if (window.electronAPI?.removeAllListeners) {
+        // @ts-ignore - Electron IPC
+        window.electronAPI.removeAllListeners('show-setup-wizard');
+      }
+    };
   }, []);
 
   const loadCases = async () => {
@@ -117,6 +136,16 @@ export default function App() {
             <LocalAIConnector />
           </div>
         </div>
+      )}
+
+      {showSetupWizard && (
+        <SetupWizard
+          onClose={() => setShowSetupWizard(false)}
+          onComplete={() => {
+            setShowSetupWizard(false);
+            // Optionally reload the app or refresh components
+          }}
+        />
       )}
 
       <div className="app-content">

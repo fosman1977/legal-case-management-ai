@@ -25,25 +25,23 @@
     "build": "tsc && vite build && npm run build:electron",
     "build:electron": "tsc electron/main.ts electron/preload.ts --outDir dist-electron --target es2020 --module commonjs --esModuleInterop --skipLibCheck",
     "preview": "vite preview",
-    "electron": "wait-on http://localhost:5173 && electron dist-electron/main.js --no-sandbox",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron dist-electron/main.js --no-sandbox\"",
+    "electron": "wait-on http://localhost:5174 && electron dist-electron/main.js --no-sandbox",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5174 && electron dist-electron/main.js --no-sandbox\"",
     "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
     "pack": "electron-builder --dir",
-    "ai": "docker compose -f docker-compose.yml up -d",
-    "ai-stop": "docker compose -f docker-compose.yml down",
-    "ai-logs": "docker compose -f docker-compose.yml logs -f",
-    "install-models": "./scripts/install-models.sh",
+    "localai-setup": "./scripts/setup-localai.sh",
     "test": "echo \"Tests coming soon\"",
     "lint": "echo \"Linting coming soon\"",
     "clean": "rm -rf dist dist-electron release node_modules/.cache",
     "postinstall": "electron-builder install-app-deps",
-    "download-models": "node scripts/download-models.js",
-    "test-pdf-extraction": "node test/pdf-system/test-extraction.js",
-    "process-pdf": "node src/pdf-system/cli.js",
-    "validate-pdf-setup": "node scripts/validate-setup.js"
+    "validate-setup": "node scripts/validate-setup.js"
   },
   "dependencies": {
+    "electron-updater": "^6.1.4",
     "@pdf-lib/fontkit": "^1.1.1",
     "compromise": "^14.10.0",
     "date-fns": "^2.29.3",
@@ -80,6 +78,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electron/notarize": "^2.2.1",
     "@types/html-to-text": "^9.0.4",
     "@types/papaparse": "^5.3.16",
     "@types/react": "^18.0.27",
@@ -97,35 +96,83 @@
     "appId": "com.legalai.casemanager",
     "productName": "Legal Case Manager AI",
     "directories": {
-      "output": "dist-electron",
-      "buildResources": "build"
+      "output": "release",
+      "buildResources": "assets"
     },
     "files": [
       "dist/**/*",
       "dist-electron/main.js",
       "dist-electron/preload.js",
-      "!dist-electron/mac*",
-      "!dist-electron/win*",
-      "!dist-electron/linux*",
-      "package.json"
+      "package.json",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
         }
-      ]
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
     },
     "win": {
-      "target": "nsis"
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker"
     },
     "linux": {
-      "target": "AppImage"
-    }
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Legal Case Manager AI"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "fosman1977",
+      "repo": "legal-case-management-ai",
+      "releaseType": "release"
+    },
+    "beforePack": "scripts/before-pack.js",
+    "afterSign": "scripts/notarize.js"
   }
 }

@@ -1,0 +1,153 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build Electron TypeScript
+        run: npm run build:electron
+        
+      - name: Build web assets
+        run: npm run build
+        
+      - name: Import Code-Signing Certificates (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: Apple-Actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        
+      - name: Build and publish Electron app (macOS)
+        if: matrix.os == 'macos-latest'
+        run: npm run dist:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          
+      - name: Build and publish Electron app (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and publish Electron app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run dist:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            release/*.exe
+            release/*.msi
+            
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installers
+          path: |
+            release/*.dmg
+            release/*.zip
+            
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            release/*.AppImage
+            release/*.deb
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 🎉 New Release of Legal Case Manager AI
+            
+            ### 📦 Download Options
+            
+            **Windows Users:**
+            - Download `.exe` installer for automatic installation
+            - Or download `.portable.exe` for portable version (no installation)
+            
+            **macOS Users:**
+            - Download `.dmg` for standard macOS installation
+            - Or download `.zip` for manual installation
+            
+            **Linux Users:**
+            - Download `.AppImage` for universal Linux compatibility
+            - Or download `.deb` for Debian/Ubuntu systems
+            
+            ### ✨ What's New
+            - Enhanced AI processing capabilities
+            - Improved document analysis accuracy
+            - Bug fixes and performance improvements
+            
+            ### 🚀 First Time Setup
+            1. Download the appropriate installer for your system
+            2. Run the installer and follow the setup wizard
+            3. The app will automatically download and configure LocalAI
+            4. Start analyzing legal documents with AI!
+            
+            ### 🔄 Auto-Updates
+            This version includes automatic update functionality. Future updates will be delivered seamlessly through the app.
+            
+            ---
+            
+            **Full Changelog:** ${{ github.event.compare }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
