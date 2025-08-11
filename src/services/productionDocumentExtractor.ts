@@ -270,10 +270,20 @@ class DocumentWorkerPool {
 
         // Create Tesseract worker for OCR
         if (i < 2) { // Only create 2 OCR workers to save memory
-          const tesseractWorker = await Tesseract.createWorker();
-          await tesseractWorker.loadLanguage('eng');
-          await tesseractWorker.initialize('eng');
-          this.tesseractWorkers.push(tesseractWorker);
+          try {
+            const tesseractWorker = await Tesseract.createWorker('eng', 1, {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+                }
+              }
+            });
+            this.tesseractWorkers.push(tesseractWorker);
+            console.log(`✅ OCR Worker ${i + 1} initialized`);
+          } catch (ocrError) {
+            console.warn(`⚠️ OCR Worker ${i + 1} failed to initialize:`, ocrError);
+            // Continue without OCR worker - extraction will work without OCR
+          }
         }
 
         console.log(`✅ Worker ${i + 1} initialized`);
@@ -308,7 +318,7 @@ class DocumentWorkerPool {
 
   async processTask<T>(taskType: string, taskData: any): Promise<T> {
     return new Promise((resolve, reject) => {
-      const taskId = Math.random().toString(36).substr(2, 9);
+      const taskId = Math.random().toString(36).substring(2, 11);
       const task = {
         task: { type: taskType, data: taskData, id: taskId },
         resolve,
@@ -320,17 +330,32 @@ class DocumentWorkerPool {
     });
   }
 
-  async performOCR(imageData: ImageData): Promise<string> {
+  async performOCR(imageData: ImageData | HTMLCanvasElement | string): Promise<string> {
     if (this.tesseractWorkers.length === 0) {
-      throw new Error('No OCR workers available');
+      console.warn('⚠️ No OCR workers available - returning empty text');
+      return '';
     }
     
     // Use available Tesseract worker
     const worker = this.tesseractWorkers[0]; // Simple round-robin
     
     try {
-      const { data: { text } } = await worker.recognize(imageData, CONFIG.TESSERACT_OPTIONS);
-      return text;
+      // Convert ImageData to Canvas if needed
+      let inputData: HTMLCanvasElement | string = imageData as any;
+      
+      if (imageData instanceof ImageData) {
+        const canvas = document.createElement('canvas');
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.putImageData(imageData, 0, 0);
+          inputData = canvas;
+        }
+      }
+      
+      const { data: { text } } = await worker.recognize(inputData);
+      return text.trim();
     } catch (error) {
       console.error('OCR Error:', error);
       return '';
