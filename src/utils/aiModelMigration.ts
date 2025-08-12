@@ -120,6 +120,7 @@ export class AIModelMigration {
     batchSize: number = 5,
     onProgress?: (completed: number, total: number) => void
   ) {
+    const aiClient = AIModelMigration.aiClient;
     return {
       async processDocuments(
         documents: T[],
@@ -127,7 +128,7 @@ export class AIModelMigration {
       ): Promise<any[]> {
         console.log(`Processing ${documents.length} documents in batches of ${batchSize}`);
         
-        return await this.aiClient.processBatch(
+        return await aiClient.processBatch(
           documents,
           async (batch: T[]) => {
             const results = [];
@@ -137,7 +138,8 @@ export class AIModelMigration {
                 results.push(result);
               } catch (error) {
                 console.error('Document processing failed:', error);
-                results.push({ error: error.message, document: doc });
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                results.push({ error: errorMessage, document: doc });
               }
             }
             return results;
