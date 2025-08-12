@@ -33,8 +33,8 @@ export interface ModelInfo {
 class LocalAIService {
   private config: LocalAIConfig = {
     endpoint: 'http://localhost:8080',
-    models: ['gpt-3.5-turbo', 'tinyllama', 'mistral-7b-instruct'],
-    defaultModel: 'gpt-3.5-turbo',
+    models: ['gpt-4', 'gpt-3.5-turbo', 'text-embedding-ada-002', 'whisper-1'],
+    defaultModel: 'gpt-4', // LocalAI typically provides gpt-4 model
     timeout: 30000,
     retryAttempts: 3
   };
@@ -43,7 +43,7 @@ class LocalAIService {
     connected: false,
     endpoint: 'http://localhost:8080',
     availableModels: [],
-    currentModel: 'gpt-3.5-turbo'
+    currentModel: 'gpt-4'
   };
 
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -71,13 +71,26 @@ class LocalAIService {
       const models = await this.getModels();
       this.status.availableModels = models;
 
-      // Check if default model is available
+      // Intelligently select the best available model
       if (models.length === 0) {
         console.warn('No models available. You may need to download models.');
-      } else if (!models.includes(this.config.defaultModel)) {
-        // Use first available model
-        this.config.defaultModel = models[0];
-        this.status.currentModel = models[0];
+        this.status.error = 'No models loaded in LocalAI';
+      } else {
+        // Prefer models in order: gpt-4, gpt-3.5-turbo, then any other
+        const preferredModels = ['gpt-4', 'gpt-3.5-turbo', 'llama-2', 'mistral'];
+        let selectedModel = models[0]; // fallback to first model
+        
+        for (const preferred of preferredModels) {
+          const found = models.find(m => m.toLowerCase().includes(preferred.toLowerCase()));
+          if (found) {
+            selectedModel = found;
+            break;
+          }
+        }
+        
+        this.config.defaultModel = selectedModel;
+        this.status.currentModel = selectedModel;
+        console.log(`Selected LocalAI model: ${selectedModel} from available: ${models.join(', ')}`);
       }
 
       this.status.connected = true;

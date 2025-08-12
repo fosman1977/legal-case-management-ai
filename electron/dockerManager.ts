@@ -452,7 +452,7 @@ export class DockerManager extends EventEmitter {
     }
   }
 
-  // Start LocalAI container
+  // Start LocalAI container with optimized configuration
   async startLocalAIContainer(modelsPath: string, port: number = 8080): Promise<boolean> {
     try {
       // Check if container already exists
@@ -463,8 +463,17 @@ export class DockerManager extends EventEmitter {
         // Container doesn't exist, continue
       }
 
-      // Start LocalAI container
-      const command = `docker run -d --name localai -p ${port}:8080 -v "${modelsPath}:/models" quay.io/go-skynet/local-ai:latest`;
+      // Start LocalAI container with increased limits to prevent 413 errors
+      const command = `docker run -d --name localai -p ${port}:8080 ` +
+        `-v "${modelsPath}:/models" ` +
+        `-e CONTEXT_SIZE=8192 ` +
+        `-e MAX_REQUEST_SIZE=10485760 ` +
+        `-e THREADS=4 ` +
+        `-e DEBUG=true ` +
+        `--memory=4g ` +
+        `localai/localai:latest-aio-cpu`;
+      
+      console.log('Starting LocalAI with command:', command);
       await this.executeCommand(command);
       
       // Wait for LocalAI to be ready

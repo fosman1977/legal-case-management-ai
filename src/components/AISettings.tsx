@@ -5,8 +5,8 @@ interface AISettingsProps {
 }
 
 export const AISettings: React.FC<AISettingsProps> = ({ caseId }) => {
-  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
-  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-3.5-turbo']);
+  const [selectedModel, setSelectedModel] = useState('gpt-4');
+  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-4']);
   const [localAIStatus, setLocalAIStatus] = useState<boolean>(false);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ caseId }) => {
     const savedPrefs = localStorage.getItem(`ai_prefs_${caseId}`);
     if (savedPrefs) {
       const prefs = JSON.parse(savedPrefs);
-      setSelectedModel(prefs.selectedModel ?? 'gpt-3.5-turbo');
+      setSelectedModel(prefs.selectedModel ?? 'gpt-4');
     }
     
     // Check LocalAI status and load models
@@ -34,7 +34,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ caseId }) => {
   };
 
   const fetchAvailableModels = async () => {
-    let models: string[] = ['gpt-3.5-turbo']; // fallback
+    let models: string[] = ['gpt-4']; // fallback to commonly available LocalAI model
 
     try {
       const response = await fetch('http://127.0.0.1:8080/v1/models');
@@ -46,7 +46,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ caseId }) => {
       console.log('Could not fetch LocalAI models, using defaults');
     }
 
-    setAvailableModels(models.length > 0 ? models : ['gpt-3.5-turbo']);
+    setAvailableModels(models.length > 0 ? models : ['gpt-4']);
   };
 
   const saveAIPrefs = (newSelectedModel?: string) => {

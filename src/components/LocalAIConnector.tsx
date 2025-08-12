@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { localAIService, LocalAIStatus } from '../services/localAIService';
+import { AIModelMigration } from '../utils/aiModelMigration';
 
 export const LocalAIConnector: React.FC = () => {
   const [status, setStatus] = useState<LocalAIStatus>(localAIService.getStatus());
@@ -11,6 +12,10 @@ export const LocalAIConnector: React.FC = () => {
   useEffect(() => {
     // Subscribe to status changes
     const unsubscribe = localAIService.onStatusChange(setStatus);
+    
+    // Run model migration on component load
+    AIModelMigration.migrateStoredPreferences().catch(console.warn);
+    
     return unsubscribe;
   }, []);
 

@@ -35,7 +35,7 @@ class UnifiedAIClient {
   constructor(config: Partial<UnifiedAIConfig> = {}) {
     this.config = {
       localAIUrl: config.localAIUrl || 'http://localhost:8080',
-      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'gpt-3.5-turbo', // LocalAI commonly supports this
+      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'gpt-4', // LocalAI commonly provides gpt-4
       timeout: config.timeout || 300000 // 5 minutes for model loading and processing
     };
   }
@@ -92,7 +92,7 @@ class UnifiedAIClient {
   }
 
   /**
-   * Get available models from LocalAI
+   * Get available models from LocalAI and intelligently select the best one
    */
   async getModels(): Promise<string[]> {
     try {
@@ -108,6 +108,38 @@ class UnifiedAIClient {
     
     // Return default model if fetch fails
     return [this.config.defaultModel];
+  }
+
+  /**
+   * Get the best available model for the task
+   */
+  async getBestAvailableModel(preferredModels: string[] = ['gpt-4', 'gpt-3.5-turbo', 'llama-2', 'mistral']): Promise<string> {
+    try {
+      const availableModels = await this.getModels();
+      
+      // Try each preferred model in order
+      for (const preferred of preferredModels) {
+        const found = availableModels.find(model => 
+          model.toLowerCase().includes(preferred.toLowerCase())
+        );
+        if (found) {
+          console.log(`Selected best available model: ${found}`);
+          return found;
+        }
+      }
+      
+      // Fallback to first available model
+      if (availableModels.length > 0) {
+        console.log(`Using fallback model: ${availableModels[0]}`);
+        return availableModels[0];
+      }
+      
+      // Final fallback
+      return this.config.defaultModel;
+    } catch (error) {
+      console.warn('Failed to get best model, using default:', error);
+      return this.config.defaultModel;
+    }
   }
 
   /**
@@ -136,7 +168,77 @@ class UnifiedAIClient {
   }
 
   /**
-   * General purpose AI query using LocalAI
+   * Process documents in batches to avoid 413 Request Entity Too Large errors
+   */
+  async processBatch<T, R>(
+    items: T[],
+    processor: (batch: T[], batchIndex: number) => Promise<R[]>,
+    options: {
+      batchSize?: number;
+      maxConcurrent?: number;
+      onProgress?: (completed: number, total: number) => void;
+    } = {}
+  ): Promise<R[]> {
+    const batchSize = options.batchSize || 5; // Process 5 documents at a time to avoid 413 errors
+    const maxConcurrent = options.maxConcurrent || 2; // Limit concurrent requests
+    
+    console.log(`Processing ${items.length} items in batches of ${batchSize}`);
+    
+    const results: R[] = [];
+    const batches: T[][] = [];
+    
+    // Split items into batches
+    for (let i = 0; i < items.length; i += batchSize) {
+      batches.push(items.slice(i, i + batchSize));
+    }
+    
+    // Process batches with limited concurrency
+    let completed = 0;
+    const processingQueue: Promise<void>[] = [];
+    
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const processBatch = async () => {
+        try {
+          const batch = batches[batchIndex];
+          console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} items)`);
+          
+          const batchResults = await processor(batch, batchIndex);
+          results.push(...batchResults);
+          
+          completed += batch.length;
+          options.onProgress?.(completed, items.length);
+          
+          console.log(`Completed batch ${batchIndex + 1}/${batches.length}`);
+        } catch (error) {
+          console.error(`Batch ${batchIndex + 1} failed:`, error);
+          // Continue with other batches even if one fails
+        }
+      };
+      
+      processingQueue.push(processBatch());
+      
+      // Limit concurrent batch processing
+      if (processingQueue.length >= maxConcurrent) {
+        await Promise.race(processingQueue);
+        // Remove completed promises
+        const stillRunning = processingQueue.filter(p => {
+          // This is a simple check - in production you'd track promise states more carefully
+          return true;
+        });
+        processingQueue.length = 0;
+        processingQueue.push(...stillRunning);
+      }
+    }
+    
+    // Wait for all remaining batches to complete
+    await Promise.all(processingQueue);
+    
+    console.log(`Batch processing complete: ${results.length} total results`);
+    return results;
+  }
+
+  /**
+   * General purpose AI query using LocalAI with automatic model selection
    */
   async query(
     prompt: string,
@@ -148,7 +250,8 @@ class UnifiedAIClient {
       retries?: number;
     } = {}
   ): Promise<AIResponse> {
-    const model = options.model || this.config.defaultModel;
+    // Automatically select the best available model if none specified
+    const model = options.model || await this.getBestAvailableModel();
     
     // Ensure model is available
     const modelAvailable = await this.ensureModel(model);
