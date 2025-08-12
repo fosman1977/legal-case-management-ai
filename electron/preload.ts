@@ -22,6 +22,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getModels: () => ipcRenderer.invoke('localai:get-models'),
     downloadModel: (modelName: string) => ipcRenderer.invoke('localai:download-model', modelName)
   },
+
+  // Docker operations
+  docker: {
+    checkRequirements: () => ipcRenderer.invoke('docker:check-requirements'),
+    install: () => ipcRenderer.invoke('docker:install'),
+    startDesktop: () => ipcRenderer.invoke('docker:start-desktop'),
+    pullLocalAI: () => ipcRenderer.invoke('docker:pull-localai'),
+    startLocalAI: (modelsPath: string, port?: number) => ipcRenderer.invoke('docker:start-localai', modelsPath, port),
+    installCompose: () => ipcRenderer.invoke('docker:install-compose')
+  },
   
   // Setup operations
   setup: {
@@ -33,6 +43,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const validChannels = [
       'show-setup-wizard',
       'localai:download-progress',
+      'docker:install-progress',
+      'docker:pull-progress',
       'download-progress',
       'update-available',
       'update-downloaded',
@@ -111,6 +123,15 @@ declare global {
         status: () => Promise<any>;
         getModels: () => Promise<any>;
         downloadModel: (modelName: string) => Promise<boolean>;
+      };
+
+      docker: {
+        checkRequirements: () => Promise<any>;
+        install: () => Promise<boolean>;
+        startDesktop: () => Promise<boolean>;
+        pullLocalAI: () => Promise<boolean>;
+        startLocalAI: (modelsPath: string, port?: number) => Promise<boolean>;
+        installCompose: () => Promise<boolean>;
       };
       
       setup: {

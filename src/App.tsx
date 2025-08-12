@@ -7,7 +7,7 @@ import { CaseForm } from './components/CaseForm';
 import { CaseDetail } from './components/CaseDetail';
 import { GlobalProceduralCalendar } from './components/GlobalProceduralCalendar';
 import { LocalAIConnector } from './components/LocalAIConnector';
-import { SetupWizard } from './components/SetupWizard';
+import { EnhancedSetupWizard } from './components/EnhancedSetupWizard';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -121,6 +121,13 @@ export default function App() {
             >
               🤖 LocalAI
             </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setShowSetupWizard(true)}
+              title="Run setup wizard"
+            >
+              🔧 Setup
+            </button>
           </div>
         </div>
       </header>
@@ -139,7 +146,7 @@ export default function App() {
       )}
 
       {showSetupWizard && (
-        <SetupWizard
+        <EnhancedSetupWizard
           onClose={() => setShowSetupWizard(false)}
           onComplete={() => {
             setShowSetupWizard(false);

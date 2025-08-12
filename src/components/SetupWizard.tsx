@@ -98,18 +98,9 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
   const loadModels = async () => {
     try {
       // @ts-ignore - Electron IPC
-      const availableModels = await window.electronAPI?.invoke('localai:get-models');
+      const availableModels = await window.electronAPI?.localAI?.getModels();
       if (availableModels) {
-        const modelEntries = Object.entries(availableModels).map(([key, model]: [string, any]) => [
-          key,
-          {
-            ...model,
-            downloaded: false,
-            downloading: false,
-            progress: 0
-          }
-        ]);
-        setModels(Object.fromEntries(modelEntries));
+        setModels(availableModels);
       }
     } catch (error) {
       console.error('Failed to load models:', error);
@@ -119,78 +110,52 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
   const checkLocalAIStatus = async () => {
     try {
       // @ts-ignore - Electron IPC
-      const status = await window.electronAPI?.invoke('localai:status');
+      const status = await window.electronAPI?.localAI?.status();
       setLocalAIStatus(status);
-      return status?.isRunning || false;
+      return status;
     } catch (error) {
       console.error('Failed to check LocalAI status:', error);
-      return false;
+      return null;
     }
   };
+
+  useEffect(() => {
+    checkLocalAIStatus();
+  }, []);
 
   const startLocalAI = async () => {
     setIsStartingLocalAI(true);
     try {
       // @ts-ignore - Electron IPC
-      const success = await window.electronAPI?.invoke('localai:start');
-      if (success) {
+      const started = await window.electronAPI?.localAI?.start();
+      if (started) {
         await checkLocalAIStatus();
-        return true;
       }
-      return false;
     } catch (error) {
       console.error('Failed to start LocalAI:', error);
-      return false;
     } finally {
       setIsStartingLocalAI(false);
     }
   };
 
-  const downloadModel = async (modelName: string) => {
-    setModels(prev => ({
-      ...prev,
-      [modelName]: {
-        ...prev[modelName],
-        downloading: true,
-        progress: 0
-      }
-    }));
-
+  const downloadModel = async () => {
+    if (!selectedModel) return;
+    
     try {
       // @ts-ignore - Electron IPC
-      const success = await window.electronAPI?.invoke('localai:download-model', modelName);
-      
+      const success = await window.electronAPI?.localAI?.downloadModel(selectedModel);
       if (success) {
-        setModels(prev => ({
-          ...prev,
-          [modelName]: {
-            ...prev[modelName],
-            downloaded: true,
-            downloading: false,
-            progress: 100
-          }
-        }));
-        return true;
+        await loadModels();
       }
-      return false;
     } catch (error) {
       console.error('Failed to download model:', error);
-      setModels(prev => ({
-        ...prev,
-        [modelName]: {
-          ...prev[modelName],
-          downloading: false,
-          progress: 0
-        }
-      }));
-      return false;
     }
   };
 
   const completeSetup = async () => {
     try {
       // @ts-ignore - Electron IPC
-      await window.electronAPI?.invoke('setup:complete');
+      await window.electronAPI?.setup?.complete();
       onComplete();
     } catch (error) {
       console.error('Failed to complete setup:', error);
@@ -298,101 +263,81 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
       <h2>Choose Your AI Model</h2>
       <p>Select the AI model that best fits your legal practice needs:</p>
       
-      <div className="models-grid">
+      <div className="model-list">
         {Object.entries(models).map(([key, model]) => (
           <div 
             key={key}
             className={`model-card ${selectedModel === key ? 'selected' : ''} ${model.recommended ? 'recommended' : ''}`}
             onClick={() => setSelectedModel(key)}
           >
-            {model.recommended && <div className="recommended-badge">Recommended</div>}
-            
-            <h3>{model.name}</h3>
-            <div className="model-size">{model.size}</div>
-            <p className="model-description">{model.description}</p>
-            
-            <div className="model-use-case">
-              <strong>Best for:</strong> {model.useCase}
+            <div className="model-header">
+              <div>
+                <span className="model-name">{model.name}</span>
+                {model.recommended && <span className="recommended-badge">RECOMMENDED</span>}
+              </div>
+              <span className="model-size">{model.size}</span>
             </div>
-            
+            <p className="model-description">{model.description}</p>
+            <p className="model-usecase">📋 {model.useCase}</p>
             {selectedModel === key && (
               <div className="selected-indicator">
                 <CheckCircle className="selected-icon" />
-                Selected
+                <span>Selected</span>
               </div>
             )}
           </div>
         ))}
       </div>
-      
-      <div className="model-recommendation">
-        <h3>💡 Recommendation</h3>
-        <p>
-          For most legal practices, we recommend <strong>Mistral 7B Instruct</strong>. 
-          It offers the best balance of accuracy, speed, and resource usage for legal document analysis.
-        </p>
-      </div>
+
+      {selectedModel && (
+        <div className="model-recommendation">
+          <h3>Good Choice!</h3>
+          <p>{models[selectedModel]?.name} is {models[selectedModel]?.recommended ? 'our recommended model' : 'a solid choice'} for legal document analysis.</p>
+        </div>
+      )}
     </div>
   );
 
   const renderModelDownloadStep = () => {
     const model = models[selectedModel];
+    const progress = downloadProgress[selectedModel] || 0;
     
     return (
       <div className="setup-step">
-        <h2>Download AI Model</h2>
-        <p>Downloading your selected AI model to your local machine.</p>
+        <h2>Download {model?.name}</h2>
+        <p>The model will be downloaded and stored locally for offline use.</p>
         
-        {model && (
-          <div className="download-section">
-            <div className="model-info">
-              <h3>{model.name}</h3>
-              <div className="model-details">
-                <span>Size: {model.size}</span>
-                <span>•</span>
-                <span>{model.description}</span>
+        {model?.downloading ? (
+          <div className="download-progress">
+            <h3>Downloading...</h3>
+            <div className="progress-bar-container">
+              <div className="progress-bar" style={{ width: `${progress}%` }}>
+                {Math.round(progress)}%
               </div>
             </div>
+            <p className="download-status">This may take several minutes depending on your connection speed.</p>
+          </div>
+        ) : model?.downloaded ? (
+          <div className="success-message">
+            ✅ Model downloaded successfully! You can proceed to complete the setup.
+          </div>
+        ) : (
+          <div className="download-prompt">
+            <div className="model-info">
+              <h3>{model?.name}</h3>
+              <p>Size: {model?.size}</p>
+              <p>{model?.description}</p>
+            </div>
             
-            {model.downloading ? (
-              <div className="download-progress">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${model.progress}%` }}
-                  ></div>
-                </div>
-                <div className="progress-text">
-                  Downloading... {Math.round(model.progress)}%
-                </div>
-              </div>
-            ) : model.downloaded ? (
-              <div className="download-complete">
-                <CheckCircle className="success-icon" />
-                <span>Model downloaded successfully!</span>
-              </div>
-            ) : (
-              <div className="download-actions">
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => downloadModel(selectedModel)}
-                >
-                  <Download className="btn-icon" />
-                  Download Model
-                </button>
-              </div>
-            )}
+            <button 
+              className="btn btn-primary"
+              onClick={downloadModel}
+            >
+              <Download className="btn-icon" />
+              Download Model
+            </button>
           </div>
         )}
-        
-        <div className="download-info">
-          <h4>What happens during download:</h4>
-          <ul>
-            <li>The AI model is downloaded directly to your computer</li>
-            <li>No data is sent to external servers</li>
-            <li>The model will be available for offline use</li>
-          </ul>
-        </div>
       </div>
     );
   };
@@ -402,9 +347,9 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
       <div className="completion-content">
         <div className="completion-icon">🎉</div>
         <h2>Setup Complete!</h2>
-        <p>Your Legal Case Manager AI is now ready to use.</p>
+        <p className="completion-message">Your Legal Case Manager AI is now ready to use.</p>
         
-        <div className="completion-summary">
+        <div className="completion-details">
           <h3>What's been configured:</h3>
           <ul>
             <li>✅ LocalAI engine is running</li>
@@ -414,7 +359,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
           </ul>
         </div>
         
-        <div className="next-steps">
+        <div className="completion-details">
           <h3>Next Steps:</h3>
           <ul>
             <li>Create your first case to start analyzing documents</li>
@@ -463,510 +408,60 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onClose, onComplete })
   return (
     <div className="setup-wizard-overlay">
       <div className="setup-wizard">
-        <div className="setup-header">
+        <div className="wizard-header">
           <h1>Setup Wizard</h1>
-          <button className="close-button" onClick={onClose}>
+          <button className="wizard-close" onClick={onClose}>
             <X />
           </button>
         </div>
         
-        <div className="setup-progress">
+        <div className="wizard-progress">
           {steps.map((step, index) => (
             <div 
               key={step.id}
               className={`progress-step ${index <= currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
             >
-              <div className="step-number">
+              <div className="step-circle">
                 {index < currentStep ? '✓' : index + 1}
               </div>
-              <div className="step-title">{step.title}</div>
+              <div className="step-label">{step.title}</div>
             </div>
           ))}
         </div>
         
-        <div className="setup-content">
+        <div className="wizard-content">
           {renderCurrentStep()}
         </div>
         
-        <div className="setup-footer">
-          <button 
-            className="btn btn-secondary"
-            onClick={prevStep}
-            disabled={currentStep === 0}
-          >
-            Previous
-          </button>
-          
-          {currentStep === steps.length - 1 ? (
+        <div className="wizard-footer">
+          <div className="wizard-nav">
             <button 
-              className="btn btn-primary"
-              onClick={completeSetup}
+              className="btn btn-secondary"
+              onClick={prevStep}
+              disabled={currentStep === 0}
             >
-              Finish Setup
+              Previous
             </button>
-          ) : (
-            <button 
-              className="btn btn-primary"
-              onClick={nextStep}
-              disabled={!canProceed()}
-            >
-              Next
-            </button>
-          )}
+            
+            {currentStep === steps.length - 1 ? (
+              <button 
+                className="btn btn-primary"
+                onClick={completeSetup}
+              >
+                Finish Setup
+              </button>
+            ) : (
+              <button 
+                className="btn btn-primary"
+                onClick={nextStep}
+                disabled={!canProceed()}
+              >
+                Next
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      
-      <style>{`
-        .setup-wizard-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-
-        .setup-wizard {
-          background: white;
-          border-radius: 16px;
-          max-width: 800px;
-          width: 90%;
-          max-height: 90vh;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .setup-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 24px 32px;
-          border-bottom: 1px solid #e0e0e0;
-        }
-
-        .setup-header h1 {
-          margin: 0;
-          font-size: 24px;
-          color: #333;
-        }
-
-        .close-button {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #666;
-          padding: 4px;
-        }
-
-        .setup-progress {
-          display: flex;
-          justify-content: space-between;
-          padding: 24px 32px;
-          background: #f8f9fa;
-        }
-
-        .progress-step {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          flex: 1;
-          text-align: center;
-        }
-
-        .step-number {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #e0e0e0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-          margin-bottom: 8px;
-          transition: all 0.3s;
-        }
-
-        .progress-step.active .step-number {
-          background: #667eea;
-          color: white;
-        }
-
-        .progress-step.completed .step-number {
-          background: #10b981;
-          color: white;
-        }
-
-        .step-title {
-          font-size: 12px;
-          color: #666;
-          max-width: 120px;
-        }
-
-        .setup-content {
-          padding: 32px;
-          flex: 1;
-        }
-
-        .setup-step h2 {
-          margin: 0 0 16px 0;
-          color: #333;
-        }
-
-        .welcome-content {
-          text-align: center;
-        }
-
-        .welcome-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-        }
-
-        .welcome-description {
-          font-size: 16px;
-          color: #666;
-          margin-bottom: 32px;
-          line-height: 1.6;
-        }
-
-        .features-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 24px;
-          margin-bottom: 32px;
-        }
-
-        .feature {
-          text-align: center;
-          padding: 20px;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-        }
-
-        .feature-icon {
-          width: 48px;
-          height: 48px;
-          color: #667eea;
-          margin-bottom: 16px;
-        }
-
-        .feature h3 {
-          margin: 0 0 8px 0;
-          font-size: 18px;
-          color: #333;
-        }
-
-        .feature p {
-          margin: 0;
-          color: #666;
-          font-size: 14px;
-        }
-
-        .system-requirements {
-          text-align: left;
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-        }
-
-        .system-requirements h3 {
-          margin: 0 0 12px 0;
-          color: #333;
-        }
-
-        .system-requirements ul {
-          margin: 0;
-          padding-left: 20px;
-          color: #666;
-        }
-
-        .localai-status {
-          margin: 24px 0;
-        }
-
-        .status-success {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #10b981;
-          font-weight: 500;
-        }
-
-        .status-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #f59e0b;
-          font-weight: 500;
-        }
-
-        .setup-actions {
-          display: flex;
-          gap: 12px;
-          margin: 24px 0;
-        }
-
-        .success-message {
-          background: #dcfce7;
-          color: #166534;
-          padding: 12px;
-          border-radius: 8px;
-          margin-top: 16px;
-        }
-
-        .models-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 16px;
-          margin: 24px 0;
-        }
-
-        .model-card {
-          border: 2px solid #e0e0e0;
-          border-radius: 12px;
-          padding: 20px;
-          cursor: pointer;
-          transition: all 0.3s;
-          position: relative;
-        }
-
-        .model-card:hover {
-          border-color: #667eea;
-        }
-
-        .model-card.selected {
-          border-color: #667eea;
-          background: #f0f4ff;
-        }
-
-        .model-card.recommended {
-          border-color: #10b981;
-        }
-
-        .recommended-badge {
-          position: absolute;
-          top: -8px;
-          right: 16px;
-          background: #10b981;
-          color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: bold;
-        }
-
-        .model-card h3 {
-          margin: 0 0 8px 0;
-          color: #333;
-        }
-
-        .model-size {
-          color: #667eea;
-          font-weight: bold;
-          margin-bottom: 12px;
-        }
-
-        .model-description {
-          color: #666;
-          margin-bottom: 16px;
-          line-height: 1.5;
-        }
-
-        .model-use-case {
-          color: #333;
-          font-size: 14px;
-          background: #f8f9fa;
-          padding: 8px;
-          border-radius: 4px;
-        }
-
-        .selected-indicator {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #667eea;
-          font-weight: bold;
-          margin-top: 12px;
-        }
-
-        .selected-icon {
-          width: 20px;
-          height: 20px;
-        }
-
-        .model-recommendation {
-          background: #fffbeb;
-          border: 1px solid #fbbf24;
-          border-radius: 8px;
-          padding: 16px;
-          margin-top: 24px;
-        }
-
-        .model-recommendation h3 {
-          margin: 0 0 8px 0;
-          color: #92400e;
-        }
-
-        .download-section {
-          margin: 24px 0;
-        }
-
-        .model-info h3 {
-          margin: 0 0 8px 0;
-          color: #333;
-        }
-
-        .model-details {
-          color: #666;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-
-        .download-progress {
-          margin: 16px 0;
-        }
-
-        .progress-bar {
-          background: #e0e0e0;
-          border-radius: 8px;
-          height: 8px;
-          overflow: hidden;
-          margin-bottom: 8px;
-        }
-
-        .progress-fill {
-          background: #667eea;
-          height: 100%;
-          transition: width 0.3s ease;
-        }
-
-        .progress-text {
-          text-align: center;
-          color: #666;
-          font-weight: 500;
-        }
-
-        .download-complete {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #10b981;
-          font-weight: 500;
-        }
-
-        .success-icon {
-          width: 20px;
-          height: 20px;
-        }
-
-        .download-actions {
-          margin: 16px 0;
-        }
-
-        .btn-icon {
-          width: 16px;
-          height: 16px;
-          margin-right: 8px;
-        }
-
-        .download-info {
-          background: #f0f4ff;
-          border: 1px solid #667eea;
-          border-radius: 8px;
-          padding: 16px;
-          margin-top: 24px;
-        }
-
-        .download-info h4 {
-          margin: 0 0 8px 0;
-          color: #333;
-        }
-
-        .download-info ul {
-          margin: 0;
-          padding-left: 20px;
-          color: #666;
-        }
-
-        .completion-content {
-          text-align: center;
-        }
-
-        .completion-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-        }
-
-        .completion-summary,
-        .next-steps {
-          text-align: left;
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-          margin: 24px 0;
-        }
-
-        .completion-summary h3,
-        .next-steps h3 {
-          margin: 0 0 12px 0;
-          color: #333;
-        }
-
-        .completion-summary ul,
-        .next-steps ul {
-          margin: 0;
-          padding-left: 20px;
-          color: #666;
-        }
-
-        .setup-footer {
-          display: flex;
-          justify-content: space-between;
-          padding: 24px 32px;
-          border-top: 1px solid #e0e0e0;
-        }
-
-        .btn {
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          transition: all 0.3s;
-        }
-
-        .btn-primary {
-          background: #667eea;
-          color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #5a67d8;
-        }
-
-        .btn-secondary {
-          background: #6b7280;
-          color: white;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-          background: #4b5563;
-        }
-
-        .btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-      `}</style>
     </div>
   );
 };

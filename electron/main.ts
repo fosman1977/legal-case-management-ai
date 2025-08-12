@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { DockerManager } from './dockerManager';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -250,6 +251,7 @@ parameters:
 let mainWindow: BrowserWindow;
 // let tray: Tray | null = null; // Disabled for simplified build
 let localAI: LocalAIManager;
+let dockerManager: DockerManager;
 let isQuitting = false;
 
 const createWindow = (): void => {
@@ -553,6 +555,7 @@ const checkFirstTimeSetup = async () => {
 // App event handlers
 app.whenReady().then(() => {
   localAI = new LocalAIManager();
+  dockerManager = new DockerManager();
   createWindow();
   createMenu();
   // setupTray(); // Disabled until proper icons are available
@@ -648,6 +651,39 @@ const registerIpcHandlers = () => {
   ipcMain.handle('updater:quit-and-install', () => {
     autoUpdater.quitAndInstall();
     return true;
+  });
+
+  // Docker Management
+  ipcMain.handle('docker:check-requirements', async () => {
+    return await dockerManager.checkSystemRequirements();
+  });
+
+  ipcMain.handle('docker:install', async (_event) => {
+    return new Promise((resolve) => {
+      dockerManager.installDocker((status, progress) => {
+        _event.sender.send('docker:install-progress', { status, progress });
+      }).then(resolve);
+    });
+  });
+
+  ipcMain.handle('docker:start-desktop', async () => {
+    return await dockerManager.startDockerDesktop();
+  });
+
+  ipcMain.handle('docker:pull-localai', async (_event) => {
+    return new Promise((resolve) => {
+      dockerManager.pullLocalAIImage((status, progress) => {
+        _event.sender.send('docker:pull-progress', { status, progress });
+      }).then(resolve);
+    });
+  });
+
+  ipcMain.handle('docker:start-localai', async (_event, modelsPath, port) => {
+    return await dockerManager.startLocalAIContainer(modelsPath, port);
+  });
+
+  ipcMain.handle('docker:install-compose', async () => {
+    return await dockerManager.installDockerCompose();
   });
 
   // Setup Operations

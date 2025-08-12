@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 4px;
+            background: #2196f3;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button.secondary {
+            background: #757575;
+        }
+        button.secondary:hover {
+            background: #616161;
+        }
+        #app-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .test-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Setup Wizard Test Page</h1>
+        
+        <div class="status">
+            <strong>Test Environment:</strong> This page tests the setup wizard without Electron
+        </div>
+        
+        <div class="test-controls">
+            <h3>Test Controls:</h3>
+            <button onclick="openSetupWizard()">Open Setup Wizard</button>
+            <button onclick="simulateElectronAPI()" class="secondary">Simulate Electron API</button>
+            <button onclick="clearSetupFlag()" class="secondary">Clear Setup Flag</button>
+        </div>
+        
+        <iframe id="app-frame" src="http://localhost:5173"></iframe>
+    </div>
+    
+    <script>
+        function openSetupWizard() {
+            const frame = document.getElementById('app-frame');
+            // Send a message to the iframe to open the setup wizard
+            frame.contentWindow.postMessage({ type: 'OPEN_SETUP_WIZARD' }, '*');
+        }
+        
+        function simulateElectronAPI() {
+            const frame = document.getElementById('app-frame');
+            // Inject a mock Electron API into the iframe
+            frame.contentWindow.electronAPI = {
+                localAI: {
+                    start: () => Promise.resolve(true),
+                    stop: () => Promise.resolve(true),
+                    status: () => Promise.resolve({
+                        isRunning: true,
+                        port: 8080,
+                        modelsPath: '/models',
+                        selectedModel: 'mistral-7b-instruct-legal'
+                    }),
+                    getModels: () => Promise.resolve({
+                        'mistral-7b-instruct-legal': {
+                            name: 'Mistral 7B Instruct (Legal Optimized)',
+                            size: '4.1GB',
+                            description: 'Best for legal document analysis',
+                            recommended: true,
+                            useCase: 'Document analysis, contract review',
+                            downloaded: false,
+                            downloading: false,
+                            progress: 0
+                        }
+                    }),
+                    downloadModel: (modelName) => Promise.resolve(true)
+                },
+                setup: {
+                    complete: () => Promise.resolve(true)
+                },
+                on: (channel, callback) => {
+                    console.log('Listening to channel:', channel);
+                },
+                removeListener: () => {},
+                removeAllListeners: () => {}
+            };
+            
+            console.log('Electron API simulated in iframe');
+            alert('Electron API simulated! The setup wizard should now work with mock data.');
+        }
+        
+        function clearSetupFlag() {
+            localStorage.removeItem('setup-complete');
+            alert('Setup flag cleared. Refresh the page to trigger first-time setup.');
+        }
+        
+        // Listen for messages from the iframe
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type) {
+                console.log('Message from iframe:', event.data);
+            }
+        });
+        
+        // Auto-simulate Electron API on load
+        setTimeout(() => {
+            simulateElectronAPI();
+        }, 2000);
+    </script>
+</body>
+</html>
