@@ -24,14 +24,14 @@ export class AIModelMigration {
 
     try {
       // Check if LocalAI is available
-      const isAvailable = await this.aiClient.isAvailable();
+      const isAvailable = await AIModelMigration.aiClient.isAvailable();
       if (!isAvailable) {
         console.warn('LocalAI is not available, using fallback model');
         return 'gpt-4'; // Better fallback than gpt-3.5-turbo
       }
 
       // Get the best available model
-      const bestModel = await this.aiClient.getBestAvailableModel();
+      const bestModel = await AIModelMigration.aiClient.getBestAvailableModel();
       this.cachedBestModel = bestModel;
       this.lastModelCheck = now;
       
@@ -102,7 +102,7 @@ export class AIModelMigration {
    */
   static async getAvailableModels(): Promise<string[]> {
     try {
-      const models = await this.aiClient.getModels();
+      const models = await AIModelMigration.aiClient.getModels();
       if (models.length === 0) {
         return ['gpt-4', 'gpt-3.5-turbo']; // Reasonable fallbacks
       }
@@ -164,7 +164,7 @@ export class AIModelMigration {
     error?: string;
   }> {
     try {
-      const connected = await this.aiClient.isAvailable();
+      const connected = await AIModelMigration.aiClient.isAvailable();
       if (!connected) {
         return {
           connected: false,
