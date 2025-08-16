@@ -10,6 +10,16 @@ import { ProductionDocumentExtractor, ExtractionResult, ExtractedEntity, Extract
 import { unifiedAIClient } from './unifiedAIClient';
 import { intelligentModelRouter, DocumentClassification } from './intelligentModelRouter';
 import { advancedCacheSystem, CacheKey } from './advancedCacheSystem';
+import { 
+  LegalEntity, 
+  LegalTable, 
+  DocumentMetadata, 
+  ProcessingStatistics, 
+  QualityMetrics,
+  LegalEntityArray,
+  LegalTableArray,
+  MetadataArray 
+} from '../types/strict-interfaces';
 
 interface OptimizedAIConfig {
   maxTokensPerChunk: number;
@@ -18,6 +28,10 @@ interface OptimizedAIConfig {
   confidenceThreshold: number;
   enableProgressCallbacks: boolean;
   contextWindow: number;
+  enableEnhancedLegalReasoning?: boolean;
+  targetLawyerGradeConfidence?: number;
+  jurisdiction?: string;
+  practiceArea?: string;
 }
 
 interface AIProgressUpdate {
@@ -50,9 +64,9 @@ export interface EnhancedAIAnalysisResult extends AIAnalysisResult {
     processingTime: number;
   };
   structuredData: {
-    tables: ExtractedTable[];
-    entities: ExtractedEntity[];
-    metadata: any[];
+    tables: LegalTableArray;
+    entities: LegalEntityArray;
+    metadata: MetadataArray;
   };
 }
 
@@ -63,7 +77,11 @@ class OptimizedAIAnalyzer {
     useStructuredData: true,
     confidenceThreshold: 0.6,
     enableProgressCallbacks: true,
-    contextWindow: 4000
+    contextWindow: 4000,
+    enableEnhancedLegalReasoning: true,
+    targetLawyerGradeConfidence: 0.95,
+    jurisdiction: 'federal',
+    practiceArea: 'general'
   };
 
   private analysisCache = new Map<string, EnhancedAIAnalysisResult>();
@@ -346,13 +364,13 @@ class OptimizedAIAnalyzer {
     documents: Array<{
       title: string;
       content: string;
-      entities: ExtractedEntity[];
-      tables: ExtractedTable[];
-      metadata: any;
+      entities: LegalEntityArray;
+      tables: LegalTableArray;
+      metadata: DocumentMetadata;
       quality: number;
     }>;
-    globalEntities: ExtractedEntity[];
-    globalTables: ExtractedTable[];
+    globalEntities: LegalEntityArray;
+    globalTables: LegalTableArray;
     qualityMetrics: {
       averageQuality: number;
       totalPages: number;
@@ -363,15 +381,15 @@ class OptimizedAIAnalyzer {
     const documents = extractionResults.map((result, index) => ({
       title: result.metadata.fileName || `Document ${index + 1}`,
       content: result.text,
-      entities: result.entities,
-      tables: result.tables,
-      metadata: result.metadata,
+      entities: result.entities as LegalEntityArray,
+      tables: result.tables as LegalTableArray,
+      metadata: result.metadata as DocumentMetadata,
       quality: result.quality.overall
     }));
 
     // Aggregate global data
-    const globalEntities = extractionResults.flatMap(r => r.entities);
-    const globalTables = extractionResults.flatMap(r => r.tables);
+    const globalEntities = extractionResults.flatMap(r => r.entities) as LegalEntityArray;
+    const globalTables = extractionResults.flatMap(r => r.tables) as LegalTableArray;
 
     // Calculate quality metrics
     const qualityMetrics = {
@@ -390,7 +408,7 @@ class OptimizedAIAnalyzer {
   }
 
   /**
-   * Perform full AI analysis with all features
+   * Perform full AI analysis with all features including advanced legal reasoning
    */
   private async performFullAnalysis(
     structuredData: any,
@@ -400,8 +418,8 @@ class OptimizedAIAnalyzer {
     onProgress?.({
       stage: 'analyzing',
       current: 1,
-      total: 4,
-      percentage: 40,
+      total: 6,
+      percentage: 30,
       status: 'Performing comprehensive AI analysis...'
     });
 
@@ -412,7 +430,15 @@ class OptimizedAIAnalyzer {
     // Create enhanced context for AI
     const enhancedContext = this.buildEnhancedContext(structuredData);
 
-    // Parallel AI processing for different analysis types
+    // Step 1: Standard AI analysis (parallel processing)
+    onProgress?.({
+      stage: 'analyzing',
+      current: 2,
+      total: 6,
+      percentage: 40,
+      status: 'Analyzing persons, issues, and chronology...'
+    });
+
     const [persons, issues, chronology, authorities, summary, keyPoints] = await Promise.all([
       this.analyzePersonsWithContext(enhancedContext, existingEntities),
       this.analyzeIssuesWithContext(enhancedContext, existingTables),
@@ -424,15 +450,8 @@ class OptimizedAIAnalyzer {
 
     if (abortSignal?.aborted) throw new Error('Analysis cancelled');
 
-    onProgress?.({
-      stage: 'summarizing',
-      current: 4,
-      total: 4,
-      percentage: 90,
-      status: 'Finalizing analysis results...'
-    });
-
-    return {
+    // Step 2: Create basic analysis result
+    const basicResult: EnhancedAIAnalysisResult = {
       // Standard AI analysis results
       chronologyEvents: chronology,
       persons: persons,
@@ -463,6 +482,75 @@ class OptimizedAIAnalyzer {
         metadata: structuredData.documents.map((d: any) => d.metadata)
       }
     };
+
+    // Step 3: Check if enhanced legal analysis is enabled
+    if (this.config.enableEnhancedLegalReasoning) {
+      onProgress?.({
+        stage: 'analyzing',
+        current: 3,
+        total: 6,
+        percentage: 55,
+        status: 'Applying advanced legal reasoning (IRAC)...'
+      });
+
+      try {
+        // Import and use enhanced legal analysis integration
+        const { createEnhancedLegalAnalysisIntegrator } = await import('../core/enhanced-legal-analysis-integration');
+        const integrator = createEnhancedLegalAnalysisIntegrator();
+
+        onProgress?.({
+          stage: 'analyzing',
+          current: 4,
+          total: 6,
+          percentage: 70,
+          status: 'Performing professional defensibility assessment...'
+        });
+
+        // Enhance the basic analysis with advanced legal reasoning
+        const enhancedResult = await integrator.enhanceAIAnalysis(
+          basicResult,
+          structuredData.documents,
+          `case-${Date.now()}`,
+          {
+            enableIRAC: true,
+            enableDefensibility: true,
+            enableUncertaintyQuantification: true,
+            targetConfidence: this.config.targetLawyerGradeConfidence || 0.95,
+            jurisdiction: this.config.jurisdiction || 'federal',
+            practiceArea: this.config.practiceArea || 'general'
+          }
+        );
+
+        onProgress?.({
+          stage: 'analyzing',
+          current: 5,
+          total: 6,
+          percentage: 85,
+          status: `Enhanced analysis complete: ${(enhancedResult.lawyerGradeConfidence * 100).toFixed(1)}% confidence`
+        });
+
+        console.log(`✅ Enhanced legal analysis applied:`);
+        console.log(`   Lawyer-grade confidence: ${(enhancedResult.lawyerGradeConfidence * 100).toFixed(1)}%`);
+        console.log(`   IRAC issues: ${enhancedResult.iracAnalysis.issues.length}`);
+        console.log(`   Professional readiness: ${enhancedResult.professionalReadiness.readinessLevel}`);
+
+        return enhancedResult;
+
+      } catch (error) {
+        console.warn('⚠️ Enhanced legal analysis failed, falling back to basic analysis:', error);
+        // Continue with basic analysis if enhanced fails
+      }
+    }
+
+    onProgress?.({
+      stage: 'summarizing',
+      current: 6,
+      total: 6,
+      percentage: 90,
+      status: 'Finalizing analysis results...'
+    });
+
+    return basicResult;
   }
 
   /**
@@ -518,7 +606,7 @@ class OptimizedAIAnalyzer {
    */
   private async analyzePersonsWithContext(
     context: string, 
-    existingEntities: ExtractedEntity[],
+    existingEntities: LegalEntityArray,
     classification?: DocumentClassification
   ): Promise<Omit<Person, 'id' | 'caseId'>[]> {
     const personEntities = existingEntities.filter(e => e.type === 'person');
@@ -585,7 +673,7 @@ Format as JSON array:
    */
   private async analyzeIssuesWithContext(
     context: string, 
-    existingTables: ExtractedTable[]
+    existingTables: LegalTableArray
   ): Promise<Omit<Issue, 'id' | 'caseId'>[]> {
     const tableContext = existingTables.map(t => 
       `Table (${t.type}): ${t.markdown.substring(0, 200)}...`
@@ -633,14 +721,14 @@ Format as JSON array:
   }
 
   // Additional analysis methods...
-  private async analyzeChronologyWithContext(_context: string, entities: ExtractedEntity[]): Promise<Omit<ChronologyEvent, 'id' | 'caseId'>[]> {
+  private async analyzeChronologyWithContext(_context: string, entities: LegalEntityArray): Promise<Omit<ChronologyEvent, 'id' | 'caseId'>[]> {
     // Implementation similar to analyzePersonsWithContext but for chronology
     const _dateEntities = entities.filter(e => e.type === 'date');
     // ... (implementation details)
     return [];
   }
 
-  private async analyzeAuthoritiesWithContext(_context: string, _entities: ExtractedEntity[]): Promise<Omit<LegalAuthority, 'id' | 'caseId'>[]> {
+  private async analyzeAuthoritiesWithContext(_context: string, _entities: LegalEntityArray): Promise<Omit<LegalAuthority, 'id' | 'caseId'>[]> {
     // Implementation for legal authorities
     return [];
   }
@@ -651,29 +739,360 @@ Format as JSON array:
     return response.content;
   }
 
-  private async extractKeyPointsWithContext(_context: string, _tables: ExtractedTable[]): Promise<Omit<KeyPoint, 'id' | 'caseId'>[]> {
+  private async extractKeyPointsWithContext(_context: string, _tables: LegalTableArray): Promise<Omit<KeyPoint, 'id' | 'caseId'>[]> {
     // Implementation for key points
     return [];
   }
 
   // Quick analysis methods
-  private async performQuickAnalysis(_structuredData: any, _onProgress?: any, _abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
-    // Simplified analysis for speed
-    throw new Error('Quick analysis not yet implemented');
+  private async performQuickAnalysis(structuredData: any, onProgress?: any, abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
+    onProgress?.({
+      stage: 'analyzing',
+      current: 1,
+      total: 3,
+      percentage: 33,
+      status: 'Performing quick analysis...'
+    });
+
+    // Fast analysis focusing on key elements only
+    const enhancedContext = this.buildEnhancedContext(structuredData);
+    
+    // Simplified parallel processing for speed
+    const [summary, keyPersons, majorIssues] = await Promise.all([
+      this.generateQuickSummary(enhancedContext),
+      this.extractKeyPersonsQuick(structuredData.globalEntities),
+      this.identifyMajorIssuesQuick(enhancedContext)
+    ]);
+
+    if (abortSignal?.aborted) throw new Error('Analysis cancelled');
+
+    onProgress?.({
+      stage: 'analyzing',
+      current: 3,
+      total: 3,
+      percentage: 100,
+      status: 'Quick analysis complete'
+    });
+
+    return {
+      // Simplified results for quick analysis
+      chronologyEvents: [],
+      persons: keyPersons,
+      issues: majorIssues,
+      keyPoints: [],
+      authorities: [],
+      confidence: 0.75, // Lower confidence for quick analysis
+      processingTime: 0,
+      summary: summary,
+
+      extractionQuality: {
+        overall: structuredData.qualityMetrics.averageQuality,
+        textQuality: structuredData.qualityMetrics.averageQuality,
+        structureQuality: structuredData.qualityMetrics.averageQuality,
+        aiConfidence: 0.75
+      },
+      processingStats: {
+        documentsProcessed: structuredData.documents.length,
+        entitiesExtracted: structuredData.globalEntities.length,
+        tablesAnalyzed: structuredData.globalTables.length,
+        aiTokensUsed: this.estimateTokensUsed(enhancedContext.substring(0, 1000)),
+        processingTime: 0
+      },
+      structuredData: {
+        tables: structuredData.globalTables,
+        entities: structuredData.globalEntities,
+        metadata: structuredData.documents.map((d: any) => d.metadata)
+      }
+    };
   }
 
-  private async performEntityOnlyAnalysis(_structuredData: any, _onProgress?: any, _abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
-    // Entity-focused analysis
-    throw new Error('Entity-only analysis not yet implemented');
+  private async performEntityOnlyAnalysis(structuredData: any, onProgress?: any, abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
+    onProgress?.({
+      stage: 'entities',
+      current: 1,
+      total: 4,
+      percentage: 25,
+      status: 'Analyzing entities and relationships...'
+    });
+
+    // Focus exclusively on entity processing and relationships
+    const entities = structuredData.globalEntities;
+    
+    onProgress?.({
+      stage: 'entities',
+      current: 2,
+      total: 4,
+      percentage: 50,
+      status: 'Processing person entities...'
+    });
+
+    // Enhanced entity analysis
+    const [persons, entitySummary, entityRelationships] = await Promise.all([
+      this.analyzePersonsWithContext(
+        this.buildEntityContext(entities), 
+        entities.filter((e: any) => e.type === 'person')
+      ),
+      this.generateEntitySummary(entities),
+      this.analyzeEntityRelationships(entities)
+    ]);
+
+    if (abortSignal?.aborted) throw new Error('Analysis cancelled');
+
+    onProgress?.({
+      stage: 'entities',
+      current: 4,
+      total: 4,
+      percentage: 100,
+      status: 'Entity analysis complete'
+    });
+
+    return {
+      // Entity-focused results
+      chronologyEvents: [],
+      persons: persons,
+      issues: [],
+      keyPoints: entityRelationships.map((rel: any) => ({
+        title: `Entity Relationship: ${rel.type}`,
+        description: rel.description,
+        importance: rel.importance as 'critical' | 'high' | 'medium' | 'low',
+        category: 'entity' as const,
+        documentRefs: rel.documentRefs || []
+      })),
+      authorities: [],
+      confidence: this.calculateEntityConfidence(entities),
+      processingTime: 0,
+      summary: entitySummary,
+
+      extractionQuality: {
+        overall: structuredData.qualityMetrics.averageQuality,
+        textQuality: structuredData.qualityMetrics.averageQuality,
+        structureQuality: structuredData.qualityMetrics.averageQuality,
+        aiConfidence: this.calculateEntityConfidence(entities)
+      },
+      processingStats: {
+        documentsProcessed: structuredData.documents.length,
+        entitiesExtracted: entities.length,
+        tablesAnalyzed: 0, // Not analyzing tables in entity-only mode
+        aiTokensUsed: this.estimateTokensUsed(this.buildEntityContext(entities)),
+        processingTime: 0
+      },
+      structuredData: {
+        tables: [],
+        entities: entities,
+        metadata: structuredData.documents.map((d: any) => d.metadata)
+      }
+    };
   }
 
-  private async performSummaryOnlyAnalysis(_structuredData: any, _onProgress?: any, _abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
-    // Summary-focused analysis
-    throw new Error('Summary-only analysis not yet implemented');
+  private async performSummaryOnlyAnalysis(structuredData: any, onProgress?: any, abortSignal?: AbortSignal): Promise<EnhancedAIAnalysisResult> {
+    onProgress?.({
+      stage: 'summarizing',
+      current: 1,
+      total: 3,
+      percentage: 33,
+      status: 'Generating comprehensive summary...'
+    });
+
+    // Focus on high-quality summary generation
+    const enhancedContext = this.buildEnhancedContext(structuredData);
+    
+    onProgress?.({
+      stage: 'summarizing',
+      current: 2,
+      total: 3,
+      percentage: 67,
+      status: 'Creating executive summary...'
+    });
+
+    // Generate multiple summary perspectives
+    const [executiveSummary, detailedSummary, keyInsights] = await Promise.all([
+      this.generateExecutiveSummary(enhancedContext),
+      this.generateDetailedSummary(enhancedContext, structuredData.globalTables),
+      this.extractKeyInsights(enhancedContext, structuredData.globalEntities)
+    ]);
+
+    if (abortSignal?.aborted) throw new Error('Analysis cancelled');
+
+    onProgress?.({
+      stage: 'summarizing',
+      current: 3,
+      total: 3,
+      percentage: 100,
+      status: 'Summary analysis complete'
+    });
+
+    const combinedSummary = `${executiveSummary}\n\n### Detailed Analysis\n${detailedSummary}\n\n### Key Insights\n${keyInsights}`;
+
+    return {
+      // Summary-focused results
+      chronologyEvents: [],
+      persons: [],
+      issues: [],
+      keyPoints: [{
+        title: 'Executive Summary',
+        description: executiveSummary,
+        importance: 'critical' as const,
+        category: 'summary' as const,
+        documentRefs: []
+      }, {
+        title: 'Key Insights',
+        description: keyInsights,
+        importance: 'high' as const,
+        category: 'analysis' as const,
+        documentRefs: []
+      }],
+      authorities: [],
+      confidence: this.calculateSummaryConfidence(structuredData),
+      processingTime: 0,
+      summary: combinedSummary,
+
+      extractionQuality: {
+        overall: structuredData.qualityMetrics.averageQuality,
+        textQuality: structuredData.qualityMetrics.averageQuality,
+        structureQuality: structuredData.qualityMetrics.averageQuality,
+        aiConfidence: this.calculateSummaryConfidence(structuredData)
+      },
+      processingStats: {
+        documentsProcessed: structuredData.documents.length,
+        entitiesExtracted: structuredData.globalEntities.length,
+        tablesAnalyzed: structuredData.globalTables.length,
+        aiTokensUsed: this.estimateTokensUsed(enhancedContext),
+        processingTime: 0
+      },
+      structuredData: {
+        tables: structuredData.globalTables,
+        entities: structuredData.globalEntities,
+        metadata: structuredData.documents.map((d: any) => d.metadata)
+      }
+    };
+  }
+
+  // Helper methods for analysis modes
+  private async generateQuickSummary(context: string): Promise<string> {
+    const prompt = `Provide a brief 2-3 sentence summary of this legal case:\\n\\n${context.substring(0, 1000)}`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.3, maxTokens: 200 });
+    return response.content;
+  }
+
+  private async extractKeyPersonsQuick(entities: LegalEntityArray): Promise<Omit<Person, 'id' | 'caseId'>[]> {
+    const personEntities = entities.filter(e => e.type === 'person').slice(0, 5); // Top 5 persons
+    return personEntities.map(entity => ({
+      name: entity.value,
+      role: 'other' as const,
+      description: entity.context?.substring(0, 50) || 'Key person identified',
+      relevance: entity.context?.substring(0, 50) || 'Key person identified',
+      documentRefs: []
+    }));
+  }
+
+  private async identifyMajorIssuesQuick(context: string): Promise<Omit<Issue, 'id' | 'caseId'>[]> {
+    const prompt = `Identify 2-3 main legal issues from this case summary:\\n\\n${context.substring(0, 1000)}\\n\\nFormat as brief bullet points.`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.3, maxTokens: 300 });
+    
+    // Parse response into issues (simple implementation)
+    const issues = response.content.split('\n').filter(line => line.trim().startsWith('-') || line.trim().startsWith('•')).slice(0, 3);
+    return issues.map((issue, index) => ({
+      title: `Issue ${index + 1}`,
+      description: issue.trim().replace(/^[-•]\s*/, ''),
+      category: 'factual' as const,
+      status: 'unresolved' as const,
+      priority: 'medium' as const,
+      documentRefs: [],
+      relatedIssues: []
+    }));
+  }
+
+  private buildEntityContext(entities: LegalEntityArray): string {
+    const entityGroups = entities.reduce((groups: Record<string, LegalEntity[]>, entity: LegalEntity) => {
+      if (!groups[entity.type]) groups[entity.type] = [];
+      groups[entity.type].push(entity);
+      return groups;
+    }, {});
+
+    let context = '=== ENTITY ANALYSIS ===\\n';
+    Object.entries(entityGroups).forEach(([type, entitiesOfType]: [string, LegalEntity[]]) => {
+      context += `${type.toUpperCase()}: ${entitiesOfType.slice(0, 10).map((e: LegalEntity) => e.value).join(', ')}\\n`;
+    });
+    return context;
+  }
+
+  private async generateEntitySummary(entities: LegalEntityArray): Promise<string> {
+    const entityContext = this.buildEntityContext(entities);
+    const prompt = `Analyze these extracted entities and provide a summary of the key people, organizations, and relationships:\\n\\n${entityContext}`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.3, maxTokens: 400 });
+    return response.content;
+  }
+
+  private async analyzeEntityRelationships(entities: LegalEntityArray): Promise<Array<{
+    type: string;
+    description: string;
+    importance: string;
+    documentRefs: string[];
+  }>> {
+    const personEntities = entities.filter(e => e.type === 'person');
+    const orgEntities = entities.filter(e => e.type === 'organization');
+    
+    // Simple relationship analysis
+    const relationships = [];
+    
+    if (personEntities.length > 1) {
+      relationships.push({
+        type: 'person-person',
+        description: `${personEntities.length} persons identified with potential relationships`,
+        importance: 'medium',
+        documentRefs: []
+      });
+    }
+    
+    if (orgEntities.length > 0 && personEntities.length > 0) {
+      relationships.push({
+        type: 'person-organization',
+        description: `${personEntities.length} persons associated with ${orgEntities.length} organizations`,
+        importance: 'high',
+        documentRefs: []
+      });
+    }
+    
+    return relationships;
+  }
+
+  private calculateEntityConfidence(entities: LegalEntityArray): number {
+    if (entities.length === 0) return 0.5;
+    const avgConfidence = entities.reduce((sum, e) => sum + (e.confidence || 0.7), 0) / entities.length;
+    return Math.min(avgConfidence, 0.9); // Cap at 90% for entity-only analysis
+  }
+
+  private async generateExecutiveSummary(context: string): Promise<string> {
+    const prompt = `Create an executive summary for this legal case. Focus on the most critical points for legal professionals:\\n\\n${context.substring(0, 1500)}`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.2, maxTokens: 300 });
+    return response.content;
+  }
+
+  private async generateDetailedSummary(context: string, tables: LegalTableArray): Promise<string> {
+    const tableContext = tables.length > 0 ? `\\n\\nTables found: ${tables.length} (${tables.map(t => t.type).join(', ')})` : '';
+    const prompt = `Provide a detailed legal analysis based on this case information${tableContext}:\\n\\n${context.substring(0, 2000)}`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.3, maxTokens: 500 });
+    return response.content;
+  }
+
+  private async extractKeyInsights(context: string, entities: LegalEntityArray): Promise<string> {
+    const entitySummary = entities.length > 0 ? `\\n\\nKey entities: ${entities.slice(0, 10).map(e => e.value).join(', ')}` : '';
+    const prompt = `Extract 3-5 key legal insights and implications from this case${entitySummary}:\\n\\n${context.substring(0, 1500)}`;
+    const response = await unifiedAIClient.query(prompt, { temperature: 0.4, maxTokens: 400 });
+    return response.content;
+  }
+
+  private calculateSummaryConfidence(structuredData: any): number {
+    // Base confidence on document quality and content completeness
+    const baseQuality = structuredData.qualityMetrics.averageQuality;
+    const contentCompleteness = Math.min(structuredData.documents.length / 3, 1); // Optimal at 3+ docs
+    const entityRichness = Math.min(structuredData.globalEntities.length / 10, 1); // Optimal at 10+ entities
+    
+    return (baseQuality * 0.6 + contentCompleteness * 0.2 + entityRichness * 0.2);
   }
 
   // Utility methods
-  private calculateOverallConfidence(...entityGroups: any[][]): number {
+  private calculateOverallConfidence(...entityGroups: Array<Array<{confidence?: number}>>): number {
     const allEntities = entityGroups.flat();
     if (allEntities.length === 0) return 0.5;
     
