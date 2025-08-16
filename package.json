@@ -108,6 +108,10 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "./electron/build/entitlements.mac.plist",
+      "entitlementsInherit": "./electron/build/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",

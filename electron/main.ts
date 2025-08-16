@@ -401,12 +401,27 @@ const createMenu = () => {
       label: 'Help',
       submenu: [
         {
+          label: 'Check for Updates...',
+          click: async () => {
+            const result = await autoUpdater.checkForUpdatesAndNotify();
+            if (!result || !result.updateInfo) {
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'No Updates Available',
+                message: 'You are running the latest version.',
+                buttons: ['OK']
+              });
+            }
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'About Legal Case Manager',
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Legal Case Manager',
-              message: 'Legal Case Manager v1.0.0',
+              message: `Legal Case Manager v${app.getVersion()}`,
               detail: 'AI-powered legal case preparation and document analysis tool.\n\nBuilt with Electron, React, and Ollama.'
             });
           }
@@ -456,14 +471,18 @@ const setupAutoUpdater = () => {
   autoUpdater.autoDownload = false; // Don't auto-download, ask user first
   autoUpdater.autoInstallOnAppQuit = true;
   
-  // Check for updates on startup (after 3 seconds)
+  // Check for updates on startup (after 10 seconds to let app fully load)
   setTimeout(() => {
-    autoUpdater.checkForUpdatesAndNotify();
-  }, 3000);
+    autoUpdater.checkForUpdates().catch(err => {
+      console.log('Auto-update check failed:', err);
+    });
+  }, 10000);
   
   // Check for updates every 6 hours
   setInterval(() => {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates().catch(err => {
+      console.log('Periodic update check failed:', err);
+    });
   }, 6 * 60 * 60 * 1000);
   
   autoUpdater.on('checking-for-update', () => {
