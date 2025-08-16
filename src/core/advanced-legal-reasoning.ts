@@ -12,6 +12,50 @@
 import { EventEmitter } from 'events';
 import { ResolvedLegalEntity } from './legal-entity-resolver';
 import { CrossDocumentAnalysis } from './cross-document-analyzer';
+import {
+  PracticeArea,
+  DoctrinalBasis,
+  ProceduralAspect,
+  AlternativeArgument,
+  SubIssue,
+  RelevantFact,
+  AuthorityLevel,
+  ApplicabilityAnalysis,
+  LegalElement,
+  LegalException,
+  FactPattern,
+  LegalApplication,
+  DistinguishingFactor,
+  OutcomeAnalysis,
+  CompetingConsideration,
+  BalancingTest,
+  PolicyConsideration,
+  PracticalImplication,
+  Weakness,
+  AlternativeOutcome,
+  PracticalImpact,
+  AuthorityValidation,
+  CitationValidation,
+  MethodologyValidation,
+  QualityAssurance,
+  PeerReviewIndicators,
+  UncertaintyFactor,
+  ConflictOfLaw,
+  ChoiceOfLaw,
+  NoveltyAssessment,
+  FactualPosition,
+  EvidenceItem,
+  FactualResolution,
+  Similarity,
+  Distinction,
+  KeyFact,
+  ChronologyEvent,
+  PartyInfo,
+  EvidenceRef,
+  ElementAnalysis,
+  FactualDispute,
+  ApplicationAnalysis
+} from './legal-reasoning-missing-types';
 
 export interface LegalReasoning {
   id: string;
