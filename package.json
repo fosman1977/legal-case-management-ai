@@ -103,8 +103,7 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/main.js",
-      "dist-electron/preload.js",
+      "dist-electron/**/*.js",
       "package.json"
     ],
     "mac": {
