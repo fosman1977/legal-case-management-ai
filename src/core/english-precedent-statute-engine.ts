@@ -9,6 +9,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { HighCourtPrecedentSystem } from './comprehensive-type-fix';
 
 export interface EnglishLegalAuthoritySystem {
   systemId: string;

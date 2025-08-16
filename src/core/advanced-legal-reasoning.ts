@@ -52,10 +52,19 @@ import {
   ChronologyEvent,
   PartyInfo,
   EvidenceRef,
-  ElementAnalysis,
-  FactualDispute,
-  ApplicationAnalysis
+  ElementAnalysis
 } from './legal-reasoning-missing-types';
+
+// Use type alias for ApplicationAnalysis
+export type ApplicationAnalysis = ApplicabilityAnalysis;
+
+// Export LegalReasoningOptions
+export interface LegalReasoningOptions {
+  includeAlternatives?: boolean;
+  depth?: 'shallow' | 'standard' | 'deep';
+  precedentAnalysis?: boolean;
+  policyConsiderations?: boolean;
+}
 
 export interface LegalReasoning {
   id: string;

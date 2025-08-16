@@ -11,6 +11,28 @@
 
 import { EventEmitter } from 'events';
 import { LegalReasoning } from './advanced-legal-reasoning';
+import {
+  ReliabilityAssessment,
+  RelevanceAnalysis,
+  PrejudiceEvaluation,
+  FoundationRequirement,
+  CompetenceStandardsAnalysis,
+  ConfidentialityAnalysis,
+  ConflictAnalysis,
+  ProfessionalLiabilityAnalysis,
+  BarStandardsCompliance,
+  LiabilityMitigation,
+  InsuranceCoverageAnalysis,
+  ClientDisclosureRequirements,
+  SensitivityAnalysis,
+  DecisionPoint,
+  AuthorityReference,
+  MethodologyStep,
+  QualityCheck,
+  ValidationStep,
+  ReviewableElement,
+  ErrorType
+} from './comprehensive-type-fix';
 
 export interface ProfessionalDefensibilityAssessment {
   id: string;
