@@ -246,7 +246,7 @@ export enum RelationshipType {
   // Personal relationships
   SPOUSE_OF = 'spouse_of',
   CHILD_OF = 'child_of',
-  PARENT_OF = 'parent_of'
+  FAMILY_PARENT_OF = 'family_parent_of'
 }
 
 // ============================================================================

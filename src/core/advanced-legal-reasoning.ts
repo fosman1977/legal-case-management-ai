@@ -1520,14 +1520,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    */
   private async validateAuthorities(ruleAnalysis: RuleAnalysis[]): Promise<AuthorityValidation[]> {
     return ruleAnalysis.map(rule => ({
-      ruleId: rule.ruleId,
-      authorityType: rule.source.type,
-      citation: rule.source.citation,
-      currentStatus: 'current',
-      hierarchyCorrect: true,
-      jurisdictionApplicable: true,
-      validationScore: 0.9,
-      issues: []
+      authority: rule.source.citation,
+      valid: true,
+      current: true,
+      relevance: 0.9
     }));
   }
 
@@ -1537,11 +1533,9 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
   private async validateCitations(ruleAnalysis: RuleAnalysis[]): Promise<CitationValidation[]> {
     return ruleAnalysis.map(rule => ({
       citation: rule.source.citation,
-      format: 'correct',
-      accuracy: 'verified',
-      currentness: 'current',
-      validationScore: 0.95,
-      suggestions: []
+      format: 'valid' as const,
+      verified: true,
+      source: rule.source.type
     }));
   }
 
@@ -1592,8 +1586,18 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     
     const factualConfidence = this.calculateFactualConfidence(legalIssues);
     const legalConfidence = this.calculateLegalConfidence(conclusions);
-    const applicationConfidence = this.calculateApplicationConfidence(conclusions.map(c => ({ confidence: c.confidence })));
-    const validationConfidence = validation.qualityAssurance.overallQuality;
+    const applicationConfidence = this.calculateApplicationConfidence(conclusions.map(c => ({
+      element: {
+        element: 'conclusion',
+        definition: c.conclusion,
+        satisfied: c.confidence > 0.7,
+        analysis: c.reasoning || 'Legal analysis completed'
+      } as LegalElement,
+      satisfied: c.confidence > 0.7,
+      analysis: c.reasoning || 'Legal analysis completed',
+      evidence: c.practicalImpact ? [c.practicalImpact.impact || 'Impact assessed'] : []
+    })));
+    const validationConfidence = validation.qualityAssurance.approved ? 0.9 : 0.6;
     
     const overallConfidence = (
       factualConfidence * 0.25 +
@@ -1802,7 +1806,7 @@ interface ReasoningTemplate {
 interface ValidationRule {
   id: string;
   description: string;
-  check: (reasoning: any) => boolean;
+  check: (reasoning: any) => boolean | Promise<any>;
 }
 
 interface IssueIndicator {
