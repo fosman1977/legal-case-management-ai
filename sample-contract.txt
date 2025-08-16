@@ -1,0 +1,36 @@
+COMMERCIAL SUPPLY AGREEMENT
+
+This Supply Agreement ("Agreement") is entered into on 15 January 2024 between:
+
+ABC Limited, a company incorporated in England and Wales (Company No. 12345678) having its registered office at 123 High Street, London EC1A 1BB ("Supplier")
+
+AND
+
+XYZ Corporation plc, a public limited company incorporated in England and Wales (Company No. 87654321) having its registered office at 456 Business Park, Manchester M1 1AA ("Buyer")
+
+WHEREAS:
+A. Supplier manufactures and supplies industrial components
+B. Buyer requires a regular supply of components for its manufacturing operations
+C. The parties wish to establish terms for ongoing supply
+
+NOW THEREFORE the parties agree:
+
+1. SUPPLY OBLIGATIONS
+1.1 Supplier agrees to supply the Products as specified in Schedule A
+1.2 Delivery shall be made monthly to Buyer's premises
+1.3 Time shall be of the essence for all deliveries
+
+2. PAYMENT TERMS
+2.1 Payment terms are 30 days from invoice date
+2.2 Late payment interest at 8% per annum above Bank of England base rate
+2.3 All amounts exclusive of VAT
+
+3. TERM AND TERMINATION
+3.1 This Agreement commences on 1 February 2024 for an initial term of 24 months
+3.2 Either party may terminate on 90 days' written notice
+3.3 Immediate termination for material breach or insolvency
+
+4. GOVERNING LAW
+This Agreement shall be governed by and construed in accordance with English law and the parties submit to the exclusive jurisdiction of the English courts.
+
+IN WITNESS WHEREOF the parties have executed this Agreement on the date first written above.
