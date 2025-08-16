@@ -14,6 +14,7 @@ import { ProfessionalDefensibilityFramework, ProfessionalDefensibilityAssessment
 import { EnhancedAIAnalysisResult } from '../utils/optimizedAIAnalysis';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { enhancedUncertaintyQuantifier, UncertaintyQuantification } from './enhanced-uncertainty-quantification';
+import { phase2IntegrationSystem, Phase2IntegrationResult } from './phase2-integration';
 
 export interface EnhancedLegalAnalysisResult extends EnhancedAIAnalysisResult {
   legalReasoning: LegalReasoning;
