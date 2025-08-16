@@ -10,7 +10,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { ResolvedLegalEntity } from './legal-entity-resolver';
+import { ResolvedLegalEntity, LegalEntityType } from './legal-entity-resolver';
 import { CrossDocumentAnalysis } from './cross-document-analyzer';
 import {
   PracticeArea,
@@ -57,14 +57,6 @@ import {
 
 // Use type alias for ApplicationAnalysis
 export type ApplicationAnalysis = ApplicabilityAnalysis;
-
-// Export LegalReasoningOptions
-export interface LegalReasoningOptions {
-  includeAlternatives?: boolean;
-  depth?: 'shallow' | 'standard' | 'deep';
-  precedentAnalysis?: boolean;
-  policyConsiderations?: boolean;
-}
 
 export interface LegalReasoning {
   id: string;
@@ -132,15 +124,7 @@ export interface RuleAnalysis {
   interpretations: StatutoryInterpretation[];
 }
 
-export interface ApplicationAnalysis {
-  issueId: string;
-  ruleId: string;
-  factPattern: FactPattern;
-  legalApplication: LegalApplication;
-  analogicalReasoning: AnalogicalReasoning[];
-  distinguishingFactors: DistinguishingFactor[];
-  outcome: OutcomeAnalysis;
-}
+// ApplicationAnalysis is defined as type alias above (line 59)
 
 export interface SynthesisAnalysis {
   overallAnalysis: string;
@@ -538,7 +522,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     }
     
     // Look for contractual relationships
-    const organizations = entities.filter(e => e.entityType === 'organization');
+    const organizations = entities.filter(e => e.entityType === LegalEntityType.CORPORATION);
     if (organizations.length >= 2) {
       indicators.push({
         type: 'entity_relationship',
@@ -667,8 +651,9 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       primaryArea: indicator.practiceArea as any,
       secondaryAreas: [],
       doctrinalBasis: {
-        source: 'statutory' as any,
-        principles: []
+        doctrine: 'statutory law',
+        application: 'applies to current case facts',
+        confidence: 0.8
       },
       proceduralAspects: []
     };
@@ -686,9 +671,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       analogousPrecedent: [],
       distinguishablePrecedent: [],
       noveltyAssessment: {
-        isNovelIssue: false,
-        similarIssues: [],
-        gapAnalysis: 'Well-established area of law'
+        novel: false,
+        aspects: [],
+        precedents: [],
+        approach: 'Well-established area of law'
       }
     };
   }
@@ -706,9 +692,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
         positions: [],
         evidence: [],
         resolution: {
-          method: 'trial',
-          likelihood: 'disputed',
-          impact: 'significant'
+          disputed: 'material facts',
+          resolution: 'requires trial determination',
+          basis: 'factual evidence',
+          confidence: 0.7
         }
       });
     }
@@ -839,16 +826,16 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
         source: template.source as LegalAuthority,
         hierarchy: this.determineAuthorityLevel(template.source),
         applicability: {
-          directlyApplicable: true,
-          analogicalApplication: false,
-          modifications: [],
-          limitations: []
+          applicable: true,
+          reasoning: 'Direct application of statutory elements',
+          limitations: [],
+          confidence: 0.9
         },
         elements: template.elements.map(element => ({
           element,
-          required: true,
-          standard: 'preponderance',
-          analysis: ''
+          definition: `Definition for ${element}`,
+          satisfied: false,
+          analysis: 'Analysis pending'
         })),
         exceptions: [],
         interpretations: []
@@ -946,13 +933,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     const outcome = this.analyzeOutcome(legalApplication, analogicalReasoning);
     
     return {
-      issueId: issue.id,
-      ruleId: rule.ruleId,
-      factPattern,
-      legalApplication,
-      analogicalReasoning,
-      distinguishingFactors,
-      outcome
+      applicable: legalApplication.result === 'satisfied',
+      reasoning: legalApplication.application,
+      limitations: [],
+      confidence: legalApplication.confidence
     };
   }
 
@@ -960,14 +944,11 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    * Extract fact pattern from documents and entities
    */
   private extractFactPattern(issue: LegalIssue, documents: any[], entities: ResolvedLegalEntity[]): FactPattern {
+    const keyFacts = this.extractKeyFacts(documents);
     return {
-      id: `factpattern-${issue.id}`,
-      description: 'Fact pattern extracted from case documents',
-      keyFacts: this.extractKeyFacts(documents),
-      chronology: this.extractChronology(documents),
-      parties: this.extractParties(entities),
-      evidence: this.extractEvidence(documents),
-      disputes: issue.factualDisputes
+      facts: keyFacts.map(fact => fact.fact),
+      pattern: 'Contract formation and performance pattern',
+      significance: 'Material facts affecting legal outcome'
     };
   }
 
@@ -984,14 +965,11 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       // Extract dates
       const dateMatches = content.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b|\b[A-Z][a-z]+ \d{1,2}, \d{4}\b/g);
       if (dateMatches) {
-        dateMatches.forEach(date => {
+        dateMatches.forEach((date: string) => {
           facts.push({
             fact: `Date referenced: ${date}`,
-            type: 'temporal',
-            importance: 'medium',
-            support: 'documentary',
-            disputed: false,
-            documentId: doc.id
+            significance: 'temporal reference point',
+            disputed: false
           });
         });
       }
@@ -999,14 +977,11 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       // Extract monetary amounts
       const moneyMatches = content.match(/\$[\d,]+(?:\.\d{2})?/g);
       if (moneyMatches) {
-        moneyMatches.forEach(amount => {
+        moneyMatches.forEach((amount: string) => {
           facts.push({
             fact: `Monetary amount: ${amount}`,
-            type: 'financial',
-            importance: 'high',
-            support: 'documentary',
-            disputed: false,
-            documentId: doc.id
+            significance: 'financial evidence',
+            disputed: false
           });
         });
       }
@@ -1026,9 +1001,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
         events.push({
           date: doc.metadata.createdDate,
           event: `Document created: ${doc.name}`,
-          type: 'documentary',
-          importance: 'medium',
-          documentId: doc.id
+          significance: 'document creation event'
         });
       }
     });
@@ -1042,9 +1015,8 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
   private extractParties(entities: ResolvedLegalEntity[]): PartyInfo[] {
     return entities.map(entity => ({
       name: entity.canonicalName,
-      type: entity.entityType === 'organization' ? 'entity' : 'individual',
       role: Array.from(entity.roles)[0] as string || 'party',
-      significance: entity.confidence > 0.8 ? 'high' : 'medium'
+      representation: entity.entityType === LegalEntityType.CORPORATION ? 'corporate entity' : 'individual'
     }));
   }
 
@@ -1054,11 +1026,8 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
   private extractEvidence(documents: any[]): EvidenceRef[] {
     return documents.map(doc => ({
       id: doc.id,
-      type: 'documentary',
       description: doc.name,
-      reliability: 'high',
-      authenticity: 'presumed_authentic',
-      weight: 'significant'
+      relevance: 'documentary evidence'
     }));
   }
 
@@ -1067,20 +1036,18 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    */
   private applyRuleToFacts(rule: RuleAnalysis, factPattern: FactPattern): LegalApplication {
     const elementAnalysis: ElementAnalysis[] = rule.elements.map(element => ({
-      element: element.element,
+      element: element,
       satisfied: this.analyzeElementSatisfaction(element, factPattern),
       evidence: this.findSupportingEvidence(element, factPattern),
-      analysis: this.generateElementAnalysis(element, factPattern),
-      confidence: 0.7 // Simplified confidence
+      analysis: this.generateElementAnalysis(element, factPattern)
     }));
     
     const overallSatisfaction = elementAnalysis.every(ea => ea.satisfied === true);
     
     return {
-      ruleId: rule.ruleId,
-      elementAnalysis,
-      overallSatisfaction,
-      analysis: this.generateOverallRuleAnalysis(rule, elementAnalysis),
+      rule: rule.ruleStatement,
+      application: this.generateOverallRuleAnalysis(rule, elementAnalysis),
+      result: overallSatisfaction ? 'satisfied' : 'not satisfied',
       confidence: this.calculateApplicationConfidence(elementAnalysis)
     };
   }
@@ -1088,43 +1055,51 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
   /**
    * Analyze if legal element is satisfied
    */
-  private analyzeElementSatisfaction(element: LegalElement, factPattern: FactPattern): boolean | null {
+  private analyzeElementSatisfaction(element: LegalElement, factPattern: FactPattern): boolean {
     // Simplified analysis - in production would be much more sophisticated
     const elementText = element.element.toLowerCase();
     
     if (elementText.includes('contract') || elementText.includes('agreement')) {
-      return factPattern.keyFacts.some(fact => 
-        fact.fact.toLowerCase().includes('agreement') || 
-        fact.fact.toLowerCase().includes('contract')
+      return factPattern.facts.some(fact => 
+        fact.toLowerCase().includes('agreement') || 
+        fact.toLowerCase().includes('contract')
       );
     }
     
     if (elementText.includes('breach')) {
-      return factPattern.keyFacts.some(fact => 
-        fact.fact.toLowerCase().includes('breach') || 
-        fact.fact.toLowerCase().includes('violation')
+      return factPattern.facts.some(fact => 
+        fact.toLowerCase().includes('breach') || 
+        fact.toLowerCase().includes('violation')
       );
     }
     
     if (elementText.includes('damage')) {
-      return factPattern.keyFacts.some(fact => 
-        fact.fact.toLowerCase().includes('damage') || 
-        fact.fact.toLowerCase().includes('loss')
+      return factPattern.facts.some(fact => 
+        fact.toLowerCase().includes('damage') || 
+        fact.toLowerCase().includes('loss')
       );
     }
     
     // Default: needs further analysis
-    return null;
+    return false; // Default to false if no match found
   }
 
   /**
    * Find supporting evidence for element
    */
   private findSupportingEvidence(element: LegalElement, factPattern: FactPattern): string[] {
-    return factPattern.keyFacts
-      .filter(fact => this.isFactRelevantToElement(fact, element))
-      .map(fact => fact.fact)
+    return factPattern.facts
+      .filter(fact => this.isFactRelevantToElementString(fact, element))
       .slice(0, 3); // Top 3 pieces of evidence
+  }
+
+  /**
+   * Check if fact string is relevant to legal element
+   */
+  private isFactRelevantToElementString(fact: string, element: LegalElement): boolean {
+    const factLower = fact.toLowerCase();
+    const elementLower = element.element.toLowerCase();
+    return factLower.includes(elementLower) || elementLower.includes(factLower);
   }
 
   /**
@@ -1161,8 +1136,8 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    * Calculate application confidence
    */
   private calculateApplicationConfidence(elementAnalysis: ElementAnalysis[]): number {
-    const confidences = elementAnalysis.map(ea => ea.confidence);
-    return confidences.reduce((sum, conf) => sum + conf, 0) / confidences.length;
+    const satisfiedCount = elementAnalysis.filter(ea => ea.satisfied).length;
+    return satisfiedCount / elementAnalysis.length;
   }
 
   /**
@@ -1177,15 +1152,15 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       similarities: [
         {
           aspect: 'Contractual relationship',
-          description: 'Both cases involve commercial contracts',
-          strength: 0.8
+          degree: 0.8,
+          significance: 'Both cases involve commercial contracts'
         }
       ],
       distinctions: [
         {
           aspect: 'Damages calculation',
-          description: 'Different methods for calculating damages',
-          significance: 'material'
+          significance: 'material',
+          impact: 'Different methods for calculating damages'
         }
       ],
       reasoning: 'Case is analogous to established precedent with similar fact patterns',
@@ -1200,7 +1175,6 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     return [
       {
         factor: 'Unique contractual terms',
-        type: 'factual',
         significance: 'moderate',
         impact: 'May affect outcome under established rule'
       }
@@ -1211,15 +1185,14 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    * Analyze outcome of rule application
    */
   private analyzeOutcome(legalApplication: LegalApplication, analogicalReasoning: AnalogicalReasoning[]): OutcomeAnalysis {
-    const likelihood = legalApplication.overallSatisfaction ? 'likely' : 'unlikely';
+    const likelihood = legalApplication.result === 'satisfied' ? 'likely' : 'unlikely';
     const confidence = legalApplication.confidence;
     
     return {
-      likelihood: likelihood as any,
-      confidence,
+      outcome: likelihood,
+      probability: confidence,
       reasoning: `Based on element analysis and analogical reasoning, outcome is ${likelihood}`,
-      alternatives: this.generateAlternativeOutcomes(legalApplication),
-      risks: this.identifyOutcomeRisks(legalApplication)
+      alternatives: this.generateAlternativeOutcomes(legalApplication)
     };
   }
 
@@ -1227,7 +1200,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    * Generate alternative outcomes
    */
   private generateAlternativeOutcomes(legalApplication: LegalApplication): string[] {
-    if (legalApplication.overallSatisfaction) {
+    if (legalApplication.result === 'satisfied') {
       return [
         'Alternative interpretation of elements might lead to different outcome',
         'Procedural defenses could affect substantive analysis'
@@ -1250,9 +1223,8 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       risks.push('Low confidence in element analysis');
     }
     
-    const uncertainElements = legalApplication.elementAnalysis.filter(ea => ea.satisfied === null);
-    if (uncertainElements.length > 0) {
-      risks.push(`${uncertainElements.length} elements require further factual development`);
+    if (legalApplication.result !== 'satisfied') {
+      risks.push('Elements not fully satisfied require further analysis');
     }
     
     return risks;
@@ -1287,7 +1259,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    */
   private generateOverallAnalysis(legalIssues: LegalIssue[], applicationAnalysis: ApplicationAnalysis[]): string {
     const totalIssues = legalIssues.length;
-    const resolvedApplications = applicationAnalysis.filter(app => app.outcome.likelihood === 'likely').length;
+    const resolvedApplications = applicationAnalysis.filter(app => app.applicable === true).length;
     
     return `Analysis of ${totalIssues} legal issues with ${resolvedApplications} applications showing likely favorable outcomes. Comprehensive legal analysis reveals both strengths and areas requiring further development.`;
   }
@@ -1300,8 +1272,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
       {
         consideration: 'Strong factual evidence vs. legal complexity',
         weight: 0.7,
-        analysis: 'While factual evidence is strong, legal issues present complexity',
-        resolution: 'Factual strength may overcome legal complexity with proper argument'
+        support: ['Strong documentary evidence', 'Clear contract terms', 'Witness testimony']
       }
     ];
   }
@@ -1311,10 +1282,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    */
   private performBalancingTest(competingConsiderations: CompetingConsideration[]): BalancingTest[] {
     return competingConsiderations.map(consideration => ({
+      test: 'Balancing test for competing considerations',
       factors: consideration.consideration.split(' vs. '),
-      weights: [consideration.weight, 1 - consideration.weight],
-      outcome: consideration.resolution,
-      confidence: 0.7
+      result: consideration.weight > 0.5 ? 'First factor prevails' : 'Second factor prevails',
+      analysis: `Analysis of competing factors with weight ${consideration.weight}`
     }));
   }
 
@@ -1338,11 +1309,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
   private analyzePracticalImplications(applicationAnalysis: ApplicationAnalysis[]): PracticalImplication[] {
     return [
       {
-        implication: 'Litigation costs and timeline',
-        description: 'Complex legal issues may require extended litigation',
+        implication: 'Litigation costs and timeline - Complex legal issues may require extended litigation',
         likelihood: 0.7,
         impact: 'significant',
-        mitigation: 'Consider settlement discussions or summary judgment motions'
+        mitigation: ['Consider settlement discussions', 'Explore summary judgment motions', 'Review case management strategies']
       }
     ];
   }
@@ -1433,7 +1403,7 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     if (issue.complexity === 'complex' || issue.complexity === 'novel') {
       weaknesses.push({
         weakness: 'Legal complexity or novel issues',
-        severity: 'significant',
+        severity: 'major',
         impact: 'Uncertain legal outcome',
         mitigation: 'Comprehensive legal research and argument development'
       });
@@ -1449,15 +1419,15 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
     return [
       {
         outcome: 'Alternative interpretation of legal standards',
-        likelihood: 0.3,
-        reasoning: 'Different courts might interpret legal standards differently',
-        impact: 'Could lead to different conclusion'
+        probability: 0.3,
+        conditions: ['Different judicial interpretation', 'Varying jurisdictional standards'],
+        implications: ['Could lead to different conclusion', 'May affect precedential value']
       },
       {
         outcome: 'Additional factual development changes analysis',
-        likelihood: 0.4,
-        reasoning: 'Discovery of additional facts could alter legal analysis',
-        impact: 'Might strengthen or weaken position'
+        probability: 0.4,
+        conditions: ['New evidence discovered', 'Additional witness testimony'],
+        implications: ['Might strengthen position', 'Could weaken current analysis']
       }
     ];
   }
@@ -1467,14 +1437,10 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
    */
   private assessPracticalImpact(issue: LegalIssue, conclusion: string): PracticalImpact {
     return {
-      immediateImpact: 'Guides litigation strategy and case development',
-      longTermImpact: 'Affects resolution prospects and settlement considerations',
-      strategicImplications: [
-        'Influences discovery priorities',
-        'Affects motion practice strategy',
-        'Guides settlement negotiations'
-      ],
-      clientCounseling: 'Informs client of legal position and strategic options'
+      area: 'litigation strategy',
+      impact: 'Guides case development and affects resolution prospects',
+      magnitude: 'high',
+      timeline: 'immediate to long-term'
     };
   }
 
@@ -1498,9 +1464,9 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
         applicableJurisdictions: ['federal', 'state'],
         conflictsOfLaw: [],
         choiceOfLaw: {
-          analysis: 'No conflict of laws issue identified',
-          conclusion: 'Local law applies',
-          confidence: 0.9
+          applicable: 'Local law applies',
+          reasoning: 'No conflict of laws issue identified',
+          alternatives: ['Foreign law might apply with different fact pattern']
         }
       }
     };
