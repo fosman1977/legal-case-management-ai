@@ -207,7 +207,8 @@ async function analyzeDocument(documentPath, options = {}) {
     console.log('   🔍 Initializing advanced extraction engine...');
     
     // Import the enhanced parser that uses existing best-in-class extraction
-    const { EnhancedDocumentParser } = require('./services/enhanced-document-parser.js');\n    const { ComplianceUpdateChecker } = require('./core/compliance-update-checker.js');
+    const { EnhancedDocumentParser } = require('./services/enhanced-document-parser.js');
+    const { ComplianceUpdateChecker } = require('./core/compliance-update-checker.js');
     
     // Parse the document using advanced system
     const documentContent = await EnhancedDocumentParser.parseDocumentAdvanced(documentPath);
@@ -269,8 +270,8 @@ ${legalAnalysis.englishLegalAnalysis?.applicableLaw?.map(law => `   • ${law}`)
    • High Court: ${(legalAnalysis.courtReadiness?.highCourt?.readiness * 100).toFixed(0)}% (${legalAnalysis.courtReadiness?.highCourt?.compliance})
 
 📜 PROFESSIONAL STANDARDS:
-   • BSB Compliance: ${(legalAnalysis.professionalStandards?.bsbCompliance * 100).toFixed(1)}%
-   • SRA Compliance: ${(legalAnalysis.professionalStandards?.sraCompliance * 100).toFixed(1)}%
+   • BSB Compliance: ${(legalAnalysis.professionalStandards?.bsbCompliance?.score * 100).toFixed(1)}%
+   • SRA Compliance: ${(legalAnalysis.professionalStandards?.sraCompliance?.score * 100).toFixed(1)}%
    • Ethical Clearance: ${legalAnalysis.professionalStandards?.ethicalClearance ? 'Approved' : 'Pending'}
 
 ⚠️ RISK ASSESSMENT:
