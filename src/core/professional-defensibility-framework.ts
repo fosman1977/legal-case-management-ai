@@ -413,8 +413,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
     const admissibilityScore = (
       daubertCompliance.overallCompliance * this.courtStandardWeights.daubert +
       fryeCompliance.overallCompliance * this.courtStandardWeights.frye +
-      reliabilityAssessment.overallReliability * this.courtStandardWeights.reliability +
-      relevanceAnalysis.relevanceScore * this.courtStandardWeights.relevance
+      reliabilityAssessment.score * this.courtStandardWeights.reliability +
+      relevanceAnalysis.directRelevance * this.courtStandardWeights.relevance
     );
     
     const recommendations = this.generateAdmissibilityRecommendations(
@@ -591,22 +591,14 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
    */
   private assessReliability(legalReasoning: LegalReasoning): ReliabilityAssessment {
     return {
-      methodologyReliability: 0.91,
-      dataReliability: 0.87,
-      outputConsistency: 0.89,
-      validationReliability: 0.92,
-      overallReliability: 0.895,
-      reliabilityFactors: [
+      reliable: true,
+      factors: [
         'Consistent methodology application',
         'Professional validation framework',
         'Quality assurance protocols',
         'Systematic error checking'
       ],
-      limitations: [
-        'Dependent on input document quality',
-        'Limited by training data scope',
-        'Evolving legal standards'
-      ]
+      score: 0.895
     };
   }
 
@@ -615,21 +607,9 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
    */
   private analyzeRelevance(legalReasoning: LegalReasoning): RelevanceAnalysis {
     return {
+      relevant: true,
       directRelevance: 0.94,
-      legalSignificance: 0.91,
-      probativeValue: 0.88,
-      relevanceScore: 0.91,
-      relevanceFactors: [
-        'Directly addresses legal issues',
-        'Follows established legal methodology',
-        'Provides actionable legal insights',
-        'Supports legal decision-making'
-      ],
-      limitations: [
-        'Relevance dependent on case context',
-        'May require expert interpretation',
-        'Subject to legal standard evolution'
-      ]
+      probativeValue: 0.88
     };
   }
 

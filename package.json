@@ -41,11 +41,11 @@
     "validate-setup": "node scripts/validate-setup.js"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2",
     "@pdf-lib/fontkit": "^1.1.1",
     "compromise": "^14.10.0",
     "date-fns": "^2.29.3",
     "dompurify": "^3.2.6",
+    "electron-updater": "^6.6.2",
     "emailjs-mime-parser": "^2.0.7",
     "file-type": "^21.0.0",
     "franc": "^6.1.0",
@@ -80,6 +80,8 @@
   "devDependencies": {
     "@electron/notarize": "^2.2.1",
     "@types/html-to-text": "^9.0.4",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
     "@types/papaparse": "^5.3.16",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
@@ -115,11 +117,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -127,11 +135,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "requestedExecutionLevel": "asInvoker"
@@ -140,11 +152,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Office"
