@@ -181,7 +181,7 @@ export class StreamingDocumentProcessor extends EventEmitter {
       return streamingResult;
       
     } catch (error) {
-      console.error(`❌ Streaming failed: ${error.message}`);
+      console.error(`❌ Streaming failed: ${(error as Error).message}`);
       throw error;
       
     } finally {
@@ -253,7 +253,7 @@ export class StreamingDocumentProcessor extends EventEmitter {
         });
         
       } catch (error) {
-        console.error(`❌ Chunk ${chunk.id} failed: ${error.message}`);
+        console.error(`❌ Chunk ${chunk.id} failed: ${(error as Error).message}`);
         
         // Retry logic
         if (chunk.retryCount < 3) {
@@ -263,7 +263,7 @@ export class StreamingDocumentProcessor extends EventEmitter {
         } else {
           session.errors.push({
             chunkId: chunk.id,
-            error: error.message,
+            error: (error as Error).message,
             recoverable: false,
             retryAttempts: chunk.retryCount
           });

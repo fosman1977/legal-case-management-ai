@@ -248,7 +248,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Initialization error: ${error.message}`);
+      errors.push(`Initialization error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -295,7 +295,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Processing error: ${error.message}`);
+      errors.push(`Processing error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -358,7 +358,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Memory test error: ${error.message}`);
+      errors.push(`Memory test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -405,7 +405,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseWorkerPool.stop();
 
     } catch (error) {
-      errors.push(`Scaling error: ${error.message}`);
+      errors.push(`Scaling error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -472,7 +472,7 @@ export class EnterpriseIntegrationTester {
       }
 
     } catch (error) {
-      errors.push(`Priority test error: ${error.message}`);
+      errors.push(`Priority test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -531,7 +531,7 @@ export class EnterpriseIntegrationTester {
       }
 
     } catch (error) {
-      errors.push(`Incremental test error: ${error.message}`);
+      errors.push(`Incremental test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -577,7 +577,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Recovery test error: ${error.message}`);
+      errors.push(`Recovery test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -645,7 +645,7 @@ export class EnterpriseIntegrationTester {
       }
 
     } catch (error) {
-      errors.push(`Checkpoint test error: ${error.message}`);
+      errors.push(`Checkpoint test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -707,7 +707,7 @@ export class EnterpriseIntegrationTester {
       resourceMonitor.stopMonitoring();
 
     } catch (error) {
-      errors.push(`Monitoring test error: ${error.message}`);
+      errors.push(`Monitoring test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -732,7 +732,7 @@ export class EnterpriseIntegrationTester {
 
     try {
       // Create mock folder with 100 files
-      const files = [];
+      const files: [string, { kind: 'file'; getFile: () => Promise<File> }][] = [];
       for (let i = 0; i < 100; i++) {
         files.push([
           `doc-${i}.pdf`,
@@ -787,7 +787,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Large folder test error: ${error.message}`);
+      errors.push(`Large folder test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -849,7 +849,7 @@ export class EnterpriseIntegrationTester {
       }
 
     } catch (error) {
-      errors.push(`Legal hooks test error: ${error.message}`);
+      errors.push(`Legal hooks test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -925,7 +925,7 @@ export class EnterpriseIntegrationTester {
       await enterpriseProcessor.stop();
 
     } catch (error) {
-      errors.push(`Benchmark test error: ${error.message}`);
+      errors.push(`Benchmark test error: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return {
@@ -965,8 +965,8 @@ export class EnterpriseIntegrationTester {
           passed: false,
           duration: Date.now() - this.startTime,
           memoryUsed: resourceMonitor.getCurrentMetrics().memory.used,
-          errors: [`Test error: ${error.message}`],
-          details: { error: error.message }
+          errors: [`Test error: ${error instanceof Error ? error.message : String(error)}`],
+          details: { error: error instanceof Error ? error.message : String(error) }
         });
       }
     });

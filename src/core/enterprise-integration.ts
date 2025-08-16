@@ -419,7 +419,7 @@ export class EnterpriseDocumentProcessor extends EventEmitter {
   private async getAllFilesFromFolder(folderHandle: FileSystemDirectoryHandle): Promise<File[]> {
     const files: File[] = [];
     
-    for await (const [name, handle] of folderHandle.entries()) {
+    for await (const [name, handle] of (folderHandle as any).entries()) {
       if (handle.kind === 'file') {
         const file = await handle.getFile();
         if (this.isProcessableFile(file)) {

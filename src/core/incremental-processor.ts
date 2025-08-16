@@ -445,7 +445,7 @@ export class IncrementalProcessor extends EventEmitter {
     fileMap: Map<string, FileInfo>,
     options: IncrementalProcessingOptions
   ): Promise<void> {
-    for await (const [name, handle] of dirHandle.entries()) {
+    for await (const [name, handle] of (dirHandle as any).entries()) {
       const fullPath = currentPath ? `${currentPath}/${name}` : name;
       
       if (handle.kind === 'file') {

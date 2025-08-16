@@ -5,11 +5,19 @@
  * These should be properly refactored in production
  */
 
+// Define missing ApplicabilityAnalysis interface
+export interface ApplicabilityAnalysis {
+  applicable: boolean;
+  reasoning: string;
+  limitations: string[];
+  confidence: number;
+  directlyApplicable?: boolean;
+  issueId?: string;
+  outcome?: string;
+}
+
 // Export missing type alias
 export type ApplicationAnalysis = ApplicabilityAnalysis;
-
-// Re-export from legal-reasoning-missing-types
-export { ApplicabilityAnalysis } from './legal-reasoning-missing-types';
 
 // Fix for professional-defensibility-framework types
 export interface ReliabilityAssessment {

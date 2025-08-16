@@ -270,13 +270,13 @@ export class BackgroundProcessingService extends EventEmitter {
       
     } catch (error) {
       task.status = 'failed';
-      task.error = error.message;
+      task.error = (error as Error).message;
       task.retryCount++;
       
       this.session.tasksFailed++;
       
-      console.error(`❌ Background task failed: ${task.id} - ${error.message}`);
-      this.emit('taskFailed', { task, error: error.message });
+      console.error(`❌ Background task failed: ${task.id} - ${(error as Error).message}`);
+      this.emit('taskFailed', { task, error: (error as Error).message });
       
       // Retry if under limit
       if (task.retryCount < 3) {
@@ -495,7 +495,7 @@ export class BackgroundProcessingService extends EventEmitter {
       this.serviceWorker = registration.active || registration.installing || registration.waiting;
       console.log('✅ Service worker registered for background processing');
     } catch (error) {
-      console.warn('⚠️ Could not register service worker:', error.message);
+      console.warn('⚠️ Could not register service worker:', (error as Error).message);
     }
   }
 
@@ -512,7 +512,7 @@ export class BackgroundProcessingService extends EventEmitter {
         this.serviceWorker = null;
         console.log('✅ Service worker unregistered');
       } catch (error) {
-        console.warn('⚠️ Could not unregister service worker:', error.message);
+        console.warn('⚠️ Could not unregister service worker:', (error as Error).message);
       }
     }
   }
@@ -649,7 +649,7 @@ export class BackgroundProcessingService extends EventEmitter {
         this.session = JSON.parse(data);
         console.log('📂 Session restored from storage');
       } catch (error) {
-        console.warn('⚠️ Could not restore session:', error.message);
+        console.warn('⚠️ Could not restore session:', (error as Error).message);
       }
     }
   }

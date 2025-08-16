@@ -69,6 +69,9 @@ export interface LegalReasoning {
   validation: ProfessionalValidation;
   confidence: ConfidenceAssessment;
   recommendations: LawyerRecommendation[];
+  // Compatibility properties
+  issues?: LegalIssue[];
+  entities?: any[];
 }
 
 export interface LegalMethodology {
@@ -86,6 +89,8 @@ export interface LegalIssue {
   precedentialGuidance: PrecedentialGuidance;
   factualDisputes: FactualDispute[];
   legalStandards: LegalStandard[];
+  legalQuestion?: string;
+  confidence?: number;
 }
 
 export interface LegalCategory {
@@ -1791,10 +1796,16 @@ export class AdvancedLegalReasoningEngine extends EventEmitter {
 }
 
 // Supporting interfaces and types
-interface LegalReasoningOptions {
+export interface LegalReasoningOptions {
   methodology?: 'IRAC' | 'CREAC' | 'TREAC';
   jurisdiction?: string;
   depth?: 'standard' | 'comprehensive' | 'expert';
+  enableIRAC?: boolean;
+  enableAnalogicalReasoning?: boolean;
+  enablePrecedentAnalysis?: boolean;
+  enableUncertaintyQuantification?: boolean;
+  targetConfidence?: number;
+  practiceArea?: string;
 }
 
 interface ReasoningTemplate {

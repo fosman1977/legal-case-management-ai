@@ -149,7 +149,25 @@ export interface SearchIndexMetadata {
 }
 
 export class EnterpriseSearchEngine extends EventEmitter {
-  private searchIndex: SearchIndex;
+  private searchIndex: SearchIndex = {
+    documents: new Map(),
+    invertedIndex: new Map(),
+    entityIndex: new Map(),
+    semanticIndex: new Map(),
+    metadata: {
+      totalDocuments: 0,
+      totalTerms: 0,
+      totalEntities: 0,
+      lastUpdated: new Date(),
+      version: '1.0.0',
+      statistics: {
+        avgDocumentLength: 0,
+        avgEntityCount: 0,
+        commonTerms: [],
+        rareTerms: []
+      }
+    }
+  };
   private isIndexing: boolean = false;
   private indexingProgress: number = 0;
   
@@ -417,7 +435,7 @@ export class EnterpriseSearchEngine extends EventEmitter {
       entityPostingList.documents.set(documentId, {
         documentId,
         occurrences: entity.mentions.length,
-        positions: entity.mentions.map(m => m.startPosition),
+        positions: entity.mentions.map(m => m.position.start),
         confidence: entity.confidence,
         contexts: entity.mentions.map(m => m.context)
       });
@@ -923,7 +941,7 @@ export class EnterpriseSearchEngine extends EventEmitter {
           entity: entity.canonicalName,
           entityType: entity.entityType,
           confidence: entity.confidence,
-          positions: entity.mentions.map(m => m.startPosition),
+          positions: entity.mentions.map(m => m.position.start),
           context: entity.mentions.map(m => m.context)
         });
       }

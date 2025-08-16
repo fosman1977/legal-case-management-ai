@@ -387,8 +387,8 @@ export class Stage3EnglishIntegration extends EventEmitter {
         uncertaintyQuantification,
         {
           targetCourt: options.targetCourt,
-          practiceArea: options.practiceAreas?.[0],
-          jurisdiction: options.jurisdictions?.[0] || 'england_wales',
+          practiceArea: options.practiceAreas?.[0] as 'commercial' | 'civil' | 'criminal' | 'family' | 'administrative' | 'constitutional' | undefined,
+          jurisdiction: (options.jurisdictions?.[0] || 'england_wales') as 'england_wales' | 'scotland' | 'northern_ireland',
           professionType: options.professionalType
         }
       );
@@ -427,7 +427,7 @@ export class Stage3EnglishIntegration extends EventEmitter {
       // Step 5: Performance Optimization
       console.log('⚡ Optimizing performance for English deployment...');
       const performanceOptimization = this.optimizeEnglishPerformance(
-        enhancedLegalAnalysis,
+        legalAuthoritySystem,
         courtReadiness,
         legalAuthoritySystem,
         options

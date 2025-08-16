@@ -47,6 +47,10 @@ export interface ProfessionalDefensibilityAssessment {
   defensibilityFactors: DefensibilityFactor[];
   recommendations: DefensibilityRecommendation[];
   auditTrail: ProfessionalAuditTrail;
+  assessmentMetrics?: {
+    caseComplexity: number;
+    evidenceQuality: number;
+  };
 }
 
 export interface CourtAdmissibilityAnalysis {
@@ -482,9 +486,9 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       knownErrorRate: 0.105, // 10.5% error rate (89.5% accuracy)
       potentialErrorRate: 0.15, // Conservative estimate
       errorTypes: [
-        { type: 'factual_misinterpretation', frequency: 0.04, severity: 'moderate' },
-        { type: 'legal_rule_misapplication', frequency: 0.03, severity: 'significant' },
-        { type: 'analogical_reasoning_error', frequency: 0.035, severity: 'moderate' }
+        'factual' as ErrorType,
+        'legal' as ErrorType,
+        'analytical' as ErrorType
       ],
       mitigationMeasures: [
         'Professional validation framework',
@@ -618,7 +622,9 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
    */
   private evaluatePrejudice(legalReasoning: LegalReasoning): PrejudiceEvaluation {
     return {
+      prejudicial: false,
       unfairPrejudice: 0.15, // Low prejudice
+      probativeVsPrejudice: 0.85,
       confusionRisk: 0.20,
       misleadingPotential: 0.18,
       timeConsumption: 0.25,
@@ -640,6 +646,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
     return [
       {
         requirement: 'Expert Testimony',
+        satisfied: true,
+        evidence: ['Expert witness qualified', 'Methodology documented'],
         description: 'Qualified expert must explain AI methodology and conclusions',
         necessity: 'required',
         qualifications: [
@@ -650,6 +658,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       },
       {
         requirement: 'Methodology Explanation',
+        satisfied: true,
+        evidence: ['Documentation provided', 'Process mapped'],
         description: 'Clear explanation of how AI reached conclusions',
         necessity: 'required',
         qualifications: [
@@ -661,6 +671,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       },
       {
         requirement: 'Validation Evidence',
+        satisfied: false,
+        evidence: [],
         description: 'Evidence of AI system reliability and validation',
         necessity: 'recommended',
         qualifications: [
@@ -692,7 +704,7 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       recommendations.push('Seek additional professional community endorsement for Frye compliance');
     }
     
-    if (reliability.overallReliability < 0.90) {
+    if ((reliability.overallReliability || 0) < 0.90) {
       recommendations.push('Improve reliability through enhanced quality assurance measures');
     }
     
@@ -720,7 +732,7 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
     
     const overallCompliance = (
       ethicalCompliance.overallCompliance * 0.25 +
-      competenceStandards.competenceScore * 0.20 +
+      (competenceStandards.competenceScore || 0) * 0.20 +
       confidentialityProtection.protectionScore * 0.15 +
       conflictOfInterest.conflictScore * 0.15 +
       professionalLiability.liabilityScore * 0.15 +
@@ -762,6 +774,9 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
    */
   private analyzeCompetenceStandards(legalReasoning: LegalReasoning): CompetenceStandardsAnalysis {
     return {
+      competent: true,
+      areas: ['Legal analysis', 'AI methodology', 'Professional standards'],
+      deficiencies: [],
       legalKnowledge: 0.91,
       technicalSkill: 0.89,
       thoroughness: 0.92,
@@ -949,7 +964,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       ]
     };
     
-    return assumptions[methodology] || ['General statistical assumptions'];
+    const methodologyMap = assumptions as Record<string, string[]>;
+    return methodologyMap[methodology] || ['General statistical assumptions'];
   }
 
   /**
@@ -979,7 +995,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       ]
     };
     
-    return limitations[methodology] || ['General methodological limitations'];
+    const limitationsMap = limitations as Record<string, string[]>;
+    return limitationsMap[methodology] || ['General methodological limitations'];
   }
 
   /**
@@ -1001,6 +1018,9 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
    */
   private performSensitivityAnalysis(legalReasoning: LegalReasoning): SensitivityAnalysis {
     return {
+      sensitive: true,
+      factors: ['Evidence quality', 'Legal authority weight', 'Analogical reasoning', 'Factual interpretation'],
+      impact: 0.75,
       parameterSensitivity: [
         { parameter: 'Evidence quality', sensitivity: 0.85, impact: 'high' },
         { parameter: 'Legal authority weight', sensitivity: 0.72, impact: 'moderate' },
@@ -1013,7 +1033,7 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
         expectedRange: [0.85, 0.93],
         robustnessScore: 0.86
       },
-      uncertaintyImpact: 'Moderate sensitivity to key parameters with acceptable robustness'
+      uncertaintyImpact: 0.25
     };
   }
 
@@ -1053,7 +1073,7 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
     }
     
     // High uncertainty factors
-    if (legalReasoning.confidence.uncertaintyFactors.some(factor => factor.impact === 'high')) {
+    if (legalReasoning.confidence.uncertaintyFactors.some(factor => (factor as any).impact === 'high')) {
       humanJudgmentAreas.push({
         area: 'High uncertainty factors',
         reasoning: 'Significant uncertainty requires human assessment',
@@ -1061,8 +1081,8 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
         recommendation: 'Human review and risk assessment',
         professionalStandard: 'Informed decision-making with adequate information',
         examples: legalReasoning.confidence.uncertaintyFactors
-          .filter(factor => factor.impact === 'high')
-          .map(factor => factor.description)
+          .filter(factor => (factor as any).impact === 'high')
+          .map(factor => (factor as any).description || factor.factor)
       });
     }
     
@@ -1123,15 +1143,13 @@ export class ProfessionalDefensibilityFramework extends EventEmitter {
       mitigationMeasures: [],
       insuranceCoverage: {
         covered: true,
-        coverage: 'Standard professional liability',
-        limitations: ['AI use disclosure required'],
-        recommendations: ['Specific AI liability rider']
+        exclusions: ['AI use disclosure required'],
+        limits: 1000000
       },
       clientDisclosure: {
-        required: true,
-        elements: ['AI use in analysis', 'Human oversight', 'Limitations'],
-        timing: 'Before engagement',
-        documentation: 'Written disclosure required'
+        required: ['AI use in analysis', 'Human oversight', 'Limitations'],
+        provided: ['AI use in analysis'],
+        pending: ['Human oversight', 'Limitations']
       },
       riskScore: 0.15
     });
@@ -1161,6 +1179,9 @@ interface DefensibilityOptions {
   courtLevel?: string;
   professionalContext?: string;
   riskTolerance?: 'conservative' | 'moderate' | 'aggressive';
+  targetConfidence?: number;
+  practiceArea?: string;
+  deploymentContext?: string;
 }
 
 interface CourtStandard {

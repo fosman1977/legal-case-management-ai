@@ -4,7 +4,13 @@
       "Bash(git tag:*)",
       "Bash(git push:*)",
       "Bash(npx tsc:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(chmod:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }

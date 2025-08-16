@@ -139,7 +139,7 @@ describe('Legal Intelligence Pipeline Integration', () => {
     enterpriseQueue = new EnterpriseProcessingQueue();
     crossDocAnalyzer = new CrossDocumentAnalyzer();
     entityResolver = new LegalEntityResolver();
-    streamingProcessor = new StreamingDocumentProcessor();
+    streamingProcessor = new StreamingDocumentProcessor(resourceMonitor);
     
     legalIntelligence = new LegalIntelligenceEngine(
       crossDocAnalyzer,
@@ -166,21 +166,33 @@ describe('Legal Intelligence Pipeline Integration', () => {
     console.log('Phase 1: Enterprise Queue Processing...');
     const queueTasks: ProcessingTask[] = sampleCaseDocuments.map(doc => ({
       id: `task-${doc.id}`,
-      type: 'legal_document_analysis',
+      type: 'legal_analysis',
       priority: TaskPriority.HIGH,
       data: {
         documentId: doc.id,
         documentName: doc.name,
         caseId: caseId
       },
+      createdAt: new Date(),
+      estimatedDuration: 30000,
       options: {
-        enableLegalIntelligence: true,
-        jurisdiction: 'us'
+        maxRetries: 3,
+        timeout: 300000,
+        memoryLimit: 512 * 1024 * 1024,
+        enableProgressCallbacks: true,
+        checkpointingEnabled: true,
+        legalAnalysisEnabled: true
       },
       legalIntelligenceHooks: {
-        entityResolution: true,
-        crossDocumentAnalysis: true,
-        insightGeneration: true
+        onDocumentProcessed: async (doc: any) => {
+          console.log(`Document processed: ${doc.id}`);
+        },
+        onEntityExtracted: async (entity: any) => {
+          console.log(`Entity extracted: ${entity.name}`);
+        },
+        onLegalAnalysisNeeded: async (data: any) => {
+          console.log(`Legal analysis needed for: ${data.id}`);
+        }
       }
     }));
     
@@ -193,7 +205,7 @@ describe('Legal Intelligence Pipeline Integration', () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const queueStatus = enterpriseQueue.getQueueStatus();
-    console.log(`   Queue status: ${queueStatus.pending} pending, ${queueStatus.completed} completed`);
+    console.log(`   Queue status: ${queueStatus.pendingTasks} pending, ${queueStatus.completedTasks} completed`);
     
     // Step 2: Perform comprehensive legal intelligence analysis
     console.log('Phase 2: Legal Intelligence Analysis...');
@@ -230,7 +242,7 @@ describe('Legal Intelligence Pipeline Integration', () => {
     
     // Validate cross-document analysis
     expect(result.analysis.entities.size).toBeGreaterThan(0);
-    expect(result.analysis.relationships).toBeDefined();
+    expect(result.analysis.documentRelationships).toBeDefined();
     expect(result.analysis.insights.length).toBeGreaterThan(0);
     
     // Validate entity resolution
@@ -283,7 +295,7 @@ describe('Legal Intelligence Pipeline Integration', () => {
     console.log('\n🧠 Testing memory management with legal intelligence...');
     
     const initialMemory = resourceMonitor.getCurrentMetrics().memory;
-    console.log(`Initial memory usage: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(1)}MB`);
+    console.log(`Initial memory usage: ${(initialMemory.jsHeapUsed / 1024 / 1024).toFixed(1)}MB`);
     
     // Create larger case for memory testing
     const largeCaseDocuments = [];
@@ -308,13 +320,13 @@ describe('Legal Intelligence Pipeline Integration', () => {
     );
     
     const finalMemory = resourceMonitor.getCurrentMetrics().memory;
-    const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
+    const memoryIncrease = finalMemory.jsHeapUsed - initialMemory.jsHeapUsed;
     
-    console.log(`Final memory usage: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(1)}MB`);
+    console.log(`Final memory usage: ${(finalMemory.jsHeapUsed / 1024 / 1024).toFixed(1)}MB`);
     console.log(`Memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(1)}MB`);
     
     // Memory should stay within reasonable bounds
-    expect(finalMemory.heapUsed).toBeLessThan(2 * 1024 * 1024 * 1024); // Under 2GB
+    expect(finalMemory.jsHeapUsed).toBeLessThan(2 * 1024 * 1024 * 1024); // Under 2GB
     expect(result.metadata.documentsAnalyzed).toBe(20);
     
     console.log('✅ Memory management test PASSED');

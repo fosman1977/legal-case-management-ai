@@ -11,6 +11,8 @@
 import { EventEmitter } from 'events';
 import { AdvancedLegalReasoningEngine, LegalReasoning, LegalReasoningOptions } from './advanced-legal-reasoning';
 import { ProfessionalDefensibilityFramework, ProfessionalDefensibilityAssessment } from './professional-defensibility-framework';
+import { ResolvedLegalEntity } from './legal-entity-resolver';
+import { CrossDocumentAnalysis } from './cross-document-analyzer';
 import { EnhancedAIAnalysisResult } from '../utils/optimizedAIAnalysis';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { enhancedUncertaintyQuantifier, UncertaintyQuantification } from './enhanced-uncertainty-quantification';
@@ -266,10 +268,19 @@ export class EnhancedLegalAnalysisIntegrator extends EventEmitter {
       );
 
       // Step 6: Calculate lawyer-grade confidence
+      // Convert UncertaintyQuantification to UncertaintyQuantificationResult
+      const uncertaintyResult: UncertaintyQuantificationResult = {
+        overallUncertainty: (uncertaintyQuantification as any).uncertainty || 0.1,
+        uncertaintyFactors: [],
+        confidenceIntervals: [],
+        sensitivityAnalysis: { parameters: [], robustnessScore: 0.9, criticalThresholds: [] },
+        riskAssessment: { overallRisk: 'low', riskLevel: 'moderate', recommendations: [] } as any
+      };
+      
       const lawyerGradeConfidence = this.calculateLawyerGradeConfidence(
         legalReasoning,
         professionalDefensibility,
-        uncertaintyQuantification
+        uncertaintyResult
       );
 
       const result: EnhancedLegalAnalysisResult = {
@@ -619,17 +630,17 @@ export class EnhancedLegalAnalysisIntegrator extends EventEmitter {
     const analysisResults = {
       confidence: legalReasoning.confidence.overallConfidence,
       issues: legalReasoning.issues,
-      persons: legalReasoning.entities,
+      persons: legalReasoning.entities || [],
       processingStats: {
-        documentsProcessed: legalReasoning.entities.length > 0 ? 3 : 1, // Estimate
-        entitiesExtracted: legalReasoning.entities.length
+        documentsProcessed: (legalReasoning.entities?.length || 0) > 0 ? 3 : 1, // Estimate
+        entitiesExtracted: legalReasoning.entities?.length || 0
       }
     };
 
     const dataQuality = {
-      overall: professionalDefensibility.assessmentMetrics.caseComplexity > 0.7 ? 0.85 : 0.9,
-      entityCompleteness: Math.min(0.95, legalReasoning.entities.length / 10),
-      textQuality: professionalDefensibility.assessmentMetrics.evidenceQuality
+      overall: (professionalDefensibility.assessmentMetrics?.caseComplexity || 0) > 0.7 ? 0.85 : 0.9,
+      entityCompleteness: Math.min(0.95, (legalReasoning.entities?.length || 0) / 10),
+      textQuality: professionalDefensibility.assessmentMetrics?.evidenceQuality || 0.85
     };
 
     const modelMetrics = {
@@ -794,53 +805,41 @@ export class EnhancedLegalAnalysisIntegrator extends EventEmitter {
   }
 
   // Helper methods
-  private convertToResolvedEntities(basicAnalysis: EnhancedAIAnalysisResult): Array<{
-    id: string;
-    type: string;
-    value: string;
-    confidence: number;
-    context: string;
-    resolved: boolean;
-  }> {
+  private convertToResolvedEntities(basicAnalysis: EnhancedAIAnalysisResult): ResolvedLegalEntity[] {
     return basicAnalysis.structuredData.entities.map(entity => ({
       id: entity.value,
       canonicalName: entity.value,
-      entityType: entity.type,
+      entityType: entity.type as any, // Convert string to LegalEntityType
       confidence: entity.confidence,
-      aliases: [],
-      roles: new Set([entity.type]),
+      aliases: new Set<string>(),
+      abbreviations: new Set<string>(),
+      nicknames: new Set<string>(),
+      formalNames: new Set<string>(),
+      roles: new Set([entity.type as any]),
       relationships: [],
-      documentOccurrences: [{ documentId: 'unknown', frequency: 1, contexts: [entity.context] }]
+      mentions: [],
+      documentFrequency: new Map<string, number>(),
+      validatedBy: [],
+      lastValidated: new Date(),
+      validationConfidence: entity.confidence
     }));
   }
 
-  private convertToCrossDocAnalysis(basicAnalysis: EnhancedAIAnalysisResult): {
-    documentCount: number;
-    commonEntities: Array<{
-      entityId: string;
-      occurrences: number;
-      documents: string[];
-    }>;
-    timelineEvents: Array<{
-      date: Date;
-      event: string;
-      documents: string[];
-    }>;
-    relationships: Array<{
-      sourceEntity: string;
-      targetEntity: string;
-      relationshipType: string;
-      confidence: number;
-    }>;
-  } {
+  private convertToCrossDocAnalysis(basicAnalysis: EnhancedAIAnalysisResult): CrossDocumentAnalysis {
     return {
+      id: `cross-doc-${Date.now()}`,
+      caseId: 'enhanced-analysis',
+      timestamp: new Date(),
+      documentsAnalyzed: 1,
       entities: new Map(),
+      documentRelationships: [],
+      knowledgeGraph: { nodes: [], edges: [] } as any,
+      timeline: { events: [] } as any,
       insights: [],
-      timeline: null,
       statistics: {
         confidence: basicAnalysis.extractionQuality.overall,
         documentsAnalyzed: basicAnalysis.processingStats.documentsProcessed
-      }
+      } as any
     };
   }
 

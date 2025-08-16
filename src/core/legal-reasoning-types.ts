@@ -82,6 +82,15 @@ export interface FactPattern {
   disputes: FactualDispute[];
 }
 
+export interface FactualDispute {
+  id: string;
+  fact: string;
+  disputeType: 'material' | 'credibility' | 'interpretation' | 'causation';
+  positions: FactualPosition[];
+  evidence: EvidenceItem[];
+  resolution?: FactualResolution;
+}
+
 export interface KeyFact {
   fact: string;
   type: 'temporal' | 'financial' | 'contractual' | 'behavioral' | 'circumstantial';

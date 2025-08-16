@@ -46,6 +46,7 @@ export interface ReliabilityAssessment {
   reliable: boolean;
   factors: string[];
   score: number;
+  overallReliability?: number;
 }
 
 export interface RelevanceAnalysis {
@@ -58,18 +59,35 @@ export interface PrejudiceEvaluation {
   prejudicial: boolean;
   unfairPrejudice: number;
   probativeVsPrejudice: number;
+  confusionRisk?: number;
+  misleadingPotential?: number;
+  timeConsumption?: number;
+  overallPrejudice?: number;
+  mitigationMeasures?: string[];
+  acceptabilityThreshold?: number;
 }
 
 export interface FoundationRequirement {
   requirement: string;
   satisfied: boolean;
   evidence: string[];
+  description?: string;
+  necessity?: string;
+  qualifications?: string[];
 }
 
 export interface CompetenceStandardsAnalysis {
   competent: boolean;
   areas: string[];
   deficiencies: string[];
+  competenceScore?: number;
+  legalKnowledge?: any;
+  technicalSkill?: number;
+  thoroughness?: number;
+  preparation?: number;
+  currentness?: number;
+  competenceAreas?: string[];
+  developmentNeeds?: string[];
 }
 
 export interface ConfidentialityAnalysis {
@@ -118,6 +136,9 @@ export interface SensitivityAnalysis {
   sensitive: boolean;
   factors: string[];
   impact: number;
+  parameterSensitivity?: any;
+  robustnessAnalysis?: any;
+  uncertaintyImpact?: number;
 }
 
 export interface DecisionPoint {

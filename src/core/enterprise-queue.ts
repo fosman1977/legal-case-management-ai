@@ -219,7 +219,7 @@ export class EnterpriseProcessingQueue extends EventEmitter {
       const processingResult: ProcessingResult = {
         taskId: task.id,
         status: 'failed',
-        error: error.message,
+        error: (error as Error).message,
         processingTime: Date.now() - startTime,
         memoryUsed,
         checkpoints
@@ -228,7 +228,7 @@ export class EnterpriseProcessingQueue extends EventEmitter {
       this.results.set(task.id, processingResult);
       this.emit('taskFailed', processingResult);
       
-      console.error(`❌ Task failed: ${task.id} - ${error.message}`);
+      console.error(`❌ Task failed: ${task.id} - ${(error as Error).message}`);
       return processingResult;
     }
   }

@@ -35,7 +35,7 @@ class UnifiedAIClient {
   constructor(config: Partial<UnifiedAIConfig> = {}) {
     this.config = {
       localAIUrl: config.localAIUrl || 'http://localhost:8080',
-      defaultModel: config.defaultModel || (import.meta.env?.VITE_AI_MODEL as string) || 'gpt-4', // LocalAI commonly provides gpt-4
+      defaultModel: config.defaultModel || process.env.VITE_AI_MODEL || 'gpt-4', // LocalAI commonly provides gpt-4
       timeout: config.timeout || 300000 // 5 minutes for model loading and processing
     };
   }

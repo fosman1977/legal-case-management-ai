@@ -475,7 +475,7 @@ export class Phase2IntegrationSystem extends EventEmitter {
       return integrationResult;
 
     } catch (error) {
-      console.error(`❌ Phase 2 integration failed: ${error.message}`);
+      console.error(`❌ Phase 2 integration failed: ${(error as Error).message}`);
       throw error;
     }
   }

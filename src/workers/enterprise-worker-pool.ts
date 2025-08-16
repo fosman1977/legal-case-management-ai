@@ -616,17 +616,17 @@ export class EnterpriseWorkerPool extends EventEmitter {
       // Handle task failure
       this.updateWorkerPerformance(worker, Date.now() - startTime, false);
       worker.health.consecutiveFailures++;
-      worker.health.lastError = error.message;
+      worker.health.lastError = (error as Error).message;
       worker.status = WorkerStatus.ERROR;
       worker.currentTask = null;
       
       this.emit('taskFailed', { 
         workerId: worker.id, 
         taskId: task.id, 
-        error: error.message 
+        error: (error as Error).message 
       });
       
-      console.error(`❌ Task ${task.id} failed in worker ${worker.id}: ${error.message}`);
+      console.error(`❌ Task ${task.id} failed in worker ${worker.id}: ${(error as Error).message}`);
       
       // Consider restarting worker if too many failures
       if (worker.health.consecutiveFailures >= 3) {
@@ -717,7 +717,8 @@ export class EnterpriseWorkerPool extends EventEmitter {
       'timeline_analysis': 6000
     };
     
-    const base = baseTime[task.type] || 5000;
+    const baseTimeMap = baseTime as Record<string, number>;
+    const base = baseTimeMap[task.type] || 5000;
     const priorityMultiplier = 1 + (task.priority / 10); // Higher priority = more thorough processing
     
     return base * priorityMultiplier;
