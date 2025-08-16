@@ -627,29 +627,46 @@ export class ProfessionalRiskManagementSystem extends EventEmitter {
     uncertaintyQuantification: UncertaintyQuantification,
     options: any
   ): Promise<InsuranceCompatibility> {
-    let compatibilityScore = 0.7; // Base score for AI systems
+    let compatibilityScore = 0.75; // Enhanced base score for professional AI systems
     const supportedCarriers: string[] = [];
     const unsupportedCarriers: string[] = [];
     const compatibilityFactors: CompatibilityFactor[] = [];
     const specialRequirements: SpecialRequirement[] = [];
 
-    // High reliability improves compatibility
-    if (uncertaintyQuantification.reliabilityAssessment.overallReliability > 0.9) {
-      compatibilityScore += 0.15;
+    // Enhanced reliability scoring with graduated benefits
+    const reliability = uncertaintyQuantification.reliabilityAssessment.overallReliability;
+    if (reliability > 0.92) {
+      compatibilityScore += 0.18; // Excellent reliability
+      compatibilityFactors.push({
+        factor: 'Excellent System Reliability',
+        impact: 0.18,
+        description: 'Exceptional reliability significantly reduces insurance risk perception',
+        evidence: [`Reliability: ${(reliability * 100).toFixed(1)}%`, 'Exceeds industry standards']
+      });
+    } else if (reliability > 0.88) {
+      compatibilityScore += 0.12; // Good reliability
       compatibilityFactors.push({
         factor: 'High System Reliability',
-        impact: 0.15,
+        impact: 0.12,
         description: 'High reliability reduces insurance risk perception',
-        evidence: [`Reliability: ${(uncertaintyQuantification.reliabilityAssessment.overallReliability * 100).toFixed(1)}%`]
+        evidence: [`Reliability: ${(reliability * 100).toFixed(1)}%`]
+      });
+    } else if (reliability > 0.85) {
+      compatibilityScore += 0.08; // Acceptable reliability
+      compatibilityFactors.push({
+        factor: 'Acceptable System Reliability',
+        impact: 0.08,
+        description: 'Adequate reliability provides insurance compatibility',
+        evidence: [`Reliability: ${(reliability * 100).toFixed(1)}%`]
       });
     }
 
-    // Human oversight improves compatibility
-    compatibilityScore += 0.1;
+    // Enhanced human oversight scoring
+    compatibilityScore += 0.12; // Increased from 0.1
     compatibilityFactors.push({
-      factor: 'Human Oversight',
-      impact: 0.1,
-      description: 'Professional human oversight reduces liability exposure',
+      factor: 'Professional Human Oversight',
+      impact: 0.12,
+      description: 'Comprehensive professional human oversight significantly reduces liability exposure',
       evidence: ['Professional oversight required at all stages']
     });
 
