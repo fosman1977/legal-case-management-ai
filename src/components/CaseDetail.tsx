@@ -18,6 +18,9 @@ import { AISystemOverview } from './AISystemOverview';
 import { SkeletonsManager } from './SkeletonsManager';
 import { UserNotesManager } from './UserNotesManager';
 import { OrdersDirectionsManager } from './OrdersDirectionsManager';
+import { SystemHealthDashboard } from './SystemHealthDashboard';
+import { ComplianceDashboard } from './ComplianceDashboard';
+import { ModelSelectionUI } from './ModelSelectionUI';
 
 interface CaseDetailProps {
   case: Case;
@@ -30,7 +33,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onEditCase,
   onDeleteCase 
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'compliance' | 'system-health' | 'settings'>('overview');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
@@ -195,6 +198,20 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             onClick={() => setActiveTab('keypoints-presentation')}
           >
             🎯 Presentation
+          </button>
+
+          <button 
+            className={`nav-tab ${activeTab === 'compliance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('compliance')}
+          >
+            ✅ Compliance
+          </button>
+
+          <button 
+            className={`nav-tab ${activeTab === 'system-health' ? 'active' : ''}`}
+            onClick={() => setActiveTab('system-health')}
+          >
+            💚 System Health
           </button>
 
           <button 
@@ -373,6 +390,17 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
         {activeTab === 'orders-directions' && (
           <OrdersDirectionsManager caseId={caseData.id} />
+        )}
+
+        {activeTab === 'compliance' && (
+          <ComplianceDashboard caseId={caseData.id} />
+        )}
+
+        {activeTab === 'system-health' && (
+          <>
+            <SystemHealthDashboard />
+            <ModelSelectionUI caseId={caseData.id} />
+          </>
         )}
 
         {activeTab === 'settings' && (

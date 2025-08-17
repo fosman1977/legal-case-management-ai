@@ -493,7 +493,8 @@ export class DockerManager extends EventEmitter {
       
       return new Promise((resolve) => {
         const pullProcess = spawn('docker', ['pull', 'quay.io/go-skynet/local-ai:latest'], {
-          stdio: ['pipe', 'pipe', 'pipe']
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, PATH: `/usr/local/bin:${process.env.PATH}` }
         });
 
         let outputBuffer = '';
@@ -589,7 +590,11 @@ export class DockerManager extends EventEmitter {
   // Helper: Execute command
   private executeCommand(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      exec(command, (error, stdout, stderr) => {
+      const options = this.platform === 'darwin' 
+        ? { env: { ...process.env, PATH: `/usr/local/bin:${process.env.PATH}` } }
+        : {};
+      
+      exec(command, options, (error, stdout) => {
         if (error) {
           reject(error);
         } else {
