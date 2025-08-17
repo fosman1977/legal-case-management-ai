@@ -1,0 +1,53 @@
+name: Build with Proper Code Signing
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.18.0'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build Electron app
+      run: npm run build
+      env:
+        # For code signing (if you have Apple Developer account)
+        CSC_LINK: ${{ secrets.CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    
+    - name: Remove quarantine (fallback if no signing)
+      if: runner.os == 'macOS'
+      run: |
+        if [ -d "release/mac" ]; then
+          for app in release/mac/*.app; do
+            if [ -d "$app" ]; then
+              echo "Removing quarantine from $app"
+              sudo xattr -rd com.apple.quarantine "$app" || true
+            fi
+          done
+        fi
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/**/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
