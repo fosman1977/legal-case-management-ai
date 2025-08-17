@@ -114,10 +114,6 @@
       "gatekeeperAssess": false,
       "entitlements": "./electron/build/entitlements.mac.plist",
       "entitlementsInherit": "./electron/build/entitlements.mac.plist",
-      "identity": "Developer ID Application: Your Name (TEAM_ID)",
-      "notarize": {
-        "teamId": "YOUR_TEAM_ID"
-      },
       "target": [
         {
           "target": "dmg",
