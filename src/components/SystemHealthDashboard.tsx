@@ -48,9 +48,9 @@ export const SystemHealthDashboard: React.FC = () => {
       };
 
       // Check Docker status via Electron IPC
-      if (window.electronAPI?.docker) {
+      if ((window as any).electronAPI?.docker) {
         try {
-          const dockerStatus = await window.electronAPI.docker.checkStatus();
+          const dockerStatus = await (window as any).electronAPI.docker.checkStatus();
           newHealth.docker = {
             installed: dockerStatus.hasDocker || false,
             running: dockerStatus.dockerRunning || false,

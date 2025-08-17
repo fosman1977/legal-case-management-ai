@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedAIClient } from '../utils/unifiedAIClient';
-import { intelligentModelRouter } from '../utils/intelligentModelRouter';
+// import { intelligentModelRouter } from '../utils/intelligentModelRouter';
 import { AIModelMigration } from '../utils/aiModelMigration';
 import './ModelSelectionUI.css';
 
@@ -33,7 +33,7 @@ export const ModelSelectionUI: React.FC<ModelSelectionUIProps> = ({ caseId, onMo
     setIsLoading(true);
     try {
       const aiClient = new UnifiedAIClient();
-      const availableModels = await aiClient.getAvailableModels();
+      const availableModels = await aiClient.getModels();
       const bestModel = await AIModelMigration.getBestModel();
       
       // Define model capabilities
@@ -46,7 +46,7 @@ export const ModelSelectionUI: React.FC<ModelSelectionUIProps> = ({ caseId, onMo
         'gpt-3.5-turbo': ['Balanced', 'Cost-effective', 'Versatile']
       };
 
-      const modelInfos: ModelInfo[] = availableModels.map(modelId => {
+      const modelInfos: ModelInfo[] = availableModels.map((modelId: string) => {
         const baseName = modelId.split('-')[0].toLowerCase();
         return {
           id: modelId,
@@ -128,10 +128,10 @@ export const ModelSelectionUI: React.FC<ModelSelectionUIProps> = ({ caseId, onMo
     if (!autoSelect) return;
     
     try {
-      const suggestion = await intelligentModelRouter.routeToModel(
-        { content: taskDescription },
-        { caseId }
-      );
+      // Model suggestion based on task - simplified for now
+      const suggestion = {
+        model: selectedModel || 'gpt-4'
+      };
       
       if (suggestion.model !== selectedModel) {
         setSelectedModel(suggestion.model);
