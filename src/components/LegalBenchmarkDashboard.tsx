@@ -525,7 +525,7 @@ export const LegalBenchmarkDashboard: React.FC<BenchmarkDashboardProps> = ({ cas
                   <div className="standard-desc">Poor - Limited use recommended</div>
                 </div>
                 <div className="standard-item">
-                  <div className="standard-grade" style={{ color: '#ef4444' }}>F (<60%)</div>
+                  <div className="standard-grade" style={{ color: '#ef4444' }}>F (&lt;60%)</div>
                   <div className="standard-desc">Failing - Additional training required</div>
                 </div>
               </div>

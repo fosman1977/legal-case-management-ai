@@ -10,6 +10,10 @@ import { LocalAIConnector } from './components/LocalAIConnector';
 import { EnhancedSetupWizard } from './components/EnhancedSetupWizard';
 import { EngineDiscoveryDashboard } from './components/EngineDiscoveryDashboard';
 import { LegalBenchmarkDashboard } from './components/LegalBenchmarkDashboard';
+import { ProductionPerformanceDashboard } from './components/ProductionPerformanceDashboard';
+import { DatabaseOptimizationDashboard } from './components/DatabaseOptimizationDashboard';
+import { EncryptionManagementDashboard } from './components/EncryptionManagementDashboard';
+import { AccessLoggingDashboard } from './components/AccessLoggingDashboard';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -21,6 +25,10 @@ export default function App() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showEngineDiscovery, setShowEngineDiscovery] = useState(false);
   const [showLegalBenchmarks, setShowLegalBenchmarks] = useState(false);
+  const [showProductionDashboard, setShowProductionDashboard] = useState(false);
+  const [showDatabaseDashboard, setShowDatabaseDashboard] = useState(false);
+  const [showEncryptionDashboard, setShowEncryptionDashboard] = useState(false);
+  const [showAccessLoggingDashboard, setShowAccessLoggingDashboard] = useState(false);
 
   useEffect(() => {
     loadCases();
@@ -140,6 +148,34 @@ export default function App() {
               ⚖️ Benchmarks
             </button>
             <button 
+              className="btn btn-primary production-btn"
+              onClick={() => setShowProductionDashboard(true)}
+              title="Production performance monitoring and optimization"
+            >
+              ⚡ Production
+            </button>
+            <button 
+              className="btn btn-primary database-btn"
+              onClick={() => setShowDatabaseDashboard(true)}
+              title="Database optimization and storage management"
+            >
+              💾 Database
+            </button>
+            <button 
+              className="btn btn-primary encryption-btn"
+              onClick={() => setShowEncryptionDashboard(true)}
+              title="Document encryption and security management"
+            >
+              🔐 Encryption
+            </button>
+            <button 
+              className="btn btn-primary audit-btn"
+              onClick={() => setShowAccessLoggingDashboard(true)}
+              title="Access logging and audit trail monitoring"
+            >
+              📋 Audit Trail
+            </button>
+            <button 
               className="btn btn-secondary"
               onClick={() => setShowSetupWizard(true)}
               title="Run setup wizard"
@@ -187,6 +223,42 @@ export default function App() {
           <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowLegalBenchmarks(false)}>×</button>
             <LegalBenchmarkDashboard />
+          </div>
+        </div>
+      )}
+
+      {showProductionDashboard && (
+        <div className="modal-overlay" onClick={() => setShowProductionDashboard(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowProductionDashboard(false)}>×</button>
+            <ProductionPerformanceDashboard />
+          </div>
+        </div>
+      )}
+
+      {showDatabaseDashboard && (
+        <div className="modal-overlay" onClick={() => setShowDatabaseDashboard(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowDatabaseDashboard(false)}>×</button>
+            <DatabaseOptimizationDashboard />
+          </div>
+        </div>
+      )}
+
+      {showEncryptionDashboard && (
+        <div className="modal-overlay" onClick={() => setShowEncryptionDashboard(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowEncryptionDashboard(false)}>×</button>
+            <EncryptionManagementDashboard />
+          </div>
+        </div>
+      )}
+
+      {showAccessLoggingDashboard && (
+        <div className="modal-overlay" onClick={() => setShowAccessLoggingDashboard(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowAccessLoggingDashboard(false)}>×</button>
+            <AccessLoggingDashboard />
           </div>
         </div>
       )}

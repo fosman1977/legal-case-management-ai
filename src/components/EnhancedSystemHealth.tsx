@@ -136,39 +136,39 @@ export const EnhancedSystemHealth: React.FC<SystemHealthProps> = ({ caseId }) =>
 
   if (isLoading) {
     return (
-      <div className=\"system-health-loading\">
-        <div className=\"loading-spinner\"></div>
+      <div className="system-health-loading">
+        <div className="loading-spinner"></div>
         <p>Loading system health data...</p>
       </div>
     );
   }
 
   return (
-    <div className=\"enhanced-system-health\">
-      <div className=\"health-header\">
-        <div className=\"health-overview\">
+    <div className="enhanced-system-health">
+      <div className="health-header">
+        <div className="health-overview">
           <h2>🏥 System Health Dashboard</h2>
-          <div className=\"overall-status\">
+          <div className="overall-status">
             <div 
-              className=\"status-indicator\"
+              className="status-indicator"
               style={{ backgroundColor: getOverallHealthColor() }}
             ></div>
-            <span className=\"status-text\">
+            <span className="status-text">
               {systemStatus?.overallHealth || 'Unknown'} 
               ({engines.filter(e => e.health === 'healthy').length}/{engines.length} engines healthy)
             </span>
           </div>
         </div>
         
-        <div className=\"health-actions\">
-          <button onClick={loadSystemHealth} className=\"btn btn-secondary\">
+        <div className="health-actions">
+          <button onClick={loadSystemHealth} className="btn btn-secondary">
             🔄 Refresh
           </button>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className=\"health-tabs\">
+      <div className="health-tabs">
         <button 
           className={`health-tab ${activeTab === 'engines' ? 'active' : ''}`}
           onClick={() => setActiveTab('engines')}
@@ -196,37 +196,37 @@ export const EnhancedSystemHealth: React.FC<SystemHealthProps> = ({ caseId }) =>
       </div>
 
       {/* Tab Content */}
-      <div className=\"health-content\">
+      <div className="health-content">
         {activeTab === 'engines' && (
-          <div className=\"engines-panel\">
+          <div className="engines-panel">
             <h3>🔧 Processing Engines Status</h3>
-            <div className=\"engines-grid\">
+            <div className="engines-grid">
               {engines.map(engine => (
-                <div key={engine.name} className=\"engine-card\">
-                  <div className=\"engine-header\">
-                    <div className=\"engine-info\">
+                <div key={engine.name} className="engine-card">
+                  <div className="engine-header">
+                    <div className="engine-info">
                       <h4>{getEngineHealthIcon(engine.health)} {engine.name}</h4>
-                      <div className=\"engine-meta\">
-                        <span className=\"confidence\">Confidence: {(engine.confidence * 100).toFixed(1)}%</span>
-                        <span className=\"availability\">{engine.isAvailable ? 'Available' : 'Offline'}</span>
+                      <div className="engine-meta">
+                        <span className="confidence">Confidence: {(engine.confidence * 100).toFixed(1)}%</span>
+                        <span className="availability">{engine.isAvailable ? 'Available' : 'Offline'}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className=\"engine-specialties\">
+                  <div className="engine-specialties">
                     <strong>Specialties:</strong>
-                    <div className=\"specialty-tags\">
+                    <div className="specialty-tags">
                       {engine.specialties.map(specialty => (
-                        <span key={specialty} className=\"specialty-tag\">{specialty}</span>
+                        <span key={specialty} className="specialty-tag">{specialty}</span>
                       ))}
                     </div>
                   </div>
                   
                   {engine.successRate && (
-                    <div className=\"engine-stats\">
-                      <div className=\"stat\">
-                        <span className=\"stat-label\">Success Rate:</span>
-                        <span className=\"stat-value\">{(engine.successRate * 100).toFixed(1)}%</span>
+                    <div className="engine-stats">
+                      <div className="stat">
+                        <span className="stat-label">Success Rate:</span>
+                        <span className="stat-value">{(engine.successRate * 100).toFixed(1)}%</span>
                       </div>
                     </div>
                   )}
@@ -237,37 +237,37 @@ export const EnhancedSystemHealth: React.FC<SystemHealthProps> = ({ caseId }) =>
         )}
 
         {activeTab === 'benchmarks' && (
-          <div className=\"benchmarks-panel\">
+          <div className="benchmarks-panel">
             <h3>🎯 Legal AI Benchmark Scores</h3>
-            <div className=\"benchmarks-grid\">
+            <div className="benchmarks-grid">
               {benchmarks.map(benchmark => (
-                <div key={benchmark.name} className=\"benchmark-card\">
-                  <div className=\"benchmark-header\">
+                <div key={benchmark.name} className="benchmark-card">
+                  <div className="benchmark-header">
                     <h4>{benchmark.name}</h4>
-                    <span className=\"trend\">{getTrendIcon(benchmark.trend)}</span>
+                    <span className="trend">{getTrendIcon(benchmark.trend)}</span>
                   </div>
                   
-                  <div className=\"benchmark-score\">
-                    <div className=\"score-display\">
-                      <span className=\"score\">{benchmark.score}</span>
-                      <span className=\"max-score\">/ {benchmark.maxScore}</span>
+                  <div className="benchmark-score">
+                    <div className="score-display">
+                      <span className="score">{benchmark.score}</span>
+                      <span className="max-score">/ {benchmark.maxScore}</span>
                     </div>
-                    <div className=\"score-bar\">
+                    <div className="score-bar">
                       <div 
-                        className=\"score-fill\"
+                        className="score-fill"
                         style={{ width: `${(benchmark.score / benchmark.maxScore) * 100}%` }}
                       ></div>
                     </div>
                   </div>
                   
-                  <div className=\"benchmark-meta\">
+                  <div className="benchmark-meta">
                     <small>Last updated: {benchmark.lastUpdated.toLocaleDateString()}</small>
                   </div>
                 </div>
               ))}
             </div>
             
-            <div className=\"benchmark-explanation\">
+            <div className="benchmark-explanation">
               <h4>📋 Benchmark Explanations</h4>
               <ul>
                 <li><strong>LegalBench:</strong> Comprehensive legal reasoning and analysis benchmark</li>
@@ -280,53 +280,53 @@ export const EnhancedSystemHealth: React.FC<SystemHealthProps> = ({ caseId }) =>
         )}
 
         {activeTab === 'processing' && (
-          <div className=\"processing-panel\">
+          <div className="processing-panel">
             <h3>📊 Processing Performance</h3>
             
             {processingStats ? (
-              <div className=\"stats-grid\">
-                <div className=\"stat-card\">
+              <div className="stats-grid">
+                <div className="stat-card">
                   <h4>📄 Documents Processed</h4>
-                  <div className=\"stat-value\">{processingStats.totalDocuments}</div>
+                  <div className="stat-value">{processingStats.totalDocuments}</div>
                 </div>
                 
-                <div className=\"stat-card\">
+                <div className="stat-card">
                   <h4>⏱️ Average Processing Time</h4>
-                  <div className=\"stat-value\">{processingStats.averageProcessingTime}ms</div>
+                  <div className="stat-value">{processingStats.averageProcessingTime}ms</div>
                 </div>
                 
-                <div className=\"stat-card\">
+                <div className="stat-card">
                   <h4>🎯 Average Confidence</h4>
-                  <div className=\"stat-value\">{(processingStats.averageConfidence * 100).toFixed(1)}%</div>
+                  <div className="stat-value">{(processingStats.averageConfidence * 100).toFixed(1)}%</div>
                 </div>
                 
-                <div className=\"stat-card\">
+                <div className="stat-card">
                   <h4>⚖️ Rules vs AI Ratio</h4>
-                  <div className=\"stat-value\">{(processingStats.rulesVsAiRatio * 100).toFixed(0)}% Rules</div>
+                  <div className="stat-value">{(processingStats.rulesVsAiRatio * 100).toFixed(0)}% Rules</div>
                 </div>
               </div>
             ) : (
-              <div className=\"no-stats\">
+              <div className="no-stats">
                 <p>No processing statistics available yet. Process some documents to see stats.</p>
               </div>
             )}
             
-            <div className=\"engine-usage\">
+            <div className="engine-usage">
               <h4>🔧 Engine Usage Distribution</h4>
               {processingStats?.enginesUsed ? (
-                <div className=\"usage-bars\">
+                <div className="usage-bars">
                   {Object.entries(processingStats.enginesUsed).map(([engine, count]) => (
-                    <div key={engine} className=\"usage-bar\">
-                      <span className=\"engine-name\">{engine}</span>
-                      <div className=\"bar-container\">
+                    <div key={engine} className="usage-bar">
+                      <span className="engine-name">{engine}</span>
+                      <div className="bar-container">
                         <div 
-                          className=\"bar-fill\"
+                          className="bar-fill"
                           style={{ 
                             width: `${(count / Math.max(...Object.values(processingStats.enginesUsed))) * 100}%` 
                           }}
                         ></div>
                       </div>
-                      <span className=\"usage-count\">{count}</span>
+                      <span className="usage-count">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -338,83 +338,83 @@ export const EnhancedSystemHealth: React.FC<SystemHealthProps> = ({ caseId }) =>
         )}
 
         {activeTab === 'transparency' && (
-          <div className=\"transparency-panel\">
+          <div className="transparency-panel">
             <h3>🔍 Processing Transparency</h3>
             
-            <div className=\"transparency-info\">
-              <div className=\"transparency-section\">
+            <div className="transparency-info">
+              <div className="transparency-section">
                 <h4>🤖 AI Processing Indicators</h4>
-                <div className=\"indicator-grid\">
-                  <div className=\"indicator\">
-                    <span className=\"indicator-icon\">🤖</span>
-                    <span className=\"indicator-label\">AI Enhanced</span>
-                    <span className=\"indicator-desc\">Complex analysis with AI assistance</span>
+                <div className="indicator-grid">
+                  <div className="indicator">
+                    <span className="indicator-icon">🤖</span>
+                    <span className="indicator-label">AI Enhanced</span>
+                    <span className="indicator-desc">Complex analysis with AI assistance</span>
                   </div>
                   
-                  <div className=\"indicator\">
-                    <span className=\"indicator-icon\">📋</span>
-                    <span className=\"indicator-label\">Rules Based</span>
-                    <span className=\"indicator-desc\">Processed entirely by rules engines</span>
+                  <div className="indicator">
+                    <span className="indicator-icon">📋</span>
+                    <span className="indicator-label">Rules Based</span>
+                    <span className="indicator-desc">Processed entirely by rules engines</span>
                   </div>
                   
-                  <div className=\"indicator\">
-                    <span className=\"indicator-icon\">🔍</span>
-                    <span className=\"indicator-label\">Consensus</span>
-                    <span className=\"indicator-desc\">Multiple engines validated results</span>
+                  <div className="indicator">
+                    <span className="indicator-icon">🔍</span>
+                    <span className="indicator-label">Consensus</span>
+                    <span className="indicator-desc">Multiple engines validated results</span>
                   </div>
                   
-                  <div className=\"indicator\">
-                    <span className=\"indicator-icon\">⚠️</span>
-                    <span className=\"indicator-label\">Low Confidence</span>
-                    <span className=\"indicator-desc\">Manual review recommended</span>
+                  <div className="indicator">
+                    <span className="indicator-icon">⚠️</span>
+                    <span className="indicator-label">Low Confidence</span>
+                    <span className="indicator-desc">Manual review recommended</span>
                   </div>
                 </div>
               </div>
               
-              <div className=\"transparency-section\">
+              <div className="transparency-section">
                 <h4>📊 Processing Decision Tree</h4>
-                <div className=\"decision-tree\">
-                  <div className=\"tree-node\">
+                <div className="decision-tree">
+                  <div className="tree-node">
                     <strong>Document Input</strong>
-                    <div className=\"tree-branches\">
-                      <div className=\"branch\">
+                    <div className="tree-branches">
+                      <div className="branch">
                         <span>Simple + Standard Accuracy</span>
-                        <span className=\"arrow\">→</span>
-                        <span className=\"result\">📋 Rules Only (3 engines)</span>
+                        <span className="arrow">→</span>
+                        <span className="result">📋 Rules Only (3 engines)</span>
                       </div>
-                      <div className=\"branch\">
+                      <div className="branch">
                         <span>Complex + High Accuracy</span>
-                        <span className=\"arrow\">→</span>
-                        <span className=\"result\">🔍 Full Consensus (7 engines)</span>
+                        <span className="arrow">→</span>
+                        <span className="result">🔍 Full Consensus (7 engines)</span>
                       </div>
-                      <div className=\"branch\">
+                      <div className="branch">
                         <span>Near-Perfect Required</span>
-                        <span className=\"arrow\">→</span>
-                        <span className=\"result\">🤖 AI Enhanced + Validation</span>
+                        <span className="arrow">→</span>
+                        <span className="result">🤖 AI Enhanced + Validation</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div className=\"transparency-section\">
+              <div className="transparency-section">
                 <h4>🛡️ Air-Gap Compliance Status</h4>
-                <div className=\"compliance-grid\">
-                  <div className=\"compliance-item\">
-                    <span className=\"compliance-icon\">✅</span>
-                    <span className=\"compliance-text\">LocalAI runs on-premises</span>
+                <div className="compliance-grid">
+                  <div className="compliance-item">
+                    <span className="compliance-icon">✅</span>
+                    <span className="compliance-text">LocalAI runs on-premises</span>
                   </div>
-                  <div className=\"compliance-item\">
-                    <span className=\"compliance-icon\">✅</span>
-                    <span className=\"compliance-text\">spaCy models cached locally</span>
+                  <div className="compliance-item">
+                    <span className="compliance-icon">✅</span>
+                    <span className="compliance-text">spaCy models cached locally</span>
                   </div>
-                  <div className=\"compliance-item\">
-                    <span className=\"compliance-icon\">✅</span>
-                    <span className=\"compliance-text\">Rules engines offline-capable</span>
+                  <div className="compliance-item">
+                    <span className="compliance-icon">✅</span>
+                    <span className="compliance-text">Rules engines offline-capable</span>
                   </div>
-                  <div className=\"compliance-item\">
-                    <span className=\"compliance-icon\">✅</span>
-                    <span className=\"compliance-text\">Zero external data transmission</span>
+                  <div className="compliance-item">
+                    <span className="compliance-icon">✅</span>
+                    <span className="compliance-text">Zero external data transmission</span>
                   </div>
                 </div>
               </div>

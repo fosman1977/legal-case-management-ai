@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentic-case-management
+  labels:
+    name: agentic-case-management
+    environment: production
+    team: legal-tech
+    compliance: "gdpr,hipaa,sox"
+  annotations:
+    description: "AI-powered legal case management system"
+    contact: "legal-tech-team@company.com"
+    security.policy: "restricted"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agentic-resource-quota
+  namespace: agentic-case-management
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: "32Gi"
+    limits.cpu: "40"
+    limits.memory: "64Gi"
+    persistentvolumeclaims: "20"
+    pods: "50"
+    services: "20"
+    secrets: "30"
+    configmaps: "30"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agentic-limit-range
+  namespace: agentic-case-management
+spec:
+  limits:
+  - default:
+      cpu: "2"
+      memory: "4Gi"
+    defaultRequest:
+      cpu: "500m"
+      memory: "1Gi"
+    type: Container
+  - default:
+      storage: "10Gi"
+    type: PersistentVolumeClaim

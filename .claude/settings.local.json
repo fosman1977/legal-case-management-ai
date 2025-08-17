@@ -14,7 +14,18 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "WebSearch",
-      "WebFetch(domain:www.jobtestprep.co.uk)"
+      "WebFetch(domain:www.jobtestprep.co.uk)",
+      "Bash(npx tsc:*)",
+      "Bash(/dev/null)",
+      "Bash(sed:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(/project/workspace/fix-quotes.sh:*)",
+      "Bash(npm run build:*)",
+      "Bash(/project/workspace/fix-all-quotes.sh:*)",
+      "Bash(./fix-quotes.sh:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

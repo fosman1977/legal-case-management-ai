@@ -1,0 +1,885 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentic-airgapped
+  labels:
+    name: agentic-airgapped
+    environment: production
+    deployment-type: airgapped
+    security-level: maximum
+  annotations:
+    description: "Air-gapped legal case management system"
+    security.policy: "isolated"
+    network.policy: "deny-external"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: airgapped-quota
+  namespace: agentic-airgapped
+spec:
+  hard:
+    requests.cpu: "32"
+    requests.memory: "64Gi"
+    limits.cpu: "64"
+    limits.memory: "128Gi"
+    persistentvolumeclaims: "50"
+    pods: "100"
+    services: "30"
+    secrets: "50"
+    configmaps: "50"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: airgapped-limits
+  namespace: agentic-airgapped
+spec:
+  limits:
+  - default:
+      cpu: "4"
+      memory: "8Gi"
+    defaultRequest:
+      cpu: "1"
+      memory: "2Gi"
+    type: Container
+  - default:
+      storage: "20Gi"
+    type: PersistentVolumeClaim
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-external
+  namespace: agentic-airgapped
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: agentic-airgapped
+    - podSelector: {}
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53  # DNS only
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: agentic-airgapped
+    - podSelector: {}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-nvme
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-ssd
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: postgres
+    component: database
+    deployment-type: airgapped
+spec:
+  serviceName: postgres-airgapped-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+        deployment-type: airgapped
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: agentic_case_management
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: postgres-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+          name: postgres
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql
+          readOnly: true
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 8Gi
+          limits:
+            cpu: 4000m
+            memory: 16Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U postgres -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+      nodeSelector:
+        node-role: storage
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-nvme
+      resources:
+        requests:
+          storage: 500Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: postgres
+    component: database
+spec:
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-airgapped-headless
+  namespace: agentic-airgapped
+  labels:
+    app: postgres
+    component: database
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+---
+# Redis StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: redis
+    component: cache
+    deployment-type: airgapped
+spec:
+  serviceName: redis-airgapped-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        component: cache
+        deployment-type: airgapped
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+          readOnly: true
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+      nodeSelector:
+        node-role: cache
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-ssd
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: redis
+    component: cache
+spec:
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  type: ClusterIP
+---
+# LocalAI Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localai-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: localai
+    component: ai-engine
+    deployment-type: airgapped
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: localai
+  template:
+    metadata:
+      labels:
+        app: localai
+        component: ai-engine
+        deployment-type: airgapped
+    spec:
+      containers:
+      - name: localai
+        image: localai/localai:latest
+        env:
+        - name: REBUILD
+          value: "false"
+        - name: DEBUG
+          value: "false"
+        - name: MODELS_PATH
+          value: /models
+        - name: PRELOAD_MODELS_CONFIG
+          value: /models/preload.yaml
+        - name: CONTEXT_SIZE
+          value: "4096"
+        - name: THREADS
+          value: "16"
+        - name: LOCALAI_LOG_LEVEL
+          value: INFO
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: models-storage
+          mountPath: /models
+          readOnly: true
+        resources:
+          requests:
+            cpu: 8000m
+            memory: 16Gi
+          limits:
+            cpu: 16000m
+            memory: 32Gi
+        livenessProbe:
+          httpGet:
+            path: /v1/models
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 60
+          timeoutSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /v1/models
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 15
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: localai-models-pvc
+      nodeSelector:
+        node-role: compute
+        gpu-available: "false"  # CPU-only for security
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localai-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: localai
+    component: ai-engine
+spec:
+  selector:
+    app: localai
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+# Main Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentic-app-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: agentic-app
+    component: application
+    deployment-type: airgapped
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: agentic-app
+  template:
+    metadata:
+      labels:
+        app: agentic-app
+        component: application
+        deployment-type: airgapped
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - name: agentic-app
+        image: agentic/case-management:latest
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: redis-url
+        - name: LOCALAI_URL
+          value: "http://localai-airgapped:8080"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: jwt-secret
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: encryption-key
+        - name: AIRGAPPED_MODE
+          value: "true"
+        - name: DISABLE_TELEMETRY
+          value: "true"
+        - name: DISABLE_ANALYTICS
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        ports:
+        - containerPort: 3000
+          name: http
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+        - name: app-logs
+          mountPath: /app/logs
+        - name: backup-storage
+          mountPath: /app/backups
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 4Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: agentic-app-data-pvc
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: agentic-app-logs-pvc
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: agentic-backup-pvc
+      nodeSelector:
+        node-role: compute
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - agentic-app
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentic-app-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: agentic-app
+    component: application
+spec:
+  selector:
+    app: agentic-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 7200
+---
+# Internal Load Balancer (No external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentic-internal-lb
+  namespace: agentic-airgapped
+  labels:
+    app: agentic-app
+    component: load-balancer
+  annotations:
+    metallb.universe.tf/address-pool: internal-pool
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+  selector:
+    app: agentic-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  - name: https
+    port: 443
+    targetPort: 3000
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agentic-app-hpa
+  namespace: agentic-airgapped
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agentic-app-airgapped
+  minReplicas: 5
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 120
+    scaleUp:
+      stabilizationWindowSeconds: 180
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 60
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agentic-app-pdb
+  namespace: agentic-airgapped
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: agentic-app
+---
+# Monitoring - Prometheus
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: prometheus
+    component: monitoring
+spec:
+  serviceName: prometheus-airgapped-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        component: monitoring
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--web.enable-lifecycle'
+        - '--storage.tsdb.retention.time=180d'
+        - '--web.external-url=http://prometheus.internal.local'
+        ports:
+        - containerPort: 9090
+          name: web
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+          readOnly: true
+        - name: prometheus-data
+          mountPath: /prometheus
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      nodeSelector:
+        node-role: monitoring
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-ssd
+      resources:
+        requests:
+          storage: 200Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: prometheus
+    component: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - name: web
+    port: 9090
+    targetPort: 9090
+  type: ClusterIP
+---
+# Backup Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backup-service-airgapped
+  namespace: agentic-airgapped
+  labels:
+    app: backup-service
+    component: backup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backup-service
+  template:
+    metadata:
+      labels:
+        app: backup-service
+        component: backup
+    spec:
+      containers:
+      - name: backup-service
+        image: agentic/backup-service:latest
+        env:
+        - name: POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: database-url
+        - name: BACKUP_SCHEDULE
+          value: "0 2 * * *"  # Daily at 2 AM
+        - name: RETENTION_DAYS
+          value: "180"
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: airgapped-secrets
+              key: backup-encryption-key
+        - name: BACKUP_PATH
+          value: "/backups"
+        - name: AIRGAPPED_MODE
+          value: "true"
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backups
+        - name: app-data
+          mountPath: /app/data
+          readOnly: true
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: agentic-backup-pvc
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: agentic-app-data-pvc
+      nodeSelector:
+        node-role: storage
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentic-app-data-pvc
+  namespace: agentic-airgapped
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: local-ssd
+  resources:
+    requests:
+      storage: 1Ti
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentic-app-logs-pvc
+  namespace: agentic-airgapped
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: local-ssd
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentic-backup-pvc
+  namespace: agentic-airgapped
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-ssd
+  resources:
+    requests:
+      storage: 2Ti
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: localai-models-pvc
+  namespace: agentic-airgapped
+spec:
+  accessModes:
+  - ReadOnlyMany
+  storageClassName: local-ssd
+  resources:
+    requests:
+      storage: 500Gi
