@@ -1,0 +1,167 @@
+.compliance-dashboard {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.compliance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.header-left h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.last-scan {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.overall-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+}
+
+.score-label {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.score-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.score-good {
+  background: #d4edda !important;
+  border-color: #28a745 !important;
+  color: #155724;
+}
+
+.score-warning {
+  background: #fff3cd !important;
+  border-color: #ffc107 !important;
+  color: #856404;
+}
+
+.score-poor {
+  background: #f8d7da !important;
+  border-color: #dc3545 !important;
+  color: #721c24;
+}
+
+.compliance-categories {
+  display: grid;
+  gap: 2rem;
+}
+
+.category-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.category-icon {
+  font-size: 1.3rem;
+}
+
+.checks-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.compliance-check {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.compliance-check:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.check-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.check-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+.status-pass {
+  background: #28a745;
+  color: white;
+}
+
+.status-fail {
+  background: #dc3545;
+  color: white;
+}
+
+.status-warning {
+  background: #ffc107;
+  color: #333;
+}
+
+.status-checking {
+  background: #6c757d;
+  color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.check-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.check-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.check-details {
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #495057;
+  border-left: 3px solid #667eea;
+}

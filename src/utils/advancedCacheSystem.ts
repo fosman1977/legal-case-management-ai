@@ -763,7 +763,16 @@ class AdvancedCacheSystem {
   /**
    * Get comprehensive cache statistics
    */
-  getStats(): CacheStats {
+  async getStats(): Promise<{ totalSize: number; totalEntries: number; hitRate: number }> {
+    const fullStats = this.getFullStats();
+    return {
+      totalSize: fullStats.memoryCache.size,
+      totalEntries: fullStats.memoryCache.entries + fullStats.persistentCache.entries,
+      hitRate: fullStats.overall.totalHitRate
+    };
+  }
+
+  getFullStats(): CacheStats {
     const totalRequests = this.stats.totalRequests;
     const avgResponseTime = this.stats.avgResponseTimes.length > 0 
       ? this.stats.avgResponseTimes.reduce((a, b) => a + b, 0) / this.stats.avgResponseTimes.length 
