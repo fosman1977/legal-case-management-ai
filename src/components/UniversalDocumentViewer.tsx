@@ -281,10 +281,20 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                           </div>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-auto">
-                          <pre className="whitespace-pre-wrap text-sm font-mono">
-                            {extractionResult.text.substring(0, 3000)}
-                            {extractionResult.text.length > 3000 && '... (truncated)'}
-                          </pre>
+                          <div className="text-sm leading-relaxed">
+                            {extractionResult.text ? (
+                              extractionResult.text.substring(0, 3000).split('\n').map((line: string, index: number) => (
+                                <div key={index} className="mb-1">
+                                  {line || '\u00A0'} {/* Non-breaking space for empty lines */}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-gray-500 italic">No text content extracted</div>
+                            )}
+                            {extractionResult.text && extractionResult.text.length > 3000 && (
+                              <div className="text-gray-500 italic mt-2">... (showing first 3000 characters)</div>
+                            )}
+                          </div>
                         </div>
                         
                         {extractionResult.images && extractionResult.images.length > 0 && (

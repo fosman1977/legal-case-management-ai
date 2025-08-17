@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAISync } from '../hooks/useAISync';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 
 interface UserNote {
   id: string;
@@ -160,13 +161,8 @@ The transcribed content would appear here and be processed by AI for entity extr
     const contentForAI = note.transcript || note.content;
     if (contentForAI && contentForAI.length > 100) {
       try {
-        // TODO: Replace with LocalAI entity extraction
-        const entities = {
-          persons: [],
-          issues: [],
-          chronologyEvents: [],
-          authorities: []
-        };
+        // Extract entities from user-generated content using LocalAI
+        const entities = await unifiedAIClient.extractEntities(contentForAI, 'user-note');
         
         // Mark as user-generated content
         const userGeneratedEntities = {

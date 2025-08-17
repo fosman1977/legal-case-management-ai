@@ -6,8 +6,10 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
-// Removed aiDocumentProcessor - using unifiedAIClient instead
+// Removed aiDocumentProcessor - using enhanced multi-engine system
 import { useAISync } from '../hooks/useAISync';
+import { unifiedAIClient } from '../utils/unifiedAIClient';
+import { enhancedAIClient } from '../utils/enhancedAIClient';
 
 // Modal Components
 const TagEditModal: React.FC<{
@@ -491,8 +493,36 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
         
         try {
-          // TODO: Replace with LocalAI equivalent
-          const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
+          // Use unifiedAIClient for actual AI extraction
+          console.log(`🤖 Extracting entities from ${doc.title} using AI...`);
+          
+          // Check if AI service is available first
+          const aiStatus = unifiedAIClient.getConnectionStatus();
+          if (aiStatus.status === 'disconnected') {
+            console.warn(`⚠️ AI service not available: ${aiStatus.lastError}`);
+            console.log('🔄 Attempting to connect to LocalAI...');
+            const isAvailable = await unifiedAIClient.isAvailable();
+            if (!isAvailable) {
+              throw new Error(`LocalAI service unavailable: ${aiStatus.lastError}`);
+            }
+          }
+          
+          // Use enhanced multi-engine processing for better accuracy
+          const entities = await enhancedAIClient.extractEntitiesIntelligent(
+            doc.fileContent || doc.content, 
+            'legal',
+            'balanced' // Use balanced approach for bulk processing
+          );
+          
+          console.log(`✅ Enhanced AI extraction results for ${doc.title}:`, {
+            persons: entities.persons.length,
+            issues: entities.issues.length,
+            chronology: entities.chronologyEvents.length,
+            authorities: entities.authorities.length,
+            processingMode: entities.processingMode,
+            consensusConfidence: entities.consensusConfidence,
+            enginesUsed: entities.enginesUsed
+          });
           
           // Only publish if we found entities
           if (entities.persons.length > 0 || entities.issues.length > 0 || 
@@ -517,6 +547,11 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
           
         } catch (error) {
           console.error(`❌ Failed to process ${doc.title}:`, error);
+          // Check if this is a LocalAI connection error
+          if (error.message?.includes('LocalAI service unavailable')) {
+            console.error('🚫 LocalAI Connection Problem:', error.message);
+            // Continue processing other documents but note the issue
+          }
         }
         
         processedCount++;
@@ -533,8 +568,13 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
       
       console.log(`🎉 Bulk AI extraction complete! Total extracted:`, totalExtracted);
       
-      // Show completion message
-      alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.`);
+      // Show completion message with diagnostic info
+      const totalEntities = totalExtracted.persons + totalExtracted.issues + totalExtracted.chronology + totalExtracted.authorities;
+      const diagnosticMessage = totalEntities === 0 ? 
+        '\n\n🔍 No entities were extracted. This might indicate:\n- LocalAI service is not running (check System Health tab)\n- Documents contain no recognizable legal entities\n- AI model needs configuration\n\nCheck the browser console for detailed error messages.' : 
+        '\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.';
+      
+      alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities${diagnosticMessage}`);
       
     } catch (error) {
       console.error('Bulk AI extraction failed:', error);

@@ -8,6 +8,8 @@ import { CaseDetail } from './components/CaseDetail';
 import { GlobalProceduralCalendar } from './components/GlobalProceduralCalendar';
 import { LocalAIConnector } from './components/LocalAIConnector';
 import { EnhancedSetupWizard } from './components/EnhancedSetupWizard';
+import { EngineDiscoveryDashboard } from './components/EngineDiscoveryDashboard';
+import { LegalBenchmarkDashboard } from './components/LegalBenchmarkDashboard';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -17,6 +19,8 @@ export default function App() {
   const [showGlobalCalendar, setShowGlobalCalendar] = useState(false);
   const [showLocalAI, setShowLocalAI] = useState(false);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [showEngineDiscovery, setShowEngineDiscovery] = useState(false);
+  const [showLegalBenchmarks, setShowLegalBenchmarks] = useState(false);
 
   useEffect(() => {
     loadCases();
@@ -122,6 +126,20 @@ export default function App() {
               🤖 LocalAI
             </button>
             <button 
+              className="btn btn-primary discovery-btn"
+              onClick={() => setShowEngineDiscovery(true)}
+              title="Engine discovery and performance monitoring"
+            >
+              🔍 AI Engines
+            </button>
+            <button 
+              className="btn btn-primary benchmark-btn"
+              onClick={() => setShowLegalBenchmarks(true)}
+              title="Legal reasoning and critical thinking benchmarks"
+            >
+              ⚖️ Benchmarks
+            </button>
+            <button 
               className="btn btn-secondary"
               onClick={() => setShowSetupWizard(true)}
               title="Run setup wizard"
@@ -153,6 +171,24 @@ export default function App() {
             // Optionally reload the app or refresh components
           }}
         />
+      )}
+
+      {showEngineDiscovery && (
+        <div className="modal-overlay" onClick={() => setShowEngineDiscovery(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowEngineDiscovery(false)}>×</button>
+            <EngineDiscoveryDashboard />
+          </div>
+        </div>
+      )}
+
+      {showLegalBenchmarks && (
+        <div className="modal-overlay" onClick={() => setShowLegalBenchmarks(false)}>
+          <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowLegalBenchmarks(false)}>×</button>
+            <LegalBenchmarkDashboard />
+          </div>
+        </div>
       )}
 
       <div className="app-content">

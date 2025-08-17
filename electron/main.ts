@@ -403,12 +403,29 @@ const createMenu = () => {
         {
           label: 'Check for Updates...',
           click: async () => {
-            const result = await autoUpdater.checkForUpdatesAndNotify();
-            if (!result || !result.updateInfo) {
+            try {
+              console.log('Manually checking for updates...');
+              const result = await autoUpdater.checkForUpdatesAndNotify();
+              console.log('Update check result:', result);
+              
+              // If no result or no update available, show message
+              if (!result || !result.updateInfo) {
+                setTimeout(() => {
+                  dialog.showMessageBox(mainWindow, {
+                    type: 'info',
+                    title: 'No Updates Available',
+                    message: 'You are running the latest version.',
+                    buttons: ['OK']
+                  });
+                }, 1000); // Wait a bit for the check to complete
+              }
+            } catch (error) {
+              console.error('Update check failed:', error);
               dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'No Updates Available',
-                message: 'You are running the latest version.',
+                type: 'error',
+                title: 'Update Check Failed',
+                message: 'Unable to check for updates. Please try again later.',
+                detail: error.message,
                 buttons: ['OK']
               });
             }
@@ -507,8 +524,11 @@ const setupAutoUpdater = () => {
     }
   });
   
-  autoUpdater.on('update-not-available', () => {
-    console.log('Update not available.');
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('Update not available. Current version:', app.getVersion());
+    
+    // If this was triggered by a manual check, we can show a message
+    // The manual check will handle showing the "no updates" dialog
   });
   
   autoUpdater.on('error', (err) => {

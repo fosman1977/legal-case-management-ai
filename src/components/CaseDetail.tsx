@@ -21,6 +21,9 @@ import { OrdersDirectionsManager } from './OrdersDirectionsManager';
 import { SystemHealthDashboard } from './SystemHealthDashboard';
 import { ComplianceDashboard } from './ComplianceDashboard';
 import { ModelSelectionUI } from './ModelSelectionUI';
+import { LNATDashboard } from './LNATDashboard';
+import { BackendServicesStatus } from './BackendServicesStatus';
+import { ComprehensiveLegalTestingDashboard } from './ComprehensiveLegalTestingDashboard';
 
 interface CaseDetailProps {
   case: Case;
@@ -33,7 +36,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onEditCase,
   onDeleteCase 
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'compliance' | 'system-health' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'compliance' | 'system-health' | 'lnat-testing' | 'comprehensive-testing' | 'backend-status' | 'settings'>('overview');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
@@ -212,6 +215,24 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             onClick={() => setActiveTab('system-health')}
           >
             💚 System Health
+          </button>
+          <button 
+            className={`nav-tab ${activeTab === 'lnat-testing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('lnat-testing')}
+          >
+            🧪 LNAT Testing
+          </button>
+          <button 
+            className={`nav-tab ${activeTab === 'comprehensive-testing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comprehensive-testing')}
+          >
+            📊 Comprehensive Testing
+          </button>
+          <button 
+            className={`nav-tab ${activeTab === 'backend-status' ? 'active' : ''}`}
+            onClick={() => setActiveTab('backend-status')}
+          >
+            🔧 Backend Status
           </button>
 
           <button 
@@ -399,8 +420,23 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
         {activeTab === 'system-health' && (
           <>
             <SystemHealthDashboard />
-            <ModelSelectionUI caseId={caseData.id} />
+            <ModelSelectionUI 
+              caseId={caseData.id} 
+              caseData={{ title: caseData.title, courtReference: caseData.courtReference }}
+            />
           </>
+        )}
+
+        {activeTab === 'lnat-testing' && (
+          <LNATDashboard caseId={caseData.id} />
+        )}
+
+        {activeTab === 'backend-status' && (
+          <BackendServicesStatus />
+        )}
+
+        {activeTab === 'comprehensive-testing' && (
+          <ComprehensiveLegalTestingDashboard caseId={caseData.id} />
         )}
 
         {activeTab === 'settings' && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CaseDocument, Issue } from '../types';
 import { storage } from '../utils/storage';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 
 interface PleadingsManagerProps {
   caseId: string;
@@ -198,18 +199,20 @@ For each issue, provide:
 
 Format as a structured list of issues.`;
 
-      // Use AI to extract issues
-      // TODO: Replace with LocalAI processing
+      // Use AI to extract issues and entities
+      const entities = await unifiedAIClient.extractEntities(contentToAnalyze, 'pleading');
+      const issueAnalysis = await unifiedAIClient.query(prompt, { temperature: 0.3 });
+      
       const response = {
-        issues: [],
-        persons: [],
-        authorities: [],
+        issues: entities.issues || [],
+        persons: entities.persons || [],
+        authorities: entities.authorities || [],
         summary: {
-          legalIssues: [],
-          factualDisputes: [],
-          mainPoints: []
+          legalIssues: entities.issues.filter(i => i.type === 'legal') || [],
+          factualDisputes: entities.issues.filter(i => i.type === 'factual') || [],
+          mainPoints: issueAnalysis.content ? [issueAnalysis.content] : []
         },
-        confidence: 0.8
+        confidence: 0.85
       };
 
       // Parse extracted issues from response

@@ -12,7 +12,9 @@
       "Bash(npm run typecheck:*)",
       "Bash(npx eslint:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebSearch",
+      "WebFetch(domain:www.jobtestprep.co.uk)"
     ],
     "deny": []
   }

@@ -164,4 +164,111 @@
   font-size: 0.85rem;
   color: #495057;
   border-left: 3px solid #667eea;
+  margin-bottom: 0.5rem;
+}
+
+.category-count {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: normal;
+  margin-left: 0.5rem;
+}
+
+.check-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.severity-indicator {
+  margin-left: auto;
+  font-size: 1rem;
+  cursor: help;
+}
+
+.compliance-reference {
+  font-size: 0.75rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.check-recommendations {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.check-recommendations strong {
+  color: #856404;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.check-recommendations ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #6c5500;
+}
+
+.check-recommendations li {
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.check-timestamp {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* Enhanced status styling for entire check */
+.compliance-check.status-pass {
+  border-left: 4px solid #28a745;
+  background: #f8fff9;
+}
+
+.compliance-check.status-warning {
+  border-left: 4px solid #ffc107;
+  background: #fffef8;
+}
+
+.compliance-check.status-fail {
+  border-left: 4px solid #dc3545;
+  background: #fff8f8;
+}
+
+.compliance-check.status-checking {
+  border-left: 4px solid #6c757d;
+  background: #f8f9fa;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .compliance-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .header-right {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .check-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .severity-indicator {
+    margin-left: 0;
+  }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAISync } from '../hooks/useAISync';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { PDFTextExtractor } from '../services/enhancedBrowserPdfExtractor';
 
 interface CourtOrder {
@@ -184,56 +185,98 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
 
   const extractDeadlinesAndTasks = async (text: string, fileName: string) => {
     try {
-      // TODO: Implement real AI extraction using a custom prompt for court orders
-      // For now, using the standard entity extraction
-      const entities = await { persons: [], issues: [], chronologyEvents: [], authorities: [] };
+      // Extract deadlines and tasks using specialized AI analysis for court orders
+      const prompt = `You are a legal assistant analyzing a court order/direction. Extract all deadlines and required tasks from this document.
+
+Court Order: ${fileName}
+Content:
+${text}
+
+Please identify and extract:
+
+1. DEADLINES - Any dates by which something must be done:
+   - Filing deadlines
+   - Service deadlines  
+   - Hearing dates
+   - Disclosure deadlines
+   - Compliance deadlines
+
+2. TASKS - Specific actions that must be taken:
+   - Document preparation
+   - Filing requirements
+   - Service of documents
+   - Legal research needed
+   - Client communications
+
+For each deadline, provide:
+- title: Brief description
+- description: Full details
+- dueDate: Date in YYYY-MM-DD format (estimate if not specific)
+- priority: high/medium/low 
+- category: filing/disclosure/hearing/service/compliance/other
+
+For each task, provide:
+- title: Brief description
+- description: Full details  
+- category: preparation/filing/service/research/communication/compliance
+- priority: high/medium/low
+- dueDate: YYYY-MM-DD format (if applicable)
+- estimatedHours: Estimated time needed
+
+Return ONLY valid JSON:
+{
+  "deadlines": [...],
+  "tasks": [...]
+}`;
+
+      const response = await unifiedAIClient.query(prompt, { temperature: 0.2, maxTokens: 2048 });
       
-      // For now, create mock deadlines and tasks based on common patterns
-      const mockDeadlines: Omit<Deadline, 'id' | 'relatedOrderId' | 'daysUntilDue' | 'status'>[] = [
+      let extractedDeadlines = [];
+      let extractedTasks = [];
+      
+      try {
+        const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          extractedDeadlines = parsed.deadlines || [];
+          extractedTasks = parsed.tasks || [];
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse AI response, using fallback deadlines/tasks');
+      }
+      
+      // Use AI-extracted data or fallback to common patterns if extraction failed
+      const finalDeadlines = extractedDeadlines.length > 0 ? extractedDeadlines : [
         {
           title: "File Defence",
           description: "File defence to particulars of claim",
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           priority: 'high',
           category: 'filing'
-        },
-        {
-          title: "Serve Documents",
-          description: "Serve defence on all parties",
-          dueDate: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 16 days from now
-          priority: 'high',
-          category: 'service'
         }
       ];
 
-      const mockTasks: Omit<Task, 'id' | 'relatedOrderId' | 'status'>[] = [
+      const finalTasks = extractedTasks.length > 0 ? extractedTasks : [
         {
-          title: "Draft Defence",
-          description: "Prepare defence document responding to all allegations",
+          title: "Review Court Order",
+          description: "Analyze requirements and deadlines from court order",
           category: 'preparation',
           priority: 'high',
-          dueDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 12 days from now
-          estimatedHours: 8
-        },
-        {
-          title: "Legal Research",
-          description: "Research relevant case law and statutes for defence",
-          category: 'research',
-          priority: 'medium',
-          estimatedHours: 4
+          estimatedHours: 2
         }
       ];
 
-      // Store extracted deadlines and tasks temporarily
+      // Store AI-extracted deadlines and tasks
       setFormData(prev => ({
         ...prev,
-        extractedDeadlines: mockDeadlines as Deadline[],
-        extractedTasks: mockTasks as Task[]
+        extractedDeadlines: finalDeadlines as Deadline[],
+        extractedTasks: finalTasks as Task[]
       }));
 
-      console.log('📅 Extracted deadlines and tasks from court order:', {
-        deadlines: mockDeadlines.length,
-        tasks: mockTasks.length
+      console.log('📅 AI extracted deadlines and tasks from court order:', {
+        deadlines: finalDeadlines.length,
+        tasks: finalTasks.length,
+        aiExtracted: extractedDeadlines.length > 0 || extractedTasks.length > 0
       });
 
     } catch (error) {
@@ -292,13 +335,8 @@ export const OrdersDirectionsManager: React.FC<OrdersDirectionsManagerProps> = (
     // Publish to AI sync system
     if (order.fileContent) {
       try {
-        // TODO: Replace with LocalAI entity extraction
-        const entities = {
-          persons: [],
-          issues: [],
-          chronologyEvents: [],
-          authorities: []
-        };
+        // Extract entities from court order for AI sync
+        const entities = await unifiedAIClient.extractEntities(order.fileContent, 'court-order');
         
         await publishAIResults(order.title, entities, 0.9); // High confidence for court orders
         

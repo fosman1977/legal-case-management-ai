@@ -7,6 +7,7 @@ import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
 // Removed aiDocumentProcessor - using unifiedAIClient instead
+import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { useAISync } from '../hooks/useAISync';
 
 interface DocumentManagerProps {
@@ -310,8 +311,12 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
         console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
         
         try {
-          // TODO: Replace with LocalAI equivalent
-          const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
+          // Use unifiedAIClient for actual AI extraction
+          console.log(`🤖 Extracting entities from ${doc.title} using AI...`);
+          const entities = await unifiedAIClient.extractEntities(
+            doc.fileContent || doc.content, 
+            'legal-document'
+          );
           
           // Only publish if we found entities
           if (entities.persons.length > 0 || entities.issues.length > 0 || 
@@ -406,14 +411,17 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
             
             // Process with AI to get structured summary
             try {
-              // TODO: Replace with LocalAI processing
+              // Use unifiedAIClient for real AI analysis
+              const executiveSummary = await unifiedAIClient.analyzeDocument(extractedText, 'summary');
+              const relevanceAnalysis = await unifiedAIClient.analyzeDocument(extractedText, 'strengths');
+              
               const processed = {
                 structuredContent: extractedText,
                 summary: {
-                  executiveSummary: 'Document processed',
-                  relevance: 'Standard processing completed'
+                  executiveSummary: executiveSummary || 'Document processed with AI analysis',
+                  relevance: relevanceAnalysis || 'AI analysis completed'
                 },
-                metadata: { confidence: 0.8 }
+                metadata: { confidence: 0.85 }
               };
               
               setFormData(prev => ({
@@ -431,8 +439,12 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ caseId, onDocu
               
               // Extract entities for AI sync system
               try {
-                // TODO: Replace with LocalAI entity extraction
-                const entities = { persons: [], issues: [], chronologyEvents: [], authorities: [] };
+                // Use unifiedAIClient for actual AI entity extraction
+                console.log(`🤖 Extracting entities for AI sync from ${file.name}...`);
+                const entities = await unifiedAIClient.extractEntities(
+                  extractedText, 
+                  'legal-document'
+                );
                 
                 // Publish AI results to sync system
                 await publishAIResults(file.name, entities, processed.metadata.confidence);

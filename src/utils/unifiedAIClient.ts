@@ -385,6 +385,23 @@ class UnifiedAIClient {
     text: string,
     documentType: string = 'legal'
   ): Promise<EntityExtractionResult> {
+    // Check if document is too large (approximate token count: 1 token ≈ 4 characters)
+    const maxChunkSize = 8000; // Conservative chunk size to avoid 413 errors
+    
+    if (text.length <= maxChunkSize) {
+      // Process small documents directly
+      return this.extractEntitiesFromChunk(text, documentType);
+    }
+    
+    // Process large documents in chunks
+    console.log(`📄 Document too large (${text.length} chars), processing in chunks...`);
+    return this.extractEntitiesFromLargeDocument(text, documentType, maxChunkSize);
+  }
+
+  private async extractEntitiesFromChunk(
+    text: string,
+    documentType: string = 'legal'
+  ): Promise<EntityExtractionResult> {
     const prompt = `
 You are a legal document analyzer. Extract the following entities from this ${documentType} document:
 
@@ -436,6 +453,138 @@ Respond ONLY with valid JSON.`;
         authorities: []
       };
     }
+  }
+
+  private async extractEntitiesFromLargeDocument(
+    text: string,
+    documentType: string,
+    maxChunkSize: number
+  ): Promise<EntityExtractionResult> {
+    const chunks = this.intelligentChunkDocument(text, maxChunkSize);
+    console.log(`📝 Processing ${chunks.length} chunks from large document`);
+    
+    const allResults: EntityExtractionResult[] = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`🔄 Processing chunk ${i + 1}/${chunks.length}...`);
+      try {
+        const chunkResult = await this.extractEntitiesFromChunk(chunks[i], documentType);
+        allResults.push(chunkResult);
+        
+        // Small delay between chunks to avoid overwhelming the server
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process chunk ${i + 1}:`, error);
+        // Continue with other chunks
+      }
+    }
+    
+    // Merge and deduplicate results
+    return this.mergeEntityResults(allResults);
+  }
+
+  private intelligentChunkDocument(text: string, maxChunkSize: number): string[] {
+    const chunks: string[] = [];
+    
+    // Try to split on paragraph boundaries first
+    const paragraphs = text.split(/\n\s*\n/);
+    let currentChunk = '';
+    
+    for (const paragraph of paragraphs) {
+      // If adding this paragraph would exceed the limit, start a new chunk
+      if (currentChunk.length + paragraph.length > maxChunkSize && currentChunk.length > 0) {
+        chunks.push(currentChunk.trim());
+        currentChunk = paragraph;
+      } else if (paragraph.length > maxChunkSize) {
+        // If single paragraph is too large, split it by sentences
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+        
+        const sentences = paragraph.split(/\.\s+/);
+        let sentenceChunk = '';
+        
+        for (const sentence of sentences) {
+          if (sentenceChunk.length + sentence.length > maxChunkSize && sentenceChunk.length > 0) {
+            chunks.push(sentenceChunk.trim() + '.');
+            sentenceChunk = sentence;
+          } else {
+            sentenceChunk += (sentenceChunk ? '. ' : '') + sentence;
+          }
+        }
+        
+        if (sentenceChunk.length > 0) {
+          currentChunk = sentenceChunk;
+        }
+      } else {
+        currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+      }
+    }
+    
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+    }
+    
+    return chunks;
+  }
+
+  private mergeEntityResults(results: EntityExtractionResult[]): EntityExtractionResult {
+    const merged: EntityExtractionResult = {
+      persons: [],
+      issues: [],
+      chronologyEvents: [],
+      authorities: []
+    };
+    
+    const seenPersons = new Set<string>();
+    const seenIssues = new Set<string>();
+    const seenEvents = new Set<string>();
+    const seenAuthorities = new Set<string>();
+    
+    for (const result of results) {
+      // Merge persons (deduplicate by name)
+      for (const person of result.persons) {
+        const key = person.name.toLowerCase().trim();
+        if (!seenPersons.has(key)) {
+          seenPersons.add(key);
+          merged.persons.push(person);
+        }
+      }
+      
+      // Merge issues (deduplicate by issue text)
+      for (const issue of result.issues) {
+        const key = issue.issue.toLowerCase().trim();
+        if (!seenIssues.has(key)) {
+          seenIssues.add(key);
+          merged.issues.push(issue);
+        }
+      }
+      
+      // Merge chronology events (deduplicate by date + event)
+      for (const event of result.chronologyEvents) {
+        const key = `${event.date}_${event.event}`.toLowerCase().trim();
+        if (!seenEvents.has(key)) {
+          seenEvents.add(key);
+          merged.chronologyEvents.push(event);
+        }
+      }
+      
+      // Merge authorities (deduplicate by citation)
+      for (const authority of result.authorities) {
+        const key = authority.citation.toLowerCase().trim();
+        if (!seenAuthorities.has(key)) {
+          seenAuthorities.add(key);
+          merged.authorities.push(authority);
+        }
+      }
+    }
+    
+    console.log(`✅ Merged results: ${merged.persons.length} persons, ${merged.issues.length} issues, ${merged.chronologyEvents.length} events, ${merged.authorities.length} authorities`);
+    
+    return merged;
   }
 
   /**
