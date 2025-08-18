@@ -362,7 +362,7 @@ export class MultiEngineProcessor {
     // Each engine will have its own specialized implementation
     try {
       return await unifiedAIClient.extractEntities(text, options.documentType);
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`Engine ${engineName} failed, using fallback:`, error);
       return {
         persons: [],
@@ -395,7 +395,7 @@ export class MultiEngineProcessor {
           specialtyMatch: true
         }
       };
-    } catch (error) {
+    } catch (error: any) {
       console.warn('AI enhancement failed:', error);
       return null;
     }
@@ -456,7 +456,7 @@ export class MultiEngineProcessor {
     const entityTypes: (keyof EntityExtractionResult)[] = ['persons', 'issues', 'chronologyEvents', 'authorities'];
     
     entityTypes.forEach(entityType => {
-      const allEntities = results.flatMap(result => result[entityType] || []);
+      const allEntities = results.flatMap(result => result[entityType] || []) as any[];
       const deduplicatedEntities = this.deduplicateEntities(allEntities, entityType);
       (merged[entityType] as any[]) = deduplicatedEntities;
     });

@@ -34,7 +34,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
     name: '',
     description: '',
     eventTypes: [] as string[],
-    alertLevel: 'info' as any,
+    alertLevel: 'info' as 'info' | 'warning' | 'error' | 'critical',
     enabled: true
   });
 
@@ -58,8 +58,8 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
       const timeframe = getTimeframeRange(eventFilters.timeframe);
       const events = accessLoggingService.getAccessEvents({
         userId: eventFilters.userId || undefined,
-        eventType: eventFilters.eventType as any || undefined,
-        riskLevel: eventFilters.riskLevel as any || undefined,
+        eventType: (eventFilters.eventType || undefined) as any,
+        riskLevel: (eventFilters.riskLevel || undefined) as any,
         timeframe,
         limit: 100
       });
@@ -116,7 +116,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
     try {
       const timeframe = getTimeframeRange('30d'); // Last 30 days
       const report = await accessLoggingService.generateComplianceReport(
-        reportType as any,
+        reportType as 'custom' | 'gdpr' | 'hipaa' | 'sox' | 'iso27001',
         timeframe,
         {
           includeRecommendations: true,
@@ -149,7 +149,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
         name: newRule.name,
         description: newRule.description,
         enabled: newRule.enabled,
-        eventTypes: newRule.eventTypes,
+        eventTypes: newRule.eventTypes as any,
         conditions: {},
         actions: {
           alertLevel: newRule.alertLevel,
@@ -380,7 +380,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
                         <span className="event-type-badge">
                           {getEventTypeIcon(type)} {type}
                         </span>
-                        <span className="count">{count}</span>
+                        <span className="count">{String(count)}</span>
                       </div>
                     ))}
                   </div>
@@ -405,7 +405,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
                           style={{ backgroundColor: getRiskLevelColor(risk) }}
                         ></div>
                         <span className="risk-label">{risk}</span>
-                        <span className="risk-count">{count}</span>
+                        <span className="risk-count">{String(count)}</span>
                       </div>
                     ))}
                   </div>
@@ -774,7 +774,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
                       </div>
                       <div className="report-findings">
                         <strong>Key Findings:</strong>
-                        {report.findings.slice(0, 3).map((finding, index) => (
+                        {report.findings.slice(0, 3).map((finding: any, index: number) => (
                           <div key={index} className="finding-item">
                             <span 
                               className="finding-severity"
@@ -865,7 +865,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
                     <label>Alert Level:</label>
                     <select
                       value={newRule.alertLevel}
-                      onChange={(e) => setNewRule(prev => ({ ...prev, alertLevel: e.target.value as any }))}
+                      onChange={(e) => setNewRule(prev => ({ ...prev, alertLevel: e.target.value as 'info' | 'warning' | 'error' | 'critical' }))}
                       className="form-select"
                     >
                       <option value="info">Info</option>
@@ -918,7 +918,7 @@ export const AccessLoggingDashboard: React.FC<AccessLoggingDashboardProps> = ({ 
                     <div className="rule-details">
                       <div className="rule-event-types">
                         <strong>Monitors:</strong>
-                        {rule.eventTypes.slice(0, 4).map(type => (
+                        {rule.eventTypes.slice(0, 4).map((type: any) => (
                           <span key={type} className="event-type-tag">
                             {getEventTypeIcon(type)} {type}
                           </span>

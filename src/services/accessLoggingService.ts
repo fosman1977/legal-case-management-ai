@@ -458,10 +458,10 @@ export class AccessLoggingService {
   /**
    * Risk assessment for events
    */
-  private calculateAuthenticationRisk(
+  private async calculateAuthenticationRisk(
     result: AccessEvent['actionResult'],
     metadata: any
-  ): AccessEvent['riskLevel'] {
+  ): Promise<AccessEvent['riskLevel']> {
     let riskScore = 0;
     
     if (result === 'failure') riskScore += 0.3;

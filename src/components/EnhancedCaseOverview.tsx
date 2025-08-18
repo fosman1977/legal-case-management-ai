@@ -71,7 +71,7 @@ export const EnhancedCaseOverview: React.FC<EnhancedCaseOverviewProps> = ({
 
   const calculateCaseStats = (docs: CaseDocument[], issues: Issue[], persons: Person[]): CaseStats => {
     // Calculate days until hearing
-    const hearing = new Date(caseData.hearingDate);
+    const hearing = new Date(caseData.hearingDate || Date.now());
     const today = new Date();
     const daysUntilHearing = Math.ceil((hearing.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -277,7 +277,7 @@ export const EnhancedCaseOverview: React.FC<EnhancedCaseOverviewProps> = ({
           <div className="countdown-label">
             {stats.daysUntilHearing > 0 ? 'days until hearing' : 'days since hearing'}
           </div>
-          <div className="hearing-date">📅 {formatDate(caseData.hearingDate)}</div>
+          <div className="hearing-date">📅 {formatDate(caseData.hearingDate || new Date().toISOString())}</div>
         </div>
       </div>
 

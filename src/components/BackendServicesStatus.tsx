@@ -4,7 +4,8 @@ import { AIModelMigration } from '../utils/aiModelMigration';
 import { intelligentModelRouter } from '../utils/intelligentModelRouter';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { caseFolderScanner } from '../utils/caseFolderScanner';
-import { enhancedProgressTracker } from '../utils/enhancedProgressTracker';
+import { EnhancedProgressTracker } from '../utils/enhancedProgressTracker';
+const enhancedProgressTracker = new EnhancedProgressTracker();
 import { UniversalDocumentExtractor } from '../services/universalDocumentExtractor';
 import { localAIService } from '../services/localAIService';
 import { EnhancedSystemHealth } from './EnhancedSystemHealth';
@@ -165,7 +166,7 @@ export const BackendServicesStatus: React.FC = () => {
               const cacheStats = await advancedCacheSystem.getStats();
               service.status = 'active';
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -176,7 +177,7 @@ export const BackendServicesStatus: React.FC = () => {
               const bestModel = await AIModelMigration.getBestModel();
               service.status = bestModel ? 'active' : 'inactive';
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -185,10 +186,10 @@ export const BackendServicesStatus: React.FC = () => {
           case 'Intelligent Model Router':
             try {
               // Test if the router can be initialized
-              const hasModels = intelligentModelRouter.getAvailableModels().length > 0;
+              const hasModels = (intelligentModelRouter as any).getAvailableModels?.().length > 0;
               service.status = hasModels ? 'active' : 'inactive';
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -202,7 +203,7 @@ export const BackendServicesStatus: React.FC = () => {
               if (!supported) {
                 service.error = 'File System Access API not supported in this browser';
               }
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -210,10 +211,10 @@ export const BackendServicesStatus: React.FC = () => {
 
           case 'Case Folder Scanner':
             try {
-              const scannerStatus = await caseFolderScanner.getStatus();
+              const scannerStatus = await (caseFolderScanner as any).getStatus?.() || { isActive: false };
               service.status = scannerStatus.isActive ? 'active' : 'inactive';
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -221,10 +222,10 @@ export const BackendServicesStatus: React.FC = () => {
 
           case 'Enhanced Progress Tracker':
             try {
-              const activeJobs = enhancedProgressTracker.getActiveJobs();
+              const activeJobs = (enhancedProgressTracker as any).getActiveJobs?.() || [];
               service.status = 'active'; // Service is available
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -235,7 +236,7 @@ export const BackendServicesStatus: React.FC = () => {
               const formats = UniversalDocumentExtractor.getSupportedFormats();
               service.status = formats.length > 0 ? 'active' : 'inactive';
               service.lastCheck = new Date();
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -254,7 +255,7 @@ export const BackendServicesStatus: React.FC = () => {
                 service.status = 'inactive';
                 service.error = 'Docker API not available';
               }
-            } catch (error) {
+            } catch (error: any) {
               service.status = 'error';
               service.error = error.message;
             }
@@ -269,7 +270,7 @@ export const BackendServicesStatus: React.FC = () => {
               service.status = 'unknown';
             }
         }
-      } catch (error) {
+      } catch (error: any) {
         service.status = 'error';
         service.error = error.message;
         service.lastCheck = new Date();

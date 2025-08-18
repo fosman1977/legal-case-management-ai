@@ -14,6 +14,11 @@ import { ProductionPerformanceDashboard } from './components/ProductionPerforman
 import { DatabaseOptimizationDashboard } from './components/DatabaseOptimizationDashboard';
 import { EncryptionManagementDashboard } from './components/EncryptionManagementDashboard';
 import { AccessLoggingDashboard } from './components/AccessLoggingDashboard';
+import { UniversalCommandCenter } from './components/UniversalCommandCenter';
+import { SmartCaseClassification } from './components/SmartCaseClassification';
+import { IntelligentDocumentViewer } from './components/IntelligentDocumentViewer';
+import { AdvancedLegalSearch } from './components/AdvancedLegalSearch';
+import { LegalKnowledgeGraph } from './components/LegalKnowledgeGraph';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -29,6 +34,13 @@ export default function App() {
   const [showDatabaseDashboard, setShowDatabaseDashboard] = useState(false);
   const [showEncryptionDashboard, setShowEncryptionDashboard] = useState(false);
   const [showAccessLoggingDashboard, setShowAccessLoggingDashboard] = useState(false);
+  const [showCommandCenter, setShowCommandCenter] = useState(false);
+  const [showCaseClassification, setShowCaseClassification] = useState(false);
+  const [newCaseName, setNewCaseName] = useState('');
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
   useEffect(() => {
     loadCases();
@@ -42,7 +54,46 @@ export default function App() {
       });
     }
     
+    // Global keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K for Command Center
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandCenter(true);
+      }
+      
+      // Cmd+N or Ctrl+N for New Case
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNewCase();
+      }
+      
+      // Cmd+F or Ctrl+F for Advanced Search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowAdvancedSearch(true);
+      }
+      
+      // Cmd+G or Ctrl+G for Knowledge Graph
+      if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
+        e.preventDefault();
+        setShowKnowledgeGraph(true);
+      }
+      
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        setShowCommandCenter(false);
+        setShowCaseClassification(false);
+        setShowDocumentViewer(false);
+        setShowAdvancedSearch(false);
+        setShowKnowledgeGraph(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       // @ts-ignore - Electron IPC
       if (window.electronAPI?.removeAllListeners) {
         // @ts-ignore - Electron IPC
@@ -100,6 +151,40 @@ export default function App() {
     setShowForm(true);
   };
 
+  const handleSmartNewCase = (caseName: string) => {
+    setNewCaseName(caseName);
+    setShowCaseClassification(true);
+  };
+
+  const handleClassificationComplete = (result: any) => {
+    // Create a new case with the classification data
+    const newCase: Case = {
+      id: self.crypto?.randomUUID?.() || `case_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: newCaseName,
+      description: `Classified as ${result.primaryType.toUpperCase()} case with ${Math.round(result.confidence * 100)}% confidence`,
+      status: 'active',
+      priority: result.estimatedComplexity === 'very_high' ? 'high' : 
+                result.estimatedComplexity === 'high' ? 'high' : 'medium',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      tags: result.subCategories,
+      documents: [],
+      timeline: [],
+      metadata: {
+        classification: result,
+        practiceArea: result.primaryType,
+        aiConfidence: result.confidence,
+        suggestedFeatures: result.suggestedFeatures,
+        estimatedDuration: result.estimatedDuration,
+        fundingOptions: result.fundingOptions
+      }
+    };
+
+    handleSaveCase(newCase);
+    setShowCaseClassification(false);
+    setNewCaseName('');
+  };
+
   const handleEditCase = () => {
     const caseToEdit = cases.find(c => c.id === selectedCaseId);
     if (caseToEdit) {
@@ -115,10 +200,31 @@ export default function App() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-text">
-            <h1>Agentic Case Management</h1>
-            <p>AI-powered legal case preparation and document analysis platform</p>
+            <h1>Agentic Legal Intelligence</h1>
+            <p>Revolutionary AI-powered legal intelligence platform</p>
           </div>
           <div className="header-actions">
+            <button 
+              className="btn btn-primary command-center-btn"
+              onClick={() => setShowCommandCenter(true)}
+              title="Universal Command Center (Cmd+K)"
+            >
+              🚀 Command Center
+            </button>
+            <button 
+              className="btn btn-primary search-btn"
+              onClick={() => setShowAdvancedSearch(true)}
+              title="Advanced Legal Search (Cmd+F)"
+            >
+              🔍 Intelligent Search
+            </button>
+            <button 
+              className="btn btn-primary knowledge-graph-btn"
+              onClick={() => setShowKnowledgeGraph(true)}
+              title="Legal Knowledge Graph (Cmd+G)"
+            >
+              🧠 Knowledge Graph
+            </button>
             <button 
               className="btn btn-primary calendar-btn"
               onClick={() => setShowGlobalCalendar(true)}
@@ -263,6 +369,95 @@ export default function App() {
         </div>
       )}
 
+      {/* Revolutionary Command Center */}
+      <UniversalCommandCenter
+        isOpen={showCommandCenter}
+        onClose={() => setShowCommandCenter(false)}
+        currentContext={{
+          caseId: selectedCase?.id,
+          documentId: undefined, // TODO: Add current document context
+          pageUrl: window.location.href,
+          selectedText: undefined // TODO: Add selected text detection
+        }}
+      />
+
+      {/* Smart Case Classification */}
+      {showCaseClassification && (
+        <div className="modal-overlay" onClick={() => setShowCaseClassification(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <SmartCaseClassification
+              caseName={newCaseName}
+              onClassificationComplete={handleClassificationComplete}
+              onClose={() => setShowCaseClassification(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Legal Search */}
+      {showAdvancedSearch && (
+        <AdvancedLegalSearch
+          isOpen={showAdvancedSearch}
+          onClose={() => setShowAdvancedSearch(false)}
+          caseContext={selectedCase ? {
+            caseId: selectedCase.id,
+            practiceArea: selectedCase.metadata?.practiceArea || 'mixed',
+            currentTags: selectedCase.tags
+          } : undefined}
+          onResultSelect={(result) => {
+            console.log('Search result selected:', result);
+            // TODO: Handle search result selection (open document, navigate, etc.)
+          }}
+        />
+      )}
+
+      {/* Intelligent Document Viewer */}
+      {showDocumentViewer && selectedDocument && (
+        <IntelligentDocumentViewer
+          documentId={selectedDocument.id || 'unknown'}
+          documentTitle={selectedDocument.title || 'Document'}
+          documentContent={selectedDocument.content || 'Document content not available'}
+          documentType={selectedDocument.type || 'witness_statement'}
+          caseContext={selectedCase ? {
+            caseId: selectedCase.id,
+            practiceArea: selectedCase.metadata?.practiceArea || 'mixed',
+            relatedDocuments: selectedCase.documents?.map(d => d.id) || []
+          } : undefined}
+          onClose={() => {
+            setShowDocumentViewer(false);
+            setSelectedDocument(null);
+          }}
+          onTagCreate={(tag) => {
+            console.log('New tag created:', tag);
+            // TODO: Save tag to document/case
+          }}
+          onAnnotationCreate={(annotation) => {
+            console.log('New annotation created:', annotation);
+            // TODO: Save annotation to document
+          }}
+        />
+      )}
+
+      {/* Legal Knowledge Graph */}
+      {showKnowledgeGraph && (
+        <LegalKnowledgeGraph
+          isOpen={showKnowledgeGraph}
+          onClose={() => setShowKnowledgeGraph(false)}
+          caseContext={selectedCase ? {
+            caseId: selectedCase.id,
+            practiceArea: selectedCase.metadata?.practiceArea || 'mixed'
+          } : undefined}
+          onNodeSelect={(node) => {
+            console.log('Knowledge graph node selected:', node);
+            // TODO: Handle node selection (navigate to case, document, etc.)
+          }}
+          onInsightSelect={(insight) => {
+            console.log('Knowledge graph insight selected:', insight);
+            // TODO: Handle insight selection (show details, take action, etc.)
+          }}
+        />
+      )}
+
       <div className="app-content">
         <aside className="sidebar">
           <CaseList
@@ -291,11 +486,28 @@ export default function App() {
             />
           ) : (
             <div className="welcome-message">
-              <h2>Welcome to Agentic Case Management</h2>
-              <p>Create your first case to get started with AI-powered legal document analysis and case preparation.</p>
-              <button className="btn btn-primary btn-large" onClick={handleNewCase}>
-                Create Your First Case
-              </button>
+              <h2>Welcome to Agentic Legal Intelligence</h2>
+              <p>Revolutionary AI-powered legal intelligence for English practice. Start with intelligent case classification or use the Command Center.</p>
+              <div className="welcome-actions">
+                <button className="btn btn-primary btn-large" onClick={() => handleSmartNewCase('R v ')}>
+                  🤖 Smart Case Creation
+                </button>
+                <button className="btn btn-secondary btn-large" onClick={handleNewCase}>
+                  📁 Manual Case Creation
+                </button>
+                <button className="btn btn-tertiary btn-large" onClick={() => setShowCommandCenter(true)}>
+                  🚀 Open Command Center (Cmd+K)
+                </button>
+              </div>
+              <div className="quick-tips">
+                <h3>💡 Quick Tips:</h3>
+                <ul>
+                  <li><kbd>Cmd+K</kbd> - Open Universal Command Center anywhere</li>
+                  <li><kbd>Cmd+N</kbd> - Create new case quickly</li>
+                  <li>Use natural language commands for analysis</li>
+                  <li>AI automatically classifies cases by English legal practice</li>
+                </ul>
+              </div>
             </div>
           )}
         </main>

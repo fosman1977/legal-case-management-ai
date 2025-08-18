@@ -69,7 +69,7 @@ export const CLIQueryInterface: React.FC<CLIQueryInterfaceProps> = ({
       console.error('Query execution failed:', error);
       const errorResult: QueryResult = {
         query,
-        result: `Error executing query: ${error.message || 'Unknown error'}`,
+        result: `Error executing query: ${(error as any)?.message || 'Unknown error'}`,
         confidence: 0,
         timestamp: new Date(),
         category: 'error'

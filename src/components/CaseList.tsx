@@ -24,11 +24,12 @@ export const CaseList: React.FC<CaseListProps> = ({
 
   const getStatusBadge = (status: Case['status']) => {
     const colors = {
+      active: 'badge-primary',
       preparation: 'badge-warning',
       ready: 'badge-success',
       concluded: 'badge-secondary'
     };
-    return colors[status];
+    return colors[status] || 'badge-secondary';
   };
 
   const getDaysUntilHearing = (hearingDate: string) => {
@@ -72,7 +73,7 @@ export const CaseList: React.FC<CaseListProps> = ({
           <p className="empty-state">No cases yet. Create your first case to get started.</p>
         ) : (
           cases.map(caseItem => {
-            const daysLeft = getDaysUntilHearing(caseItem.hearingDate);
+            const daysLeft = caseItem.hearingDate ? getDaysUntilHearing(caseItem.hearingDate) : null;
             return (
               <div
                 key={caseItem.id}
@@ -85,18 +86,25 @@ export const CaseList: React.FC<CaseListProps> = ({
                     <span className={`badge ${getStatusBadge(caseItem.status)}`}>
                       {caseItem.status}
                     </span>
-                    <span className={`days-countdown ${getDaysColor(daysLeft)}`}>
-                      {getDaysLabel(daysLeft)}
-                    </span>
+                    {daysLeft !== null && (
+                      <span className={`days-countdown ${getDaysColor(daysLeft)}`}>
+                        {getDaysLabel(daysLeft)}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <p className="case-ref">{caseItem.courtReference}</p>
-                <p className="case-parties">{caseItem.client} v {caseItem.opponent}</p>
+                {caseItem.courtReference && <p className="case-ref">{caseItem.courtReference}</p>}
+                {caseItem.description && <p className="case-description">{caseItem.description}</p>}
+                {caseItem.client && caseItem.opponent && (
+                  <p className="case-parties">{caseItem.client} v {caseItem.opponent}</p>
+                )}
                 <div className="case-item-footer">
-                  <span className="court">{caseItem.court}</span>
-                  <span className="hearing-date">
-                    📅 {formatDate(caseItem.hearingDate)}
-                  </span>
+                  {caseItem.court && <span className="court">{caseItem.court}</span>}
+                  {caseItem.hearingDate && (
+                    <span className="hearing-date">
+                      📅 {formatDate(caseItem.hearingDate)}
+                    </span>
+                  )}
                 </div>
               </div>
             );

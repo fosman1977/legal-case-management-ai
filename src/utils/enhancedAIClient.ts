@@ -57,7 +57,7 @@ export class EnhancedAIClient {
     const enhancedOptions: EnhancedProcessingOptions = {
       requiredAccuracy: 'high',
       maxProcessingTime: 30000,
-      documentType: documentType as any,
+      documentType: documentType as 'legal' | 'court-order' | 'pleading' | 'authority' | 'user-note',
       fallbackToAI: true,
       enableConsensus: true,
       transparencyLevel: 'detailed',
@@ -80,7 +80,7 @@ export class EnhancedAIClient {
           ...consensusResult,
           fallbackUsed: false,
           transparencyLevel: enhancedOptions.transparencyLevel,
-          processingMode: consensusResult.transparencyReport.primaryMethod,
+          processingMode: consensusResult.transparencyReport.primaryMethod as 'rules-only' | 'consensus' | 'ai-enhanced' | 'fallback-ai',
           recommendations: this.generateRecommendations(consensusResult)
         };
       }
@@ -288,8 +288,8 @@ Provide detailed analysis based on the extracted legal entities and their relati
         }]
       },
       fallbackUsed: true,
-      transparencyLevel: transparencyLevel as any,
-      processingMode: mode as any,
+      transparencyLevel: transparencyLevel as 'basic' | 'detailed' | 'full',
+      processingMode: mode as 'rules-only' | 'consensus' | 'ai-enhanced' | 'fallback-ai',
       recommendations: ['AI fallback used - consider validation with rules engines']
     };
   }
@@ -316,8 +316,8 @@ Provide detailed analysis based on the extracted legal entities and their relati
         engineBreakdown: []
       },
       fallbackUsed: false,
-      transparencyLevel: transparencyLevel as any,
-      processingMode: mode as any,
+      transparencyLevel: transparencyLevel as 'basic' | 'detailed' | 'full',
+      processingMode: mode as 'rules-only' | 'consensus' | 'ai-enhanced' | 'fallback-ai',
       recommendations: ['Processing failed - manual review required']
     };
   }

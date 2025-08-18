@@ -1,15 +1,29 @@
 export interface Case {
   id: string;
   title: string;
-  courtReference: string;
-  client: string;
-  opponent: string;
-  court: string;
-  hearingDate: string;
+  description?: string;
+  courtReference?: string;
+  client?: string;
+  opponent?: string;
+  court?: string;
+  hearingDate?: string;
   judge?: string;
-  createdAt: string;
-  updatedAt: string;
-  status: 'preparation' | 'ready' | 'concluded';
+  status: 'active' | 'preparation' | 'ready' | 'concluded';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  tags?: string[];
+  documents?: CaseDocument[];
+  timeline?: ChronologyEvent[];
+  metadata?: {
+    classification?: any;
+    practiceArea?: 'criminal' | 'civil' | 'poca' | 'mixed';
+    aiConfidence?: number;
+    suggestedFeatures?: string[];
+    estimatedDuration?: string;
+    fundingOptions?: string[];
+    [key: string]: any;
+  };
 }
 
 export interface CaseDocument {

@@ -422,7 +422,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             <SystemHealthDashboard />
             <ModelSelectionUI 
               caseId={caseData.id} 
-              caseData={{ title: caseData.title, courtReference: caseData.courtReference }}
+              caseData={{ title: caseData.title || '', courtReference: caseData.courtReference || '' }}
             />
           </>
         )}
