@@ -65,7 +65,9 @@ class LocalAIService {
       if (!healthCheck) {
         // Don't try to auto-start, just inform the user
         console.log('LocalAI is not available - using fallback processing mode');
-        return false;
+        this.status.connected = false;
+        this.status.error = 'LocalAI service not available';
+        return this.status;
       }
 
       // Get available models

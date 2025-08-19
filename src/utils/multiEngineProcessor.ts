@@ -356,7 +356,7 @@ export class MultiEngineProcessor {
     options: ProcessingOptions
   ): Promise<EntityExtractionResult> {
     try {
-      const engineInstance = ENGINE_REGISTRY[engineName];
+      const engineInstance = (ENGINE_REGISTRY as any)[engineName];
       
       if (!engineInstance) {
         console.warn(`Engine ${engineName} not found in registry, using fallback`);
