@@ -21,11 +21,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install Rollup native dependencies
+        run: |
+          npm install @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 @rollup/rollup-linux-x64-gnu @rollup/rollup-win32-x64-msvc --save-optional
+        continue-on-error: true
 
       - name: Build application
         run: npm run build

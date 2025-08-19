@@ -97,7 +97,11 @@
     "wait-on": "^7.0.1"
   },
   "optionalDependencies": {
-    "dmg-license": "^1.0.11"
+    "dmg-license": "^1.0.11",
+    "@rollup/rollup-darwin-arm64": "^4.21.2",
+    "@rollup/rollup-darwin-x64": "^4.21.2",
+    "@rollup/rollup-linux-x64-gnu": "^4.21.2",
+    "@rollup/rollup-win32-x64-msvc": "^4.21.2"
   },
   "build": {
     "appId": "com.legalai.casemanager",
