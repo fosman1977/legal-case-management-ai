@@ -96,7 +96,7 @@ jobs:
         
       - name: Build Electron app (macOS - no signing)
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: npm run build && electron-builder --mac --x64 --arm64 --publish=always
         timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -105,7 +105,7 @@ jobs:
           
       - name: Build Electron app (Windows)
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win
+        run: npm run build && electron-builder --win --x64 --publish=always
         timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -113,7 +113,7 @@ jobs:
           
       - name: Build Electron app (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: npm run dist:linux
+        run: npm run build && electron-builder --linux --x64 --publish=always
         timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
