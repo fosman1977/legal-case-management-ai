@@ -315,7 +315,7 @@ class SecureUpdateService extends EventEmitter {
 
       result.isValid = result.errors.length === 0;
     } catch (error) {
-      result.errors.push(`Validation error: ${error.message}`);
+      result.errors.push(`Validation error: ${(error as Error).message || 'Unknown error'}`);
     }
 
     return result;

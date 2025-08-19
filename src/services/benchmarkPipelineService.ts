@@ -530,7 +530,7 @@ export class BenchmarkPipelineService {
     const scores: number[] = [];
     
     for (let i = 0; i < iterations; i++) {
-      const performance = await legalBenchmarkService.runBenchmarkSuite(engineName, suite);
+      const performance = await legalBenchmarkService.runBenchmarkSuite(engineName, suite as any);
       scores.push(this.getScoreForSuite(performance, suite));
     }
     

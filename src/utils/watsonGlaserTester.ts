@@ -189,8 +189,7 @@ export class WatsonGlaserModelTester {
     
     // Fall back to unified client
     const unifiedClient = new UnifiedAIClient();
-    await unifiedClient.initialize();
-    return unifiedClient;
+    return unifiedClient as any;
   }
 
   /**
@@ -534,8 +533,8 @@ export class WatsonGlaserModelTester {
       let bestModel = '';
       
       availableComparisons.forEach(comp => {
-        const score = comp.profile.sectionScores[section];
-        if (score > bestScore) {
+        const score = comp.profile && (comp.profile as any)[section];
+        if (score && score > bestScore) {
           bestScore = score;
           bestModel = comp.modelId;
         }

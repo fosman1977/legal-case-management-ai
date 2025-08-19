@@ -167,8 +167,7 @@ export class LNATModelTester {
     
     // Fall back to unified client
     const unifiedClient = new UnifiedAIClient();
-    await unifiedClient.initialize();
-    return unifiedClient;
+    return unifiedClient as any;
   }
 
   /**

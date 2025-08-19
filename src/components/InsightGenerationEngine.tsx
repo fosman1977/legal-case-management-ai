@@ -472,7 +472,7 @@ export const InsightGenerationEngine: React.FC<InsightGenerationEngineProps> = (
         evidence: [
           {
             id: 'ev_deadline_1',
-            type: 'temporal',
+            type: 'pattern' as const,
             description: 'Critical timeline analysis showing resource conflicts',
             confidence: 0.98,
             dataPoints: upcomingDeadlines,

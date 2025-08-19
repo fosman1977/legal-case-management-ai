@@ -589,7 +589,7 @@ export const ProductionPerformanceDashboard: React.FC<ProductionDashboardProps> 
                   )}
                 </div>
                 
-                {Object.entries(failSafeData.queue.tasksByPriority).some(([_, count]) => count > 0) && (
+                {Object.entries(failSafeData.queue.tasksByPriority).some(([_, count]) => Number(count as any) > 0) && (
                   <div className="queue-breakdown">
                     <h5>By Priority:</h5>
                     <div className="priority-breakdown">

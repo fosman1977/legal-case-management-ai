@@ -292,7 +292,7 @@ export const EncryptionManagementDashboard: React.FC<EncryptionManagementDashboa
                         >
                           {classification}
                         </span>
-                        <span className="count">{count}</span>
+                        <span className="count">{String(count)}</span>
                       </div>
                     ))}
                   </div>
@@ -313,7 +313,7 @@ export const EncryptionManagementDashboard: React.FC<EncryptionManagementDashboa
                     {Object.entries(encryptionStats?.keysByAlgorithm || {}).map(([algorithm, count]) => (
                       <div key={algorithm} className="breakdown-item">
                         <span className="algorithm-badge">{algorithm}</span>
-                        <span className="count">{count}</span>
+                        <span className="count">{String(count)}</span>
                       </div>
                     ))}
                   </div>
@@ -594,7 +594,7 @@ export const EncryptionManagementDashboard: React.FC<EncryptionManagementDashboa
                       )}
                     </div>
                     <div className="compliance-flags">
-                      {event.complianceFlags.map(flag => (
+                      {event.complianceFlags.map((flag: any) => (
                         <span key={flag} className="compliance-flag">
                           {flag.replace('_', ' ')}
                         </span>

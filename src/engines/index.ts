@@ -3,6 +3,11 @@
  */
 
 // Import all engines
+import { blackstoneEngine, BlackstoneEngine } from './blackstoneEngine';
+import { eyeciteEngine, EyeciteEngine } from './eyeciteEngine';
+import { legalRegexEngine, LegalRegexEngine } from './legalRegexEngine';
+
+// Re-export
 export { blackstoneEngine, BlackstoneEngine } from './blackstoneEngine';
 export { eyeciteEngine, EyeciteEngine } from './eyeciteEngine';
 export { legalRegexEngine, LegalRegexEngine } from './legalRegexEngine';
@@ -157,9 +162,9 @@ export const statisticalValidatorEngine = new StatisticalValidatorEngine();
 
 // Engine registry for dynamic access
 export const ENGINE_REGISTRY = {
-  'blackstone-uk': blackstoneEngine,
-  'eyecite': eyeciteEngine,
-  'legal-regex': legalRegexEngine,
+  'blackstone-uk': blackstoneEngine as any,
+  'eyecite': eyeciteEngine as any,
+  'legal-regex': legalRegexEngine as any,
   'spacy-legal': spacyLegalEngine,
   'custom-uk': customUKEngine,
   'database-validator': databaseValidatorEngine,

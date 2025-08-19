@@ -195,7 +195,7 @@ export const SmartCaseClassification: React.FC<SmartCaseClassificationProps> = (
       name: 'Unexplained Wealth Orders',
       description: 'UWO applications, disclosure requirements, enforcement',
       practiceArea: 'poca',
-      complexity: 'very_high',
+      complexity: 'high' as const,
       commonWith: ['asset-tracing', 'offshore'],
       features: ['High-value assets', 'Offshore structures', 'Disclosure obligations']
     },

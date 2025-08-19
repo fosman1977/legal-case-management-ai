@@ -48,7 +48,7 @@ export const PresentationPrep: React.FC<PresentationPrepProps> = ({ caseData }) 
     notes.push(`### ${caseData.client} v ${caseData.opponent}`);
     notes.push(`Court: ${caseData.court}`);
     notes.push(`Judge: ${caseData.judge || 'TBC'}`);
-    notes.push(`Date: ${new Date(caseData.hearingDate).toLocaleDateString('en-GB')}\n`);
+    notes.push(`Date: ${caseData.hearingDate ? new Date(caseData.hearingDate as string).toLocaleDateString('en-GB') : 'TBC'}\n`);
 
     (['opening', 'examination', 'cross_examination', 'closing', 'legal_argument'] as const).forEach(category => {
       const categoryPoints = keyPoints.filter(p => p.category === category);

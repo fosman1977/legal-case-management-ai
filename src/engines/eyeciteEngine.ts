@@ -236,7 +236,7 @@ export class EyeciteEngine {
         const court = match[2];
         const caseNumber = match[4] || match[3];
         
-        const courtName = this.citationPatterns.courtAbbreviations[court] || court;
+        const courtName = (this.citationPatterns.courtAbbreviations as any)[court] || court;
         
         events.push({
           date: `${year}-01-01`, // Approximate date (year only from citation)

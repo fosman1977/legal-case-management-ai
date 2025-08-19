@@ -353,7 +353,7 @@ export class BackupEncryptionService {
         algorithm: config.encryption.algorithm || this.configuration.defaultEncryption,
         keyRotationDays: this.configuration.keyRotationDays,
         compressionEnabled: this.configuration.defaultCompression,
-        compressionLevel: config.encryption.compressionLevel || this.configuration.defaultCompressionLevel,
+        compressionLevel: Math.min(9, Math.max(1, config.encryption.compressionLevel || this.configuration.defaultCompressionLevel)) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
         integrityChecking: true,
         dedupEnabled: this.configuration.dedupEnabled
       },
@@ -635,11 +635,11 @@ export class BackupEncryptionService {
    * Execute restore operation
    */
   private async executeRestoreOperation(restore: RestoreOperation): Promise<void> {
+    const backup = this.encryptedBackups.get(restore.backupId)!;
+    
     try {
       restore.status = 'running';
       restore.startedAt = new Date();
-      
-      const backup = this.encryptedBackups.get(restore.backupId)!;
       const encryptionKey = this.encryptionKeys.get(backup.encryptionKeyId);
       
       if (!encryptionKey) {
@@ -729,7 +729,7 @@ export class BackupEncryptionService {
         userAgent: 'BackupEncryptionService',
         success: false,
         reason: error instanceof Error ? error.message : 'Unknown error',
-        approvalRequired: backup.accessControl.requiresApproval,
+        approvalRequired: (backup as any)?.accessControl?.requiresApproval || false,
         emergencyAccess: false,
         metadata: {
           restorePoint: restore.backupId,

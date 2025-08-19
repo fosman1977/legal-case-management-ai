@@ -907,9 +907,9 @@ export class DatabaseOptimizationService {
   }> {
     const currentEfficiency = this.storageMetrics?.storageEfficiency || 0;
     const recommendations: string[] = [];
+    const gap = targetEfficiency - currentEfficiency;
     
     if (currentEfficiency < targetEfficiency) {
-      const gap = targetEfficiency - currentEfficiency;
       
       if (this.storageMetrics?.fragmentationLevel && this.storageMetrics.fragmentationLevel > 0.3) {
         recommendations.push('Defragment document chunks to reduce fragmentation');
@@ -930,7 +930,7 @@ export class DatabaseOptimizationService {
     return {
       currentEfficiency,
       recommendations,
-      estimatedImprovement: Math.min(gap * 0.7, 0.2) // Conservative estimate
+      estimatedImprovement: Math.min((1 - currentEfficiency) * 0.7, 0.2) // Conservative estimate
     };
   }
 

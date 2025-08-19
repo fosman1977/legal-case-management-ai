@@ -310,7 +310,7 @@ export const EngineDiscoveryDashboard: React.FC<DiscoveryDashboardProps> = ({ ca
                       <div className="detail-section">
                         <strong>Specialties:</strong>
                         <div className="specialty-tags">
-                          {rec.candidate.specialties.map(specialty => (
+                          {rec.candidate.specialties.map((specialty: any) => (
                             <span key={specialty} className="specialty-tag">{specialty}</span>
                           ))}
                         </div>
@@ -319,7 +319,7 @@ export const EngineDiscoveryDashboard: React.FC<DiscoveryDashboardProps> = ({ ca
                       <div className="detail-section">
                         <strong>Reasoning:</strong>
                         <ul>
-                          {rec.reasoning.map((reason, idx) => (
+                          {rec.reasoning.map((reason: any, idx: any) => (
                             <li key={idx}>{reason}</li>
                           ))}
                         </ul>
@@ -348,7 +348,7 @@ export const EngineDiscoveryDashboard: React.FC<DiscoveryDashboardProps> = ({ ca
                         <div className="detail-section">
                           <strong>Benchmark Results:</strong>
                           <div className="benchmark-results">
-                            {rec.benchmarkResults.map((benchmark, idx) => (
+                            {rec.benchmarkResults.map((benchmark: any, idx: any) => (
                               <div key={idx} className="benchmark-item">
                                 <span className="benchmark-name">{benchmark.testSuite}</span>
                                 <span className="benchmark-score">

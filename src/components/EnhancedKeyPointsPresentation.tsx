@@ -150,7 +150,7 @@ export const EnhancedKeyPointsPresentation: React.FC<EnhancedKeyPointsPresentati
     notes.push(`### ${caseData.client} v ${caseData.opponent}`);
     notes.push(`Court: ${caseData.court}`);
     notes.push(`Judge: ${caseData.judge || 'TBC'}`);
-    notes.push(`Date: ${new Date(caseData.hearingDate).toLocaleDateString('en-GB')}\n`);
+    notes.push(`Date: ${caseData.hearingDate ? new Date(caseData.hearingDate as string).toLocaleDateString('en-GB') : 'TBC'}\n`);
 
     categories.forEach(category => {
       const categoryPoints = keyPoints.filter(p => p.category === category.key);
@@ -463,12 +463,12 @@ export const EnhancedKeyPointsPresentation: React.FC<EnhancedKeyPointsPresentati
                   <span className="court-details">{caseData.court}</span>
                   {caseData.judge && <span className="judge">Before: {caseData.judge}</span>}
                   <span className="hearing-date">
-                    {new Date(caseData.hearingDate).toLocaleDateString('en-GB', {
+                    {caseData.hearingDate ? new Date(caseData.hearingDate as string).toLocaleDateString('en-GB', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
-                    })}
+                    }) : 'Date TBC'}
                   </span>
                 </div>
               </div>

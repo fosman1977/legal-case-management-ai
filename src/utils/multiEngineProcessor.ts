@@ -455,11 +455,21 @@ export class MultiEngineProcessor {
     // For each entity type, merge and deduplicate
     const entityTypes: (keyof EntityExtractionResult)[] = ['persons', 'issues', 'chronologyEvents', 'authorities'];
     
-    entityTypes.forEach(entityType => {
-      const allEntities = results.flatMap(result => result[entityType] || []) as any[];
-      const deduplicatedEntities = this.deduplicateEntities(allEntities, entityType);
-      (merged[entityType] as any[]) = deduplicatedEntities;
-    });
+    // Handle persons
+    const allPersons = results.flatMap(result => result.persons || []);
+    merged.persons = this.deduplicateEntities(allPersons, 'persons');
+    
+    // Handle issues
+    const allIssues = results.flatMap(result => result.issues || []);
+    merged.issues = this.deduplicateEntities(allIssues as any, 'issues') as any;
+    
+    // Handle chronologyEvents
+    const allEvents = results.flatMap(result => result.chronologyEvents || []);
+    merged.chronologyEvents = this.deduplicateEntities(allEvents as any, 'chronologyEvents');
+    
+    // Handle authorities
+    const allAuthorities = results.flatMap(result => result.authorities || []);
+    merged.authorities = this.deduplicateEntities(allAuthorities as any, 'authorities');
     
     return merged;
   }

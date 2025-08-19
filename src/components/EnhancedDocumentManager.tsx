@@ -548,8 +548,8 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         } catch (error) {
           console.error(`❌ Failed to process ${doc.title}:`, error);
           // Check if this is a LocalAI connection error
-          if (error.message?.includes('LocalAI service unavailable')) {
-            console.error('🚫 LocalAI Connection Problem:', error.message);
+          if ((error as Error).message?.includes('LocalAI service unavailable')) {
+            console.error('🚫 LocalAI Connection Problem:', (error as Error).message);
             // Continue processing other documents but note the issue
           }
         }

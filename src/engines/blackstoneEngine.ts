@@ -183,8 +183,9 @@ export class BlackstoneEngine {
 
     // Extract issues from headings and numbered paragraphs
     const headingPattern = /^(\d+\.?\s*)(.+)$/gm;
-    while ((match = headingPattern.exec(text)) !== null) {
-      const heading = match[2].trim();
+    let headingMatch: RegExpExecArray | null;
+    while ((headingMatch = headingPattern.exec(text)) !== null) {
+      const heading = headingMatch[2].trim();
       if (heading.length > 10 && heading.length < 100) {
         issues.push({
           issue: heading,

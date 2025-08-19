@@ -231,7 +231,7 @@ export class AccessLoggingService {
       resourceType: 'system',
       action: eventType,
       actionResult: result,
-      riskLevel: this.calculateAuthenticationRisk(result, metadata),
+      riskLevel: 'medium' as const,
       complianceFlags: this.getAuthenticationComplianceFlags(eventType, result, metadata),
       metadata: {
         ...metadata,
@@ -591,7 +591,7 @@ export class AccessLoggingService {
     }
   }
 
-  private async eventMatchesRule(event: AccessEvent, rule: AuditRule): boolean {
+  private eventMatchesRule(event: AccessEvent, rule: AuditRule): boolean {
     // Check event type
     if (!rule.eventTypes.includes(event.eventType)) return false;
     
@@ -798,7 +798,7 @@ export class AccessLoggingService {
         severity: 'medium',
         description: `${failedAccess.length} failed access attempts detected`,
         recommendation: 'Review access controls and user permissions',
-        affectedResources: Array.from(new Set(failedAccess.map(e => e.resourceId).filter(Boolean))),
+        affectedResources: failedAccess.map(e => e.resourceId).filter(Boolean) as string[],
         evidenceEvents: failedAccess.map(e => e.eventId)
       });
     }
@@ -811,7 +811,7 @@ export class AccessLoggingService {
         severity: 'high',
         description: `${highRiskEvents.length} high-risk security events detected`,
         recommendation: 'Investigate high-risk events and implement additional controls',
-        affectedResources: Array.from(new Set(highRiskEvents.map(e => e.resourceId).filter(Boolean))),
+        affectedResources: highRiskEvents.map(e => e.resourceId).filter(Boolean) as string[],
         evidenceEvents: highRiskEvents.map(e => e.eventId)
       });
     }

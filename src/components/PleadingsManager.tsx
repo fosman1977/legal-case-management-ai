@@ -220,12 +220,12 @@ Format as a structured list of issues.`;
       
       // Extract from main points or issues section
       if (response.summary.legalIssues) {
-        response.summary.legalIssues.forEach((issue: string) => {
+        response.summary.legalIssues.forEach((issueData: any) => {
           extractedIssues.push({
-            title: issue.substring(0, 100),
-            description: issue,
+            title: issueData.issue.substring(0, 100),
+            description: issueData.issue,
             category: 'legal',
-            [party.partyType === 'claimant' ? 'claimantPosition' : 'defendantPosition']: issue,
+            [party.partyType === 'claimant' ? 'claimantPosition' : 'defendantPosition']: issueData.issue,
             sourceDocument: doc.title,
             party: party.partyName
           });
@@ -233,12 +233,12 @@ Format as a structured list of issues.`;
       }
 
       if (response.summary.factualDisputes) {
-        response.summary.factualDisputes.forEach((issue: string) => {
+        response.summary.factualDisputes.forEach((issueData: any) => {
           extractedIssues.push({
-            title: issue.substring(0, 100),
-            description: issue,
+            title: issueData.issue.substring(0, 100),
+            description: issueData.issue,
             category: 'factual',
-            [party.partyType === 'claimant' ? 'claimantPosition' : 'defendantPosition']: issue,
+            [party.partyType === 'claimant' ? 'claimantPosition' : 'defendantPosition']: issueData.issue,
             sourceDocument: doc.title,
             party: party.partyName
           });

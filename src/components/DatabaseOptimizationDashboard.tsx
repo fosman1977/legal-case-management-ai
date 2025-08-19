@@ -357,11 +357,11 @@ export const DatabaseOptimizationDashboard: React.FC<DatabaseOptimizationDashboa
                         <div 
                           className="distribution-fill"
                           style={{ 
-                            width: `${(count as number / Math.max(...Object.values(storageMetrics.chunkDistribution))) * 100}%`
+                            width: `${(Number(count) / Math.max(...Object.values(storageMetrics.chunkDistribution).map(v => Number(v)))) * 100}%`
                           }}
                         ></div>
                       </div>
-                      <div className="distribution-count">{count}</div>
+                      <div className="distribution-count">{String(count)}</div>
                     </div>
                   ))}
                 </div>
