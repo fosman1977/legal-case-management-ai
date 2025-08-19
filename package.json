@@ -1,7 +1,7 @@
 {
   "name": "legal-case-management-ai",
-  "version": "1.0.0",
-  "description": "Professional legal case management system with AI integration",
+  "version": "2.0.0",
+  "description": "Revolutionary privacy-compliant legal case management system with Claude AI consultation",
   "main": "dist-electron/main.js",
   "homepage": "./",
   "repository": {

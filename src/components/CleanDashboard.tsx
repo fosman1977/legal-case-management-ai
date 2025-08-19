@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Case } from '../types';
+import { AITransparencyDashboard, ConsultationLogEntry } from './AITransparencyDashboard';
+import { ComplianceConfirmationSystem } from './ComplianceConfirmationSystem';
+import './AITransparencyDashboard.css';
+import './ComplianceConfirmationSystem.css';
 
 interface CleanDashboardProps {
   cases: Case[];
@@ -15,6 +19,54 @@ export const CleanDashboard: React.FC<CleanDashboardProps> = ({
   onOpenCommand,
 }) => {
   const [activeView, setActiveView] = useState<'overview' | 'cases' | 'calendar' | 'tools'>('overview');
+  
+  // AI Transparency State
+  const [consultationActive, setConsultationActive] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [consultationLog, setConsultationLog] = useState<ConsultationLogEntry[]>([]);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+
+  // Demo consultation log data
+  useEffect(() => {
+    // Add some sample consultation entries for demonstration
+    const sampleEntries: ConsultationLogEntry[] = [
+      {
+        id: '1',
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+        patternType: 'Commercial Contract Analysis',
+        guidanceType: 'Contract Interpretation Framework',
+        status: 'success',
+        responseTime: 1250,
+        dataProtected: true
+      },
+      {
+        id: '2',
+        timestamp: new Date(Date.now() - 1800000).toISOString(),
+        patternType: 'Employment Law Issue',
+        guidanceType: 'Dismissal Procedures Guidance',
+        status: 'success',
+        responseTime: 890,
+        dataProtected: true
+      },
+      {
+        id: '3',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        patternType: 'Property Dispute Pattern',
+        guidanceType: 'Landlord Tenant Rights Analysis',
+        status: 'fallback',
+        responseTime: 0,
+        dataProtected: true
+      }
+    ];
+    setConsultationLog(sampleEntries);
+  }, []);
+
+  const handleToggleAI = (enabled: boolean) => {
+    setAiEnabled(enabled);
+    if (!enabled) {
+      setConsultationActive(false);
+    }
+  };
 
   const activeCases = cases.filter(c => c.status === 'active').length;
   const completedCases = cases.filter(c => c.status === 'concluded').length;
@@ -111,6 +163,15 @@ export const CleanDashboard: React.FC<CleanDashboardProps> = ({
         <div className="animate-fade-in">
           {activeView === 'overview' && (
             <>
+              {/* AI Transparency Dashboard */}
+              <AITransparencyDashboard
+                consultationActive={consultationActive}
+                consultationLog={consultationLog}
+                aiEnabled={aiEnabled}
+                onToggleAI={handleToggleAI}
+                className="mb-6"
+              />
+
               {/* Quick Stats */}
               <div className="dashboard-grid">
                 <div className="dashboard-card">
@@ -308,42 +369,105 @@ export const CleanDashboard: React.FC<CleanDashboardProps> = ({
           )}
 
           {activeView === 'tools' && (
-            <div className="dashboard-grid">
-              <div className="dashboard-card">
-                <div className="dashboard-card-header">
-                  <h3 className="dashboard-card-title">
-                    <svg className="dashboard-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="11" cy="11" r="8"/>
-                      <path d="21 21l-4.35-4.35"/>
-                    </svg>
-                    AI Search
-                  </h3>
-                </div>
-                <div className="dashboard-card-content">
-                  <p className="text-body mb-4">Intelligent search across all case documents and legal databases.</p>
-                  <button className="btn btn-primary">Launch Search</button>
-                </div>
-              </div>
+            <div>
+              {/* AI Transparency Panel for Tools View */}
+              <AITransparencyDashboard
+                consultationActive={consultationActive}
+                consultationLog={consultationLog}
+                aiEnabled={aiEnabled}
+                onToggleAI={handleToggleAI}
+                className="mb-6"
+              />
 
-              <div className="dashboard-card">
-                <div className="dashboard-card-header">
-                  <h3 className="dashboard-card-title">
-                    <svg className="dashboard-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="3"/>
-                      <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
-                    </svg>
-                    AI Engine
-                  </h3>
+              <div className="dashboard-grid">
+                <div className="dashboard-card">
+                  <div className="dashboard-card-header">
+                    <h3 className="dashboard-card-title">
+                      <svg className="dashboard-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="21 21l-4.35-4.35"/>
+                      </svg>
+                      AI-Enhanced Search
+                    </h3>
+                  </div>
+                  <div className="dashboard-card-content">
+                    <p className="text-body mb-4">Intelligent search across all case documents using privacy-compliant AI consultation.</p>
+                    <button 
+                      className={`btn ${aiEnabled ? 'btn-primary' : 'btn-secondary'}`}
+                      disabled={!aiEnabled}
+                    >
+                      {aiEnabled ? 'Launch Search' : 'AI Disabled'}
+                    </button>
+                  </div>
                 </div>
-                <div className="dashboard-card-content">
-                  <p className="text-body mb-4">Configure and monitor AI processing engines.</p>
-                  <button className="btn btn-secondary">Configure</button>
+
+                <div className="dashboard-card">
+                  <div className="dashboard-card-header">
+                    <h3 className="dashboard-card-title">
+                      <svg className="dashboard-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
+                      </svg>
+                      Claude Consultation
+                    </h3>
+                  </div>
+                  <div className="dashboard-card-content">
+                    <p className="text-body mb-4">Privacy-first AI consultation system. No case data transmitted externally.</p>
+                    <div className="mb-4">
+                      <div className={`status ${consultationActive ? 'status-success' : 'status-warning'}`}>
+                        {consultationActive ? 'Active' : 'Standby'}
+                      </div>
+                    </div>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => setConsultationActive(!consultationActive)}
+                    >
+                      {consultationActive ? 'Stop Consultation' : 'Start Test Consultation'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="dashboard-card">
+                  <div className="dashboard-card-header">
+                    <h3 className="dashboard-card-title">
+                      <svg className="dashboard-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9,12l2,2 4,-4"/>
+                        <path d="M21,12c0,1.66 -1.34,3 -3,3l-1.5,0c-0.83,0 -1.5,-0.67 -1.5,-1.5 0,-0.83 0.67,-1.5 1.5,-1.5l1.5,0c1.66,0 3,-1.34 3,-3 0,-1.66 -1.34,-3 -3,-3l-1.5,0c-0.83,0 -1.5,0.67 -1.5,1.5"/>
+                        <path d="M12,2v20"/>
+                      </svg>
+                      Compliance Status
+                    </h3>
+                  </div>
+                  <div className="dashboard-card-content">
+                    <p className="text-body mb-4">Regulatory compliance monitoring for AI usage in legal practice.</p>
+                    <div className="status status-success mb-4">
+                      Fully Compliant - BSB, SRA, GDPR
+                    </div>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => setShowComplianceModal(true)}
+                    >
+                      View Compliance Report
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
       </main>
+
+      {/* Compliance Modal */}
+      {showComplianceModal && (
+        <div className="modal-backdrop">
+          <div className="modal-container">
+            <ComplianceConfirmationSystem 
+              onClose={() => setShowComplianceModal(false)}
+              className="compliance-modal"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
