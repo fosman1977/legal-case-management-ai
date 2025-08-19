@@ -118,6 +118,21 @@
   color: var(--color-primary-500);
 }
 
+.dropdown-shortcut {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  background: var(--color-gray-100);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-weight: 500;
+}
+
+.dropdown-item:hover .dropdown-shortcut {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
 .dropdown-backdrop {
   position: fixed;
   inset: 0;

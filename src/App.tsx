@@ -95,8 +95,41 @@ export default function App() {
     
     window.addEventListener('keydown', handleKeyDown);
     
+    // Custom event listeners for menu items
+    const handleShowCalendar = () => setShowGlobalCalendar(true);
+    const handleShowEngineDiscovery = () => setShowEngineDiscovery(true);
+    const handleShowBenchmarks = () => setShowLegalBenchmarks(true);
+    const handleShowProductionDashboard = () => setShowProductionDashboard(true);
+    const handleShowEncryptionDashboard = () => setShowEncryptionDashboard(true);
+    const handleShowAccessLogging = () => setShowAccessLoggingDashboard(true);
+    const handleShowDatabaseOptimization = () => setShowDatabaseDashboard(true);
+    const handleShowLocalAI = () => setShowLocalAI(true);
+    const handleShowSetupWizard = () => setShowSetupWizard(true);
+    const handleShowCaseClassification = () => setShowCaseClassification(true);
+    
+    window.addEventListener('show-calendar', handleShowCalendar);
+    window.addEventListener('show-engine-discovery', handleShowEngineDiscovery);
+    window.addEventListener('show-benchmarks', handleShowBenchmarks);
+    window.addEventListener('show-production-dashboard', handleShowProductionDashboard);
+    window.addEventListener('show-encryption-dashboard', handleShowEncryptionDashboard);
+    window.addEventListener('show-access-logging', handleShowAccessLogging);
+    window.addEventListener('show-database-optimization', handleShowDatabaseOptimization);
+    window.addEventListener('show-localai', handleShowLocalAI);
+    window.addEventListener('show-setup-wizard', handleShowSetupWizard);
+    window.addEventListener('show-case-classification', handleShowCaseClassification);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('show-calendar', handleShowCalendar);
+      window.removeEventListener('show-engine-discovery', handleShowEngineDiscovery);
+      window.removeEventListener('show-benchmarks', handleShowBenchmarks);
+      window.removeEventListener('show-production-dashboard', handleShowProductionDashboard);
+      window.removeEventListener('show-encryption-dashboard', handleShowEncryptionDashboard);
+      window.removeEventListener('show-access-logging', handleShowAccessLogging);
+      window.removeEventListener('show-database-optimization', handleShowDatabaseOptimization);
+      window.removeEventListener('show-localai', handleShowLocalAI);
+      window.removeEventListener('show-setup-wizard', handleShowSetupWizard);
+      window.removeEventListener('show-case-classification', handleShowCaseClassification);
       // @ts-ignore - Electron IPC
       if (window.electronAPI?.removeAllListeners) {
         // @ts-ignore - Electron IPC
