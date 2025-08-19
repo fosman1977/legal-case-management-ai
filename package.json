@@ -38,7 +38,8 @@
     "lint": "echo \"Linting coming soon\"",
     "clean": "rm -rf dist dist-electron release node_modules/.cache",
     "postinstall": "electron-builder install-app-deps",
-    "validate-setup": "node scripts/validate-setup.js"
+    "validate-setup": "node scripts/validate-setup.js",
+    "fix-auto-updater": "node scripts/fix-auto-updater.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
@@ -173,12 +174,15 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Legal Case Manager AI"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "fosman1977",
-      "repo": "legal-case-management-ai",
-      "releaseType": "release"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "fosman1977",
+        "repo": "legal-case-management-ai",
+        "releaseType": "release",
+        "publishAutoUpdate": true
+      }
+    ],
     "afterSign": "./scripts/notarize.js"
   }
 }

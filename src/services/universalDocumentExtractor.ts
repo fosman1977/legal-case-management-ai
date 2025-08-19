@@ -7,6 +7,7 @@
 import * as mammoth from 'mammoth';
 import { fileTypeFromBuffer } from 'file-type';
 import { ProductionDocumentExtractor, ExtractionOptions } from './productionDocumentExtractor';
+import { multiEngineProcessor } from '../utils/multiEngineProcessor';
 
 interface UniversalExtractionResult {
   text: string;
@@ -683,10 +684,85 @@ export class UniversalDocumentExtractor {
   }
 
   /**
-   * Extract legal entities from plain text
+   * Extract legal entities using multi-engine processor
    */
   private static async extractLegalEntitiesFromText(text: string): Promise<any[]> {
-    // Simplified legal entity extraction for non-PDF documents
+    try {
+      console.log('🔧 Using Multi-Engine Processor for legal entity extraction...');
+      
+      // Use multi-engine processor for comprehensive analysis
+      const result = await multiEngineProcessor.processDocument(text, {
+        requiredAccuracy: 'high',
+        maxProcessingTime: 30000, // 30 seconds max
+        preferredEngines: ['blackstone-uk', 'eyecite', 'legal-regex', 'spacy-legal', 'custom-uk'],
+        documentType: 'legal'
+      });
+      
+      console.log(`✅ Multi-engine processing complete: ${result.enginesUsed.length} engines used, ${result.consensusConfidence}% consensus confidence`);
+      console.log(`📊 Extracted: ${result.persons.length} persons, ${result.issues.length} issues, ${result.authorities.length} authorities, ${result.chronologyEvents.length} events`);
+      
+      // Convert to legacy format for backward compatibility
+      const entities: any[] = [];
+      
+      // Add persons
+      result.persons.forEach(person => {
+        entities.push({
+          type: 'person',
+          value: person.name,
+          role: person.role,
+          confidence: person.confidence,
+          source: 'multi-engine'
+        });
+      });
+      
+      // Add issues
+      result.issues.forEach(issue => {
+        entities.push({
+          type: 'legal_issue',
+          value: issue.issue,
+          category: issue.type,
+          confidence: issue.confidence,
+          source: 'multi-engine'
+        });
+      });
+      
+      // Add authorities
+      result.authorities.forEach(authority => {
+        entities.push({
+          type: 'legal_authority',
+          value: authority.citation,
+          relevance: authority.relevance,
+          confidence: authority.confidence,
+          source: 'multi-engine'
+        });
+      });
+      
+      // Add chronology events
+      result.chronologyEvents.forEach(event => {
+        entities.push({
+          type: 'chronology_event',
+          value: event.event,
+          date: event.date,
+          confidence: event.confidence,
+          source: 'multi-engine'
+        });
+      });
+      
+      console.log(`🎯 Converted ${entities.length} entities from multi-engine results`);
+      return entities;
+      
+    } catch (error) {
+      console.error('❌ Multi-engine processing failed, falling back to basic patterns:', error);
+      
+      // Fallback to basic pattern matching
+      return this.extractBasicLegalEntities(text);
+    }
+  }
+  
+  /**
+   * Fallback basic entity extraction
+   */
+  private static extractBasicLegalEntities(text: string): any[] {
     const entities: any[] = [];
     
     // UK Case numbers
@@ -697,7 +773,8 @@ export class UniversalDocumentExtractor {
         type: 'case_number',
         value: match[0],
         context: this.getContext(text, match.index, 50),
-        confidence: 0.9
+        confidence: 0.9,
+        source: 'basic-patterns'
       });
     }
     
@@ -708,7 +785,8 @@ export class UniversalDocumentExtractor {
         type: 'monetary_amount',
         value: match[0],
         context: this.getContext(text, match.index, 30),
-        confidence: 0.95
+        confidence: 0.95,
+        source: 'basic-patterns'
       });
     }
     
@@ -719,7 +797,8 @@ export class UniversalDocumentExtractor {
         type: 'court',
         value: match[0],
         context: this.getContext(text, match.index, 40),
-        confidence: 0.85
+        confidence: 0.85,
+        source: 'basic-patterns'
       });
     }
     

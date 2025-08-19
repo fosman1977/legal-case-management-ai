@@ -4,6 +4,7 @@
  */
 
 import { unifiedAIClient, EntityExtractionResult } from './unifiedAIClient';
+import { ENGINE_REGISTRY } from '../engines/index';
 
 // Engine Types and Interfaces
 export interface ProcessingEngine {
@@ -316,7 +317,7 @@ export class MultiEngineProcessor {
   }
 
   /**
-   * Run a single engine (placeholder implementations)
+   * Run a single engine with actual implementations
    */
   private async runSingleEngine(
     engineName: string,
@@ -328,9 +329,8 @@ export class MultiEngineProcessor {
     
     const startTime = Date.now();
     
-    // For now, we'll simulate engine processing
-    // In production, each engine would have its actual implementation
-    const result = await this.simulateEngineProcessing(engineName, text, options);
+    // Use actual engine implementations
+    const result = await this.runActualEngine(engineName, text, options);
     
     const processingTime = Date.now() - startTime;
     
@@ -348,29 +348,49 @@ export class MultiEngineProcessor {
   }
 
   /**
-   * Simulate engine processing (to be replaced with actual implementations)
+   * Run actual engine implementation
    */
-  private async simulateEngineProcessing(
+  private async runActualEngine(
     engineName: string,
     text: string,
     options: ProcessingOptions
   ): Promise<EntityExtractionResult> {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
-    
-    // For now, use the existing unifiedAIClient as fallback
-    // Each engine will have its own specialized implementation
     try {
-      return await unifiedAIClient.extractEntities(text, options.documentType);
+      const engineInstance = ENGINE_REGISTRY[engineName];
+      
+      if (!engineInstance) {
+        console.warn(`Engine ${engineName} not found in registry, using fallback`);
+        return this.getFallbackResult();
+      }
+
+      // Initialize engine if needed
+      if (typeof engineInstance.initialize === 'function' && !engineInstance.isInitialized) {
+        await engineInstance.initialize();
+      }
+
+      // Extract entities using the actual engine
+      const result = await engineInstance.extractEntities(text, options.documentType);
+      
+      console.log(`🔧 Engine ${engineName} processed: ${result.persons?.length || 0} persons, ${result.issues?.length || 0} issues, ${result.authorities?.length || 0} authorities`);
+      
+      return result;
+      
     } catch (error: any) {
       console.warn(`Engine ${engineName} failed, using fallback:`, error);
-      return {
-        persons: [],
-        issues: [],
-        chronologyEvents: [],
-        authorities: []
-      };
+      return this.getFallbackResult();
     }
+  }
+
+  /**
+   * Get fallback result when engine fails
+   */
+  private getFallbackResult(): EntityExtractionResult {
+    return {
+      persons: [],
+      issues: [],
+      chronologyEvents: [],
+      authorities: []
+    };
   }
 
   /**

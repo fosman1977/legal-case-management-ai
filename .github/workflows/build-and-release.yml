@@ -101,6 +101,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Ensure update metadata files are generated
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         continue-on-error: true
           
       - name: Build Electron app (Windows)
@@ -109,6 +111,7 @@ jobs:
         timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         continue-on-error: true
           
       - name: Build Electron app (Linux)
@@ -117,6 +120,7 @@ jobs:
         timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         continue-on-error: true
           
       - name: Upload artifacts (Windows)
@@ -127,6 +131,7 @@ jobs:
           path: |
             release/*.exe
             release/*.msi
+            release/latest.yml
         continue-on-error: true
             
       - name: Upload artifacts (macOS)
@@ -137,6 +142,7 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
+            release/latest-mac.yml
         continue-on-error: true
             
       - name: Upload artifacts (Linux)
@@ -147,6 +153,7 @@ jobs:
           path: |
             release/*.AppImage
             release/*.deb
+            release/latest-linux.yml
         continue-on-error: true
 
   create-release:

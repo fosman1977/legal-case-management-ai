@@ -483,6 +483,15 @@ const createMenu = () => {
 // };
 
 const setupAutoUpdater = () => {
+  // Only enable auto-updater in production builds and for official releases
+  const isProductionBuild = process.env.NODE_ENV === 'production' && !isDev;
+  const hasOfficialRelease = app.getVersion() && !app.getVersion().includes('dev');
+  
+  if (!isProductionBuild || !hasOfficialRelease) {
+    console.log('Auto-updater disabled: Development mode or unofficial build');
+    return;
+  }
+  
   // Configure auto-updater
   autoUpdater.logger = console;
   autoUpdater.autoDownload = false; // Don't auto-download, ask user first
@@ -547,14 +556,22 @@ const setupAutoUpdater = () => {
   autoUpdater.on('error', (err) => {
     console.error('Auto-updater error:', err);
     
-    // Don't show error dialog if it's just missing update files
-    if (err.message && (err.message.includes('latest-mac.yml') || err.message.includes('latest.yml'))) {
-      console.log('No published releases found - this is normal for development');
+    // Don't show error dialog for common development/deployment issues
+    const errorMessage = err.message || '';
+    const isKnownDevError = errorMessage.includes('latest-mac.yml') || 
+                           errorMessage.includes('latest.yml') || 
+                           errorMessage.includes('latest-linux.yml') ||
+                           errorMessage.includes('404') ||
+                           errorMessage.includes('ENOTFOUND') ||
+                           errorMessage.includes('net::ERR_');
+    
+    if (isKnownDevError) {
+      console.log('Auto-updater: No published releases found or network issue - this is normal for development/beta builds');
       return;
     }
     
     // Only show critical errors to users
-    if (mainWindow && !err.message.includes('net::ERR_')) {
+    if (mainWindow) {
       dialog.showErrorBox('Update Error', 
         'There was a problem checking for updates. Please check your internet connection.');
     }
