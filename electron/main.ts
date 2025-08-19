@@ -486,8 +486,15 @@ const setupAutoUpdater = () => {
   // Only enable auto-updater in production builds and for official releases
   const isProductionBuild = process.env.NODE_ENV === 'production' && !isDev;
   const hasOfficialRelease = app.getVersion() && !app.getVersion().includes('dev');
+  const currentVersion = app.getVersion();
   
-  if (!isProductionBuild || !hasOfficialRelease) {
+  // Disable auto-updater for problematic versions
+  if (currentVersion === '3.8.0' || currentVersion.includes('3.8.0')) {
+    console.log('Auto-updater disabled: Known problematic version 3.8.0 (missing metadata files)');
+    return;
+  }
+  
+  if (!isProductionBuild || !hasOfficialRelease || !app.isPackaged) {
     console.log('Auto-updater disabled: Development mode or unofficial build');
     return;
   }
@@ -557,13 +564,16 @@ const setupAutoUpdater = () => {
     console.error('Auto-updater error:', err);
     
     // Don't show error dialog for common development/deployment issues
-    const errorMessage = err.message || '';
+    const errorMessage = err.message || err.toString();
     const isKnownDevError = errorMessage.includes('latest-mac.yml') || 
                            errorMessage.includes('latest.yml') || 
                            errorMessage.includes('latest-linux.yml') ||
                            errorMessage.includes('404') ||
                            errorMessage.includes('ENOTFOUND') ||
-                           errorMessage.includes('net::ERR_');
+                           errorMessage.includes('net::ERR_') ||
+                           errorMessage.includes('HttpError') ||
+                           errorMessage.includes('v3.8.0') ||
+                           errorMessage.includes('release artifacts');
     
     if (isKnownDevError) {
       console.log('Auto-updater: No published releases found or network issue - this is normal for development/beta builds');
