@@ -34,6 +34,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
           registry-url: 'https://registry.npmjs.org'
           
       - name: Free up disk space (Ubuntu)
