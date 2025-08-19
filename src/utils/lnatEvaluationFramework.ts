@@ -365,16 +365,17 @@ Think step by step and select the best answer based on the passage.
 `;
 
     try {
-      const response = await aiClient.completion(prompt, {
-        maxTokens: 200,
-        temperature: 0.1 // Low temperature for consistent reasoning
-      });
+      // Use chat method for UnifiedAIClient compatibility
+      const response = await aiClient.chat([
+        { role: 'user', content: prompt }
+      ]);
       
       const timeSpent = (Date.now() - startTime) / 1000;
       
-      // Parse the response
-      const answerMatch = response.match(/ANSWER:\s*([ABCD])/i);
-      const reasoningMatch = response.match(/REASONING:\s*(.+)/i);
+      // Parse the response - handle both string and object responses
+      const responseText = typeof response === 'string' ? response : response.content || '';
+      const answerMatch = responseText.match(/ANSWER:\s*([ABCD])/i);
+      const reasoningMatch = responseText.match(/REASONING:\s*(.+)/i);
       
       const selectedAnswer = answerMatch ? 
         ['A', 'B', 'C', 'D'].indexOf(answerMatch[1].toUpperCase()) : -1;
@@ -383,7 +384,7 @@ Think step by step and select the best answer based on the passage.
         selectedAnswer,
         reasoning: reasoningMatch ? reasoningMatch[1].trim() : 'No reasoning provided',
         timeSpent,
-        rawResponse: response
+        rawResponse: responseText
       };
       
     } catch (error) {
