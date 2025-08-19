@@ -16,6 +16,7 @@ export default defineConfig({
     },
     define: {
         global: 'globalThis', // Fix global is not defined
+        'process.env': 'import.meta.env', // Fix process.env references
     },
     build: {
         rollupOptions: {

@@ -89,8 +89,8 @@ class SecureUpdateService extends EventEmitter {
 
   constructor() {
     super();
-    this.updatePath = process.env.UPDATE_PATH || '/var/lib/agentic/updates';
-    this.quarantinePath = process.env.QUARANTINE_PATH || '/var/lib/agentic/quarantine';
+    this.updatePath = import.meta.env.VITE_UPDATE_PATH || '/var/lib/agentic/updates';
+    this.quarantinePath = import.meta.env.VITE_QUARANTINE_PATH || '/var/lib/agentic/quarantine';
     this.trustedKeys = new Map();
     this.pendingUpdates = new Map();
     this.quarantineQueue = new Map();
