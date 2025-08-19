@@ -328,6 +328,10 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
     initializeComponent();
   }, [caseId]);
 
+  const loadDocuments = async () => {
+    return loadDocumentsWithScanned(scannedDocuments);
+  };
+
   useEffect(() => {
     if (scannedDocuments.length > 0) {
       loadDocuments();
@@ -341,25 +345,33 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
   }, [documents]);
 
   const initializeComponent = async () => {
+    console.log(`🔄 Initializing EnhancedDocumentManager for case: ${caseId}`);
+    
     setUseFileSystem(fileSystemManager.hasCaseFolder(caseId) || fileSystemManager.hasRootFolder());
     
     const cases = storage.getCasesSync();
     const currentCase = cases.find(c => c.id === caseId);
     setCaseData(currentCase);
     
-    // Load scanned documents from localStorage
+    // Load scanned documents from localStorage with debugging
     const storageKey = `scanned_documents_${caseId}`;
     const savedScannedDocs = localStorage.getItem(storageKey);
+    let loadedScannedDocs: CaseDocument[] = [];
+    
+    console.log(`🔍 Checking localStorage for key "${storageKey}":`, savedScannedDocs ? `Found data (${savedScannedDocs.length} chars)` : 'No data found');
+    
     if (savedScannedDocs) {
       try {
-        const documents = JSON.parse(savedScannedDocs);
-        setScannedDocuments(documents);
+        loadedScannedDocs = JSON.parse(savedScannedDocs);
+        setScannedDocuments(loadedScannedDocs);
+        console.log(`📄 Loaded ${loadedScannedDocs.length} scanned documents from localStorage`);
       } catch (error) {
         console.error('Failed to parse saved scanned documents:', error);
       }
     }
     
-    await loadDocuments();
+    // Pass scanned documents directly to loadDocuments to avoid race condition
+    await loadDocumentsWithScanned(loadedScannedDocs);
     await initializeIndexedDB();
   };
 
@@ -371,13 +383,14 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
     }
   };
 
-  const loadDocuments = async () => {
+  const loadDocumentsWithScanned = async (scannedDocs: CaseDocument[] = []) => {
     try {
       const allDocs: CaseDocument[] = [];
 
-      // Add scanned documents
-      if (scannedDocuments.length > 0) {
-        allDocs.push(...scannedDocuments);
+      // Add scanned documents (use parameter to avoid race condition)
+      if (scannedDocs.length > 0) {
+        allDocs.push(...scannedDocs);
+        console.log(`📄 Including ${scannedDocs.length} scanned documents in document list`);
       }
 
       // Add file system documents
@@ -422,6 +435,11 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
       );
 
       setDocuments(uniqueDocs);
+      console.log(`📄 Set ${uniqueDocs.length} documents in state:`, {
+        scanned: scannedDocs.length,
+        total: uniqueDocs.length,
+        documentTitles: uniqueDocs.map(d => d.title).slice(0, 10) // Show first 10 titles for debugging
+      });
     } catch (error) {
       console.error('Failed to load documents:', error);
       setDocuments(storage.getDocuments(caseId));
