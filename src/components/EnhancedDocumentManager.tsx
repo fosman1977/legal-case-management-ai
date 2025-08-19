@@ -589,7 +589,7 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
       // Show completion message with diagnostic info
       const totalEntities = totalExtracted.persons + totalExtracted.issues + totalExtracted.chronology + totalExtracted.authorities;
       const diagnosticMessage = totalEntities === 0 ? 
-        '\n\n🔍 No entities were extracted. This might indicate:\n- LocalAI service is not running (check System Health tab)\n- Documents contain no recognizable legal entities\n- AI model needs configuration\n\nCheck the browser console for detailed error messages.' : 
+        '\n\n🔍 No entities were extracted. This might indicate:\n- Documents contain no recognizable legal entities\n- Using standard processing mode (LocalAI not available)\n- Document text quality may need improvement\n\nCheck the browser console for detailed information.' : 
         '\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.';
       
       alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities${diagnosticMessage}`);

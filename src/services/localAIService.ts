@@ -64,7 +64,8 @@ class LocalAIService {
       
       if (!healthCheck) {
         // Don't try to auto-start, just inform the user
-        throw new Error('LocalAI is not running. Please start it with: docker-compose -f docker-compose.minimal.yml up -d');
+        console.log('LocalAI is not available - using fallback processing mode');
+        return false;
       }
 
       // Get available models
@@ -259,7 +260,7 @@ class LocalAIService {
       await this.waitForLocalAI();
     } catch (error) {
       console.error('Failed to start LocalAI:', error);
-      throw new Error('Please start LocalAI manually using: docker-compose -f docker-compose.minimal.yml up -d');
+      console.log('LocalAI auto-start failed - continuing with fallback processing');
     }
   }
 

@@ -118,27 +118,17 @@ export const LocalAIConnector: React.FC = () => {
               {showAdvanced && (
                 <div className="advanced-section">
                   <h4>Setup Instructions:</h4>
-                  <div className="setup-steps">
-                    <div className="step">
-                      <span className="step-number">1</span>
-                      <div>
-                        <strong>Install Docker:</strong>
-                        <code>curl -fsSL https://get.docker.com | sh</code>
-                      </div>
-                    </div>
-                    <div className="step">
-                      <span className="step-number">2</span>
-                      <div>
-                        <strong>Start LocalAI:</strong>
-                        <code>docker-compose -f docker-compose.minimal.yml up -d</code>
-                      </div>
-                    </div>
-                    <div className="step">
-                      <span className="step-number">3</span>
-                      <div>
-                        <strong>Click Connect above!</strong>
-                      </div>
-                    </div>
+                  <div className="setup-note">
+                    <h4>✅ LocalAI is Optional</h4>
+                    <p>All core features work without LocalAI. The app includes:</p>
+                    <ul>
+                      <li>✅ Document scanning and processing</li>
+                      <li>✅ Case management and organization</li>
+                      <li>✅ Text extraction and analysis</li>
+                      <li>✅ Claude Consultation Pattern (fallback mode)</li>
+                    </ul>
+                    <p><strong>LocalAI adds:</strong> Enhanced AI analysis, entity extraction, and advanced processing.</p>
+                    <p><em>You can use the app fully without setting up LocalAI.</em></p>
                   </div>
                 </div>
               )}

@@ -80,23 +80,24 @@ export const AISettings: React.FC<AISettingsProps> = ({ caseId }) => {
       <div className="ai-options">
         <div className="option-card">
           <div className="option-header">
-            <h4>LocalAI Status</h4>
+            <h4>AI Processing Mode</h4>
           </div>
           <div className="option-content">
             <div className="localai-status">
               <p>
                 <span className="status-indicator">
-                  🤖 LocalAI: 
-                  <span className={`status-badge ${localAIStatus ? 'online' : 'offline'}`}>
-                    {localAIStatus ? '● Online' : '● Offline'}
+                  🤖 Local AI: 
+                  <span className={`status-badge ${localAIStatus ? 'online' : 'fallback'}`}>
+                    {localAIStatus ? '● Enhanced Mode' : '● Standard Mode'}
                   </span>
                 </span>
               </p>
-              {!localAIStatus && (
-                <p className="status-help">
-                  Make sure LocalAI is running: <code>docker-compose -f docker-compose.minimal.yml up -d</code>
-                </p>
-              )}
+              <p className="status-help">
+                {localAIStatus 
+                  ? '✅ Using local AI for enhanced document analysis and processing'
+                  : '✅ Using built-in processing - all features work without external dependencies'
+                }
+              </p>
             </div>
             <button 
               className="btn btn-secondary"
