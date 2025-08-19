@@ -488,19 +488,32 @@ const setupAutoUpdater = () => {
   autoUpdater.autoDownload = false; // Don't auto-download, ask user first
   autoUpdater.autoInstallOnAppQuit = true;
   
-  // Check for updates on startup (after 10 seconds to let app fully load)
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.log('Auto-update check failed:', err);
-    });
-  }, 10000);
+  // Set update server URL (GitHub releases)
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'fosman1977',
+    repo: 'legal-case-management-ai',
+    releaseType: 'release'
+  });
   
-  // Check for updates every 6 hours
-  setInterval(() => {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.log('Periodic update check failed:', err);
-    });
-  }, 6 * 60 * 60 * 1000);
+  // Only check for updates in production
+  if (!isDev && app.isPackaged) {
+    // Check for updates on startup (after 10 seconds to let app fully load)
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch(err => {
+        console.log('Auto-update check failed:', err);
+      });
+    }, 10000);
+    
+    // Check for updates every 6 hours
+    setInterval(() => {
+      autoUpdater.checkForUpdates().catch(err => {
+        console.log('Periodic update check failed:', err);
+      });
+    }, 6 * 60 * 60 * 1000);
+  } else {
+    console.log('Auto-updater disabled in development mode');
+  }
   
   autoUpdater.on('checking-for-update', () => {
     console.log('Checking for update...');
@@ -533,6 +546,18 @@ const setupAutoUpdater = () => {
   
   autoUpdater.on('error', (err) => {
     console.error('Auto-updater error:', err);
+    
+    // Don't show error dialog if it's just missing update files
+    if (err.message && (err.message.includes('latest-mac.yml') || err.message.includes('latest.yml'))) {
+      console.log('No published releases found - this is normal for development');
+      return;
+    }
+    
+    // Only show critical errors to users
+    if (mainWindow && !err.message.includes('net::ERR_')) {
+      dialog.showErrorBox('Update Error', 
+        'There was a problem checking for updates. Please check your internet connection.');
+    }
   });
   
   autoUpdater.on('download-progress', (progressObj) => {

@@ -27,7 +27,7 @@
     "preview": "vite preview",
     "electron": "wait-on http://localhost:5174 && electron dist-electron/main.js --no-sandbox",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5174 && electron dist-electron/main.js --no-sandbox\"",
-    "build-electron": "npm run build && electron-builder",
+    "build-electron": "npm run build && electron-builder --publish=always",
     "dist": "npm run build && electron-builder --publish=never",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:mac": "npm run build && electron-builder --mac && ./scripts/remove-quarantine.sh",
@@ -177,6 +177,7 @@
       "owner": "fosman1977",
       "repo": "legal-case-management-ai",
       "releaseType": "release"
-    }
+    },
+    "afterSign": "./scripts/notarize.js"
   }
 }
