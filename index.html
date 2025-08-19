@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self'; 
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: chrome-extension: moz-extension:;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: chrome-extension: moz-extension: https://cdn.jsdelivr.net;
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: blob: chrome-extension: moz-extension:;
       font-src 'self' data: chrome-extension: moz-extension:;
       connect-src 'self' http: https: ws: wss: chrome-extension: moz-extension:;
+      worker-src 'self' blob: https://cdn.jsdelivr.net;
       object-src 'none';
       base-uri 'self';
     ">

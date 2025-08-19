@@ -299,6 +299,7 @@ class DocumentWorkerPool {
         if (i < 2) { // Only create 2 OCR workers to save memory
           try {
             const tesseractWorker = await Tesseract.createWorker('eng', 1, {
+              workerPath: '/tesseract/worker.min.js',
               logger: m => {
                 if (m.status === 'recognizing text') {
                   console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);

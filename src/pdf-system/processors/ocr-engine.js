@@ -50,6 +50,7 @@ class OCREngine {
   
   async createWorker() {
     const worker = await Tesseract.createWorker({
+      workerPath: '/tesseract/worker.min.js',
       langPath: path.join(__dirname, '../../../models/tessdata'),
       cachePath: this.config.cacheDir,
       gzip: false,
