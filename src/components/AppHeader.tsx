@@ -88,7 +88,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       📊 Court Presentation Prep
                     </button>
                     <button className="dropdown-item" onClick={() => window.dispatchEvent(new Event('show-pleadings-manager'))}>
-                      📝 Pleadings Assistant
+                      📋 Pleadings Manager
+                    </button>
+                    <button className="dropdown-item" onClick={() => window.dispatchEvent(new Event('show-parallel-research'))}>
+                      🔍 Parallel AI Research
                     </button>
                     <button className="dropdown-item" onClick={() => window.dispatchEvent(new Event('show-keypoints-presentation'))}>
                       🎯 Key Points Analysis

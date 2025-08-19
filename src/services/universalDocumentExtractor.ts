@@ -8,6 +8,7 @@ import * as mammoth from 'mammoth';
 import { fileTypeFromBuffer } from 'file-type';
 import { ProductionDocumentExtractor, ExtractionOptions } from './productionDocumentExtractor';
 import { multiEngineProcessor } from '../utils/multiEngineProcessor';
+import { parallelAIService } from './parallelAIService';
 
 interface UniversalExtractionResult {
   text: string;
@@ -701,6 +702,9 @@ export class UniversalDocumentExtractor {
       console.log(`✅ Multi-engine processing complete: ${result.enginesUsed.length} engines used, ${result.consensusConfidence}% consensus confidence`);
       console.log(`📊 Extracted: ${result.persons.length} persons, ${result.issues.length} issues, ${result.authorities.length} authorities, ${result.chronologyEvents.length} events`);
       
+      // Create automatic Parallel AI research tasks for interesting findings
+      await this.createAutomaticResearchTasks(result, text);
+      
       // Convert to legacy format for backward compatibility
       const entities: any[] = [];
       
@@ -894,6 +898,168 @@ export class UniversalDocumentExtractor {
    */
   static getSupportedFormats(): string[] {
     return ['PDF', 'Word (.docx)', 'Legacy Word (.doc)', 'Text (.txt)', 'Rich Text (.rtf)'];
+  }
+
+  /**
+   * Create automatic Parallel AI research tasks based on document analysis
+   */
+  private static async createAutomaticResearchTasks(result: any, documentText: string): Promise<void> {
+    try {
+      // Check if Parallel AI is configured
+      const hasApiKey = localStorage.getItem('parallelai_api_key');
+      const autoResearchEnabled = localStorage.getItem('auto_research_enabled') !== 'false';
+      
+      if (!hasApiKey || !autoResearchEnabled) {
+        console.log('🔍 Parallel AI auto-research not enabled - skipping task creation');
+        return;
+      }
+
+      const tasks: Array<{
+        title: string;
+        description: string;
+        researchType: 'case-law' | 'statutes' | 'precedents' | 'authorities' | 'background';
+        priority: 'low' | 'medium' | 'high';
+        tags: string[];
+      }> = [];
+
+      // Create research tasks for significant legal authorities
+      if (result.authorities && result.authorities.length > 0) {
+        const significantAuthorities = result.authorities.filter((auth: any) => 
+          auth.confidence > 0.8 && auth.relevance > 0.7
+        );
+
+        if (significantAuthorities.length > 0) {
+          const topAuthorities = significantAuthorities.slice(0, 3);
+          tasks.push({
+            title: `Research Case Law Citations: ${topAuthorities.map((a: any) => a.citation).join(', ')}`,
+            description: `Analyze the relevance and precedential value of these case citations found in the document. Provide current status, subsequent treatment, and similar cases.
+
+Citations to research:
+${topAuthorities.map((a: any) => `- ${a.citation} (Confidence: ${Math.round(a.confidence * 100)}%)`).join('\n')}
+
+Document context: ${documentText.substring(0, 500)}...`,
+            researchType: 'case-law',
+            priority: 'high',
+            tags: ['auto-generated', 'case-citations', 'precedents']
+          });
+        }
+      }
+
+      // Create research tasks for complex legal issues
+      if (result.issues && result.issues.length > 0) {
+        const complexIssues = result.issues.filter((issue: any) => 
+          issue.confidence > 0.7 && issue.issue.length > 50
+        );
+
+        if (complexIssues.length > 0) {
+          const primaryIssue = complexIssues[0];
+          tasks.push({
+            title: `Legal Background Research: ${primaryIssue.issue.substring(0, 100)}...`,
+            description: `Research the legal background, current law, and recent developments related to this legal issue identified in the document:
+
+Issue: ${primaryIssue.issue}
+Type: ${primaryIssue.type || 'General'}
+Confidence: ${Math.round(primaryIssue.confidence * 100)}%
+
+Please provide:
+1. Current legal framework and applicable statutes
+2. Recent case law and precedents
+3. Regulatory developments
+4. Practice guidance and commentary
+
+Document context: ${documentText.substring(0, 500)}...`,
+            researchType: 'background',
+            priority: 'medium',
+            tags: ['auto-generated', 'legal-issues', primaryIssue.type || 'general']
+          });
+        }
+      }
+
+      // Create research tasks for parties/entities with potential conflicts
+      if (result.persons && result.persons.length > 2) {
+        const keyPersons = result.persons.filter((person: any) => 
+          person.confidence > 0.8 && ['plaintiff', 'defendant', 'appellant', 'respondent'].includes(person.role?.toLowerCase())
+        );
+
+        if (keyPersons.length >= 2) {
+          tasks.push({
+            title: `Party Research: ${keyPersons.map((p: any) => p.name).slice(0, 2).join(' vs ')}`,
+            description: `Research the background and litigation history of the key parties identified in this document:
+
+Parties:
+${keyPersons.map((p: any) => `- ${p.name} (Role: ${p.role || 'Unknown'}, Confidence: ${Math.round(p.confidence * 100)}%)`).join('\n')}
+
+Research focus:
+1. Previous litigation between these parties
+2. Corporate structure and relationships
+3. Public records and regulatory filings
+4. Potential conflicts of interest
+
+Document context: ${documentText.substring(0, 500)}...`,
+            researchType: 'background',
+            priority: 'low',
+            tags: ['auto-generated', 'parties', 'background-check']
+          });
+        }
+      }
+
+      // Create research tasks for unknown or unclear authorities
+      if (result.authorities && result.authorities.length > 0) {
+        const unclearAuthorities = result.authorities.filter((auth: any) => 
+          auth.confidence < 0.6 && auth.citation.length > 10
+        );
+
+        if (unclearAuthorities.length > 0) {
+          const topUnclear = unclearAuthorities.slice(0, 2);
+          tasks.push({
+            title: `Verify Legal Citations: ${topUnclear.map((a: any) => a.citation).join(', ')}`,
+            description: `Verify and clarify these legal citations that were identified with lower confidence. They may contain formatting issues or be partially complete:
+
+Citations to verify:
+${topUnclear.map((a: any) => `- "${a.citation}" (Confidence: ${Math.round(a.confidence * 100)}%)`).join('\n')}
+
+Please:
+1. Verify correct citation format
+2. Confirm the case/statute exists
+3. Provide full citation if abbreviated
+4. Check current validity/status
+
+Document context: ${documentText.substring(0, 500)}...`,
+            researchType: 'authorities',
+            priority: 'medium',
+            tags: ['auto-generated', 'citation-verification', 'quality-check']
+          });
+        }
+      }
+
+      // Create tasks only if we have meaningful content
+      if (tasks.length > 0) {
+        console.log(`🤖 Creating ${tasks.length} automatic research tasks based on document analysis`);
+        
+        // Add tasks with slight delay to avoid overwhelming the API
+        for (const [index, task] of tasks.entries()) {
+          setTimeout(async () => {
+            try {
+              await parallelAIService.createResearchTask({
+                title: task.title,
+                description: task.description,
+                researchType: task.researchType,
+                priority: task.priority,
+                tags: task.tags
+              });
+              console.log(`✅ Created auto-research task: ${task.title}`);
+            } catch (error) {
+              console.warn(`Failed to create auto-research task: ${task.title}`, error);
+            }
+          }, index * 1000); // 1 second delay between tasks
+        }
+      } else {
+        console.log('📄 No significant findings warrant automatic research tasks');
+      }
+
+    } catch (error) {
+      console.warn('Failed to create automatic research tasks:', error);
+    }
   }
 }
 

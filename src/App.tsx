@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import "./styles.css";
 import "./styles/design-system.css";
 import "./styles/components.css";
+import "./styles/ParallelAI.css";
 import { Case } from './types';
 import { storage } from './utils/storage';
 import { AppHeader } from './components/AppHeader';
@@ -22,6 +23,7 @@ import { SmartCaseClassification } from './components/SmartCaseClassification';
 import { IntelligentDocumentViewer } from './components/IntelligentDocumentViewer';
 import { AdvancedLegalSearch } from './components/AdvancedLegalSearch';
 import { LegalKnowledgeGraph } from './components/LegalKnowledgeGraph';
+import { ParallelAIResearchDashboard } from './components/ParallelAIResearchDashboard';
 
 export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -43,6 +45,7 @@ export default function App() {
   const [showDocumentViewer, setShowDocumentViewer] = useState(false);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+  const [showParallelResearch, setShowParallelResearch] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
   useEffect(() => {
@@ -90,6 +93,7 @@ export default function App() {
         setShowDocumentViewer(false);
         setShowAdvancedSearch(false);
         setShowKnowledgeGraph(false);
+        setShowParallelResearch(false);
       }
     };
     
@@ -106,6 +110,7 @@ export default function App() {
     const handleShowLocalAI = () => setShowLocalAI(true);
     const handleShowSetupWizard = () => setShowSetupWizard(true);
     const handleShowCaseClassification = () => setShowCaseClassification(true);
+    const handleShowParallelResearch = () => setShowParallelResearch(true);
     
     window.addEventListener('show-calendar', handleShowCalendar);
     window.addEventListener('show-engine-discovery', handleShowEngineDiscovery);
@@ -117,6 +122,7 @@ export default function App() {
     window.addEventListener('show-localai', handleShowLocalAI);
     window.addEventListener('show-setup-wizard', handleShowSetupWizard);
     window.addEventListener('show-case-classification', handleShowCaseClassification);
+    window.addEventListener('show-parallel-research', handleShowParallelResearch);
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -130,6 +136,7 @@ export default function App() {
       window.removeEventListener('show-localai', handleShowLocalAI);
       window.removeEventListener('show-setup-wizard', handleShowSetupWizard);
       window.removeEventListener('show-case-classification', handleShowCaseClassification);
+      window.removeEventListener('show-parallel-research', handleShowParallelResearch);
       // @ts-ignore - Electron IPC
       if (window.electronAPI?.removeAllListeners) {
         // @ts-ignore - Electron IPC
@@ -408,6 +415,31 @@ export default function App() {
             </div>
             <div className="card-content">
               <LocalAIConnector />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parallel AI Research Modal */}
+      {showParallelResearch && (
+        <div className="modal-overlay" onClick={() => setShowParallelResearch(false)}>
+          <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="card-header flex-between">
+              <h2 className="heading-2">Parallel AI Legal Research</h2>
+              <button className="btn btn-ghost" onClick={() => setShowParallelResearch(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="card-content">
+              <ParallelAIResearchDashboard 
+                onTaskComplete={(task) => {
+                  console.log(`Research task completed: ${task.title}`);
+                  // Could trigger notifications or other actions here
+                }}
+              />
             </div>
           </div>
         </div>
