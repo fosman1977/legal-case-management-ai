@@ -468,17 +468,17 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
           line.setAttribute('x2', toNode.x!.toString());
           line.setAttribute('y2', toNode.y!.toString());
           line.setAttribute('stroke', edge.color?.color || '#999');
-          line.setAttribute('stroke-width', '2');
+          line.setAttribute('strokeWidth', '2');
           if (edge.dashes) {
-            line.setAttribute('stroke-dasharray', '5,5');
+            line.setAttribute('strokeDasharray', '5,5');
           }
           
           // Add label
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           text.setAttribute('x', ((fromNode.x! + toNode.x!) / 2).toString());
           text.setAttribute('y', ((fromNode.y! + toNode.y!) / 2).toString());
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('font-size', '10');
+          text.setAttribute('textAnchor', 'middle');
+          text.setAttribute('fontSize', '10');
           text.setAttribute('fill', '#666');
           text.textContent = edge.label;
           
@@ -498,15 +498,15 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
         circle.setAttribute('r', '30');
         circle.setAttribute('fill', getRoleColor(node.group as Person['role']));
         circle.setAttribute('stroke', '#fff');
-        circle.setAttribute('stroke-width', '3');
+        circle.setAttribute('strokeWidth', '3');
         
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', node.x!.toString());
         text.setAttribute('y', (node.y! + 5).toString());
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-size', '12');
+        text.setAttribute('textAnchor', 'middle');
+        text.setAttribute('fontSize', '12');
         text.setAttribute('fill', '#fff');
-        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fontWeight', 'bold');
         text.textContent = node.label.split(' ')[0];
         
         // Add tooltip

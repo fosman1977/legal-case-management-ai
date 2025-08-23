@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { Case, CaseDocument } from '../types';
 import { storage } from '../utils/storage';
 import { EnhancedDocumentManager } from './EnhancedDocumentManager';
-import { EnhancedKeyPointsPresentation } from './EnhancedKeyPointsPresentation';
 import { EnhancedAuthoritiesManager } from './EnhancedAuthoritiesManager';
 import { AutoGenerator } from './AutoGenerator';
 import { EnhancedChronologyBuilder } from './EnhancedChronologyBuilder';
 import { EnhancedDramatisPersonae } from './EnhancedDramatisPersonae';
 import { EnhancedIssuesBuilder } from './EnhancedIssuesBuilder';
-import { AISettings } from './AISettings';
 import { EnhancedAIDialogue } from './EnhancedAIDialogue';
 import { EnhancedRAGDialogue } from './EnhancedRAGDialogue';
 import { EnhancedCaseOverview } from './EnhancedCaseOverview';
@@ -18,12 +16,6 @@ import { AISystemOverview } from './AISystemOverview';
 import { SkeletonsManager } from './SkeletonsManager';
 import { UserNotesManager } from './UserNotesManager';
 import { OrdersDirectionsManager } from './OrdersDirectionsManager';
-import { SystemHealthDashboard } from './SystemHealthDashboard';
-import { ComplianceDashboard } from './ComplianceDashboard';
-import { ModelSelectionUI } from './ModelSelectionUI';
-import { LNATDashboard } from './LNATDashboard';
-import { BackendServicesStatus } from './BackendServicesStatus';
-import { ComprehensiveLegalTestingDashboard } from './ComprehensiveLegalTestingDashboard';
 
 interface CaseDetailProps {
   case: Case;
@@ -36,7 +28,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   onEditCase,
   onDeleteCase 
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'keypoints-presentation' | 'authorities' | 'user-notes' | 'orders-directions' | 'compliance' | 'system-health' | 'lnat-testing' | 'comprehensive-testing' | 'backend-status' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'pleadings' | 'skeletons' | 'auto-generate' | 'ai-dialogue' | 'ai-rag' | 'ai-chronology' | 'ai-persons' | 'ai-issues' | 'authorities' | 'user-notes' | 'orders-directions'>('overview');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
   const [documents, setDocuments] = useState<CaseDocument[]>([]);
@@ -196,51 +188,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             </button>
           </div>
 
-          <button 
-            className={`nav-tab ${activeTab === 'keypoints-presentation' ? 'active' : ''}`}
-            onClick={() => setActiveTab('keypoints-presentation')}
-          >
-            🎯 Presentation
-          </button>
-
-          <button 
-            className={`nav-tab ${activeTab === 'compliance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('compliance')}
-          >
-            ✅ Compliance
-          </button>
-
-          <button 
-            className={`nav-tab ${activeTab === 'system-health' ? 'active' : ''}`}
-            onClick={() => setActiveTab('system-health')}
-          >
-            💚 System Health
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === 'lnat-testing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('lnat-testing')}
-          >
-            🧪 LNAT Testing
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === 'comprehensive-testing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('comprehensive-testing')}
-          >
-            📊 Comprehensive Testing
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === 'backend-status' ? 'active' : ''}`}
-            onClick={() => setActiveTab('backend-status')}
-          >
-            🔧 Backend Status
-          </button>
-
-          <button 
-            className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            🔒 Settings
-          </button>
         </div>
       </div>
 
@@ -397,10 +344,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           <EnhancedIssuesBuilder caseId={caseData.id} />
         )}
 
-        {activeTab === 'keypoints-presentation' && (
-          <EnhancedKeyPointsPresentation caseId={caseData.id} caseData={caseData} />
-        )}
-
         {activeTab === 'authorities' && (
           <EnhancedAuthoritiesManager caseId={caseData.id} />
         )}
@@ -411,36 +354,6 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
         {activeTab === 'orders-directions' && (
           <OrdersDirectionsManager caseId={caseData.id} />
-        )}
-
-        {activeTab === 'compliance' && (
-          <ComplianceDashboard caseId={caseData.id} />
-        )}
-
-        {activeTab === 'system-health' && (
-          <>
-            <SystemHealthDashboard />
-            <ModelSelectionUI 
-              caseId={caseData.id} 
-              caseData={{ title: caseData.title || '', courtReference: caseData.courtReference || '' }}
-            />
-          </>
-        )}
-
-        {activeTab === 'lnat-testing' && (
-          <LNATDashboard caseId={caseData.id} />
-        )}
-
-        {activeTab === 'backend-status' && (
-          <BackendServicesStatus />
-        )}
-
-        {activeTab === 'comprehensive-testing' && (
-          <ComprehensiveLegalTestingDashboard caseId={caseData.id} />
-        )}
-
-        {activeTab === 'settings' && (
-          <AISettings caseId={caseData.id} />
         )}
       </div>
     </div>

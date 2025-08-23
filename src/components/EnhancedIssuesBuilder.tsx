@@ -554,16 +554,16 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
           line.setAttribute('x2', toNode.x!.toString());
           line.setAttribute('y2', toNode.y!.toString());
           line.setAttribute('stroke', edge.color?.color || '#999');
-          line.setAttribute('stroke-width', '2');
+          line.setAttribute('strokeWidth', '2');
           if (edge.dashes) {
-            line.setAttribute('stroke-dasharray', '5,5');
+            line.setAttribute('strokeDasharray', '5,5');
           }
           
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           text.setAttribute('x', ((fromNode.x! + toNode.x!) / 2).toString());
           text.setAttribute('y', ((fromNode.y! + toNode.y!) / 2).toString());
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('font-size', '10');
+          text.setAttribute('textAnchor', 'middle');
+          text.setAttribute('fontSize', '10');
           text.setAttribute('fill', '#666');
           text.textContent = edge.label;
           
@@ -583,16 +583,16 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
         rect.setAttribute('height', '30');
         rect.setAttribute('fill', getCategoryColor(node.group as Issue['category']));
         rect.setAttribute('stroke', '#fff');
-        rect.setAttribute('stroke-width', '2');
+        rect.setAttribute('strokeWidth', '2');
         rect.setAttribute('rx', '5');
         
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', node.x!.toString());
         text.setAttribute('y', (node.y! + 5).toString());
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-size', '11');
+        text.setAttribute('textAnchor', 'middle');
+        text.setAttribute('fontSize', '11');
         text.setAttribute('fill', '#fff');
-        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fontWeight', 'bold');
         text.textContent = node.label;
         
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');

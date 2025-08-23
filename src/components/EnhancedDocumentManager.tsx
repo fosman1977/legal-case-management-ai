@@ -10,6 +10,11 @@ import { CaseFolderSetup } from './CaseFolderSetup';
 import { useAISync } from '../hooks/useAISync';
 import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { enhancedAIClient } from '../utils/enhancedAIClient';
+// Performance optimization imports
+import { getProcessingQueue } from '../utils/documentProcessingQueue';
+import { getOCRWorkerPool, terminateOCRWorkerPool } from '../utils/ocrWorkerPool';
+import { RealTimeProgressTracker } from './RealTimeProgressTracker';
+import Tesseract from 'tesseract.js';
 
 // Modal Components
 const TagEditModal: React.FC<{
@@ -323,10 +328,20 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
   const [stats, setStats] = useState<DocumentStats | null>(null);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, currentDoc: '' });
+  const [showProgressTracker, setShowProgressTracker] = useState(false);
+  const [processingQueue] = useState(() => getProcessingQueue());
+  const [ocrPool] = useState(() => getOCRWorkerPool(4));
 
   useEffect(() => {
     initializeComponent();
   }, [caseId]);
+
+  useEffect(() => {
+    // Cleanup OCR workers on component unmount
+    return () => {
+      terminateOCRWorkerPool();
+    };
+  }, []);
 
   const loadDocuments = async () => {
     return loadDocumentsWithScanned(scannedDocuments);
@@ -484,124 +499,161 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
     onDocumentChange?.();
   };
 
-  const processBulkAIExtraction = async () => {
+  const processDocumentWithOCR = async (file: File, onProgress?: (progress: number, message?: string) => void): Promise<string> => {
+    try {
+      onProgress?.(10, 'Preparing document for OCR...');
+      
+      // Convert file to canvas for OCR processing
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (file.type.includes('image')) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        
+        await new Promise((resolve) => {
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx?.drawImage(img, 0, 0);
+            resolve(null);
+          };
+        });
+        
+        onProgress?.(30, 'Processing with OCR worker pool...');
+        
+        // Use OCR worker pool for parallel processing
+        const result = await ocrPool.process(canvas);
+        
+        onProgress?.(90, 'Finalizing OCR results...');
+        
+        URL.revokeObjectURL(img.src);
+        return result.data.text;
+      } else {
+        // For non-image files, use existing text extraction
+        onProgress?.(50, 'Extracting text from document...');
+        const textExtractor = new PDFTextExtractor();
+        const extractedText = await textExtractor.extractText(file);
+        return extractedText || '';
+      }
+    } catch (error) {
+      console.error('OCR processing failed:', error);
+      throw error;
+    }
+  };
+
+  const processBulkDocumentExtraction = async () => {
     if (isBulkProcessing) return;
     
     setIsBulkProcessing(true);
-    setBulkProgress({ current: 0, total: 0, currentDoc: '' });
+    setShowProgressTracker(true);
     
     try {
-      // Get all documents with content
-      const documentsWithContent = documents.filter(doc => 
+      const documentsToProcess = documents.filter(doc => 
         doc.fileContent && doc.fileContent.length > 100
       );
       
-      setBulkProgress({ current: 0, total: documentsWithContent.length, currentDoc: '' });
+      console.log(`🚀 Starting bulk processing of ${documentsToProcess.length} documents with performance optimizations`);
       
-      let processedCount = 0;
-      let totalExtracted = { persons: 0, issues: 0, chronology: 0, authorities: 0 };
-      
-      for (const doc of documentsWithContent) {
-        setBulkProgress({ 
-          current: processedCount, 
-          total: documentsWithContent.length, 
-          currentDoc: doc.title 
-        });
+      const processingTasks = documentsToProcess.map((doc, index) => {
+        const taskId = `extract_${doc.id}_${Date.now()}`;
         
-        console.log(`🔄 Processing document ${processedCount + 1}/${documentsWithContent.length}: ${doc.title}`);
-        
-        try {
-          // Use unifiedAIClient for actual AI extraction
-          console.log(`🤖 Extracting entities from ${doc.title} using AI...`);
-          
-          // Check if AI service is available first
-          const aiStatus = unifiedAIClient.getConnectionStatus();
-          if (aiStatus.status === 'disconnected') {
-            console.warn(`⚠️ AI service not available: ${aiStatus.lastError}`);
-            console.log('🔄 Attempting to connect to LocalAI...');
-            const isAvailable = await unifiedAIClient.isAvailable();
-            if (!isAvailable) {
-              throw new Error(`LocalAI service unavailable: ${aiStatus.lastError}`);
+        return processingQueue.addTask(
+          taskId,
+          `Extract entities: ${doc.title}`,
+          'extraction',
+          async (onProgress) => {
+            try {
+              onProgress(10, 'Preparing document...');
+              
+              // Check if AI service is available first
+              const aiStatus = unifiedAIClient.getConnectionStatus();
+              if (aiStatus.status === 'disconnected') {
+                console.warn(`⚠️ AI service not available: ${aiStatus.lastError}`);
+                onProgress(20, 'Connecting to LocalAI...');
+                const isAvailable = await unifiedAIClient.isAvailable();
+                if (!isAvailable) {
+                  throw new Error(`LocalAI service unavailable: ${aiStatus.lastError}`);
+                }
+              }
+              
+              onProgress(40, 'Extracting entities with AI...');
+              
+              // Use enhanced multi-engine processing for better accuracy
+              const entities = await enhancedAIClient.extractEntitiesIntelligent(
+                doc.fileContent || doc.content, 
+                'legal',
+                'balanced' // Use balanced approach for bulk processing
+              );
+              
+              onProgress(80, 'Publishing results...');
+              
+              // Only publish if we found entities
+              if (entities.persons.length > 0 || entities.issues.length > 0 || 
+                  entities.chronologyEvents.length > 0 || entities.authorities.length > 0) {
+                
+                await publishAIResults(doc.fileName || doc.title, entities, 0.7);
+                
+                console.log(`✅ Extracted from ${doc.title}:`, {
+                  persons: entities.persons.length,
+                  issues: entities.issues.length,
+                  chronology: entities.chronologyEvents.length,
+                  authorities: entities.authorities.length,
+                  processingMode: entities.processingMode,
+                  consensusConfidence: entities.consensusConfidence,
+                  enginesUsed: entities.enginesUsed
+                });
+              } else {
+                console.log(`⚠️ No entities found in ${doc.title}`);
+              }
+              
+              onProgress(100, 'Complete');
+              
+              return {
+                document: doc.title,
+                entitiesFound: entities.persons.length + entities.issues.length + entities.chronologyEvents.length + entities.authorities.length,
+                processingMode: entities.processingMode
+              };
+              
+            } catch (error) {
+              console.error(`❌ Failed to process ${doc.title}:`, error);
+              throw error;
             }
           }
-          
-          // Use enhanced multi-engine processing for better accuracy
-          const entities = await enhancedAIClient.extractEntitiesIntelligent(
-            doc.fileContent || doc.content, 
-            'legal',
-            'balanced' // Use balanced approach for bulk processing
-          );
-          
-          console.log(`✅ Enhanced AI extraction results for ${doc.title}:`, {
-            persons: entities.persons.length,
-            issues: entities.issues.length,
-            chronology: entities.chronologyEvents.length,
-            authorities: entities.authorities.length,
-            processingMode: entities.processingMode,
-            consensusConfidence: entities.consensusConfidence,
-            enginesUsed: entities.enginesUsed
-          });
-          
-          // Only publish if we found entities
-          if (entities.persons.length > 0 || entities.issues.length > 0 || 
-              entities.chronologyEvents.length > 0 || entities.authorities.length > 0) {
-            
-            await publishAIResults(doc.fileName || doc.title, entities, 0.7);
-            
-            totalExtracted.persons += entities.persons.length;
-            totalExtracted.issues += entities.issues.length;
-            totalExtracted.chronology += entities.chronologyEvents.length;
-            totalExtracted.authorities += entities.authorities.length;
-            
-            console.log(`✅ Extracted from ${doc.title}:`, {
-              persons: entities.persons.length,
-              issues: entities.issues.length,
-              chronology: entities.chronologyEvents.length,
-              authorities: entities.authorities.length
-            });
-          } else {
-            console.log(`⚠️ No entities found in ${doc.title}`);
-          }
-          
-        } catch (error) {
-          console.error(`❌ Failed to process ${doc.title}:`, error);
-          // Check if this is a LocalAI connection error
-          if ((error as Error).message?.includes('LocalAI service unavailable')) {
-            console.error('🚫 LocalAI Connection Problem:', (error as Error).message);
-            // Continue processing other documents but note the issue
-          }
-        }
-        
-        processedCount++;
-        
-        // Small delay to prevent overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      setBulkProgress({ 
-        current: documentsWithContent.length, 
-        total: documentsWithContent.length, 
-        currentDoc: 'Complete!' 
+        );
       });
       
-      console.log(`🎉 Bulk AI extraction complete! Total extracted:`, totalExtracted);
+      // Wait for all processing to complete
+      const results = await Promise.allSettled(processingTasks);
       
-      // Show completion message with diagnostic info
-      const totalEntities = totalExtracted.persons + totalExtracted.issues + totalExtracted.chronology + totalExtracted.authorities;
-      const diagnosticMessage = totalEntities === 0 ? 
-        '\n\n🔍 No entities were extracted. This might indicate:\n- Documents contain no recognizable legal entities\n- Using standard processing mode (LocalAI not available)\n- Document text quality may need improvement\n\nCheck the browser console for detailed information.' : 
-        '\n\nCheck the Persons, Issues, Timeline, and Authorities tabs to see the results.';
+      // Calculate final statistics
+      let totalExtracted = { persons: 0, issues: 0, chronology: 0, authorities: 0, completed: 0, failed: 0 };
       
-      alert(`Bulk AI extraction complete!\n\nExtracted:\n- ${totalExtracted.persons} persons\n- ${totalExtracted.issues} issues\n- ${totalExtracted.chronology} chronology events\n- ${totalExtracted.authorities} authorities${diagnosticMessage}`);
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          totalExtracted.completed++;
+        } else {
+          totalExtracted.failed++;
+          console.error('Processing failed:', result.reason);
+        }
+      });
+      
+      console.log(`🎉 Bulk processing complete! Results:`, totalExtracted);
+      
+      // Show completion message
+      const successRate = ((totalExtracted.completed / documentsToProcess.length) * 100).toFixed(1);
+      alert(`Bulk document processing complete!\n\n• ${totalExtracted.completed} documents processed successfully\n• ${totalExtracted.failed} documents failed\n• Success rate: ${successRate}%\n\nCheck the Progress Tracker for detailed results and the Persons, Issues, Timeline, and Authorities tabs to see extracted data.`);
       
     } catch (error) {
-      console.error('Bulk AI extraction failed:', error);
-      alert('Bulk AI extraction failed. Please try again.');
+      console.error('Bulk processing failed:', error);
+      alert('Bulk document processing failed. Please try again.');
     } finally {
       setIsBulkProcessing(false);
-      setBulkProgress({ current: 0, total: 0, currentDoc: '' });
     }
   };
+
+  // Legacy method name for compatibility
+  const processBulkAIExtraction = processBulkDocumentExtraction;
 
   const filteredAndSortedDocuments = () => {
     let filtered = documents;
@@ -1053,13 +1105,22 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
                 📁 Scan Folder
               </button>
               {documents.length > 0 && (
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={processBulkAIExtraction}
-                  title="Extract persons, issues, dates, and authorities from all documents"
-                >
-                  🤖 AI Extract All
-                </button>
+                <>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={processBulkDocumentExtraction}
+                    title="Extract persons, issues, dates, and authorities from all documents using optimized processing"
+                  >
+                    🤖 AI Extract All
+                  </button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setShowProgressTracker(true)}
+                    title="View processing progress and queue status"
+                  >
+                    📊 Progress
+                  </button>
+                </>
               )}
               <button 
                 className="btn btn-primary" 
@@ -1265,6 +1326,12 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
           onClose={() => setShowBulkTagging(false)}
         />
       )}
+
+      {/* Real-Time Progress Tracker */}
+      <RealTimeProgressTracker
+        isVisible={showProgressTracker}
+        onClose={() => setShowProgressTracker(false)}
+      />
 
       <style>{`
         /* Modal Styles */
