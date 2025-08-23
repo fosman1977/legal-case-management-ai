@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { LNATModelTester, TestConfiguration, TestSession, LNATLeaderboard } from '../utils/lnatModelTester';
 import { ModelLNATResult } from '../utils/lnatEvaluationFramework';
 import { UnifiedAIClient } from '../utils/unifiedAIClient';
-import './LNATDashboard.css';
 
 interface LNATDashboardProps {
   caseId?: string;

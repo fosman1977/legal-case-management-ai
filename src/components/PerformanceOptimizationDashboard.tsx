@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './PerformanceOptimizationDashboard.css';
 
 interface SystemMetrics {
   id: string;

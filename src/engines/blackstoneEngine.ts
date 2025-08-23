@@ -151,6 +151,38 @@ export class BlackstoneEngine {
       );
     }
 
+    // Enhanced general person extraction
+    const generalPersonPatterns = [
+      // Titles + Names
+      /\b(Mr\.?|Mrs\.?|Ms\.?|Dr\.?|Professor)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})\b/g,
+      // Professional references
+      /\b([A-Z][a-zA-Z\s]+)(?:\s+(?:Solicitor|Barrister|Counsel|Attorney|Advocate))\b/g,
+      // Party designations
+      /\b(?:the\s+)?(claimant|defendant|plaintiff|respondent|appellant|applicant)[,\s]*([A-Z][a-zA-Z\s]+)/gi,
+      // Witnesses and experts
+      /\b(?:witness|expert|doctor)\s+([A-Z][a-zA-Z\s]+)/gi,
+      // Names in quotes or specific contexts
+      /["']([A-Z][a-zA-Z\s]+)["'](?:\s+(?:said|stated|testified|declared))/g,
+      // Names with actions
+      /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(?:said|stated|argued|claimed|testified|declared|mentioned|reported)/g
+    ];
+
+    generalPersonPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const name = match[2] ? match[2].trim() : match[1].trim();
+        const roleIndicator = match[2] ? match[1] : 'Individual';
+        
+        if (name && name.length > 2 && !this.isCommonLegalWord(name)) {
+          persons.push({
+            name: name,
+            role: this.determineRole(roleIndicator, text, match.index || 0),
+            confidence: 0.75
+          });
+        }
+      }
+    });
+
     return this.deduplicatePersons(persons);
   }
 
@@ -178,6 +210,34 @@ export class BlackstoneEngine {
           type: type,
           confidence: confidence
         });
+      }
+    });
+
+    // Enhanced issue extraction
+    const enhancedIssuePatterns = [
+      // Direct issue statements
+      /\b(?:the\s+)?(?:main\s+|primary\s+|key\s+)?(?:issue|question|dispute|matter|problem)\s+(?:is|are|concerns?)\s+([^.!?]{10,150})/gi,
+      // Whether questions
+      /\b(?:whether|if)\s+([^.!?]{15,150})/gi,
+      // Claims and contentions
+      /\b(?:claims?|alleges?|contends?|argues?)\s+(?:that\s+)?([^.!?]{15,150})/gi,
+      // Legal grounds
+      /\b(?:on\s+the\s+)?(?:grounds?|basis)\s+(?:that\s+|of\s+)?([^.!?]{15,150})/gi,
+      // Court findings
+      /\b(?:the\s+court\s+)?(?:finds?|holds?|rules?|decides?)\s+(?:that\s+)?([^.!?]{15,150})/gi
+    ];
+
+    enhancedIssuePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const issueText = match[1].trim();
+        if (this.isValidIssueText(issueText)) {
+          issues.push({
+            issue: issueText,
+            type: this.categorizeIssue(issueText),
+            confidence: 0.78
+          });
+        }
       }
     });
 
@@ -371,6 +431,75 @@ export class BlackstoneEngine {
     });
     
     return unique;
+  }
+
+  /**
+   * Check if text is a common legal word that shouldn't be treated as a person name
+   */
+  private isCommonLegalWord(word: string): boolean {
+    const commonWords = [
+      'court', 'judge', 'justice', 'counsel', 'solicitor', 'barrister',
+      'claimant', 'defendant', 'appellant', 'respondent', 'witness',
+      'case', 'matter', 'application', 'appeal', 'hearing', 'trial',
+      'judgment', 'order', 'decision', 'ruling', 'law', 'legal',
+      'evidence', 'document', 'statement', 'agreement', 'contract'
+    ];
+    return commonWords.some(cw => word.toLowerCase().includes(cw));
+  }
+
+  /**
+   * Determine role based on context
+   */
+  private determineRole(roleIndicator: string, text: string, position: number): string {
+    const context = text.substring(Math.max(0, position - 100), Math.min(text.length, position + 100));
+    
+    if (roleIndicator.toLowerCase().includes('claimant')) return 'Claimant';
+    if (roleIndicator.toLowerCase().includes('defendant')) return 'Defendant';
+    if (roleIndicator.toLowerCase().includes('witness')) return 'Witness';
+    if (roleIndicator.toLowerCase().includes('expert')) return 'Expert Witness';
+    if (context.toLowerCase().includes('solicitor')) return 'Solicitor';
+    if (context.toLowerCase().includes('barrister')) return 'Barrister';
+    if (context.toLowerCase().includes('counsel')) return 'Counsel';
+    
+    return 'Individual';
+  }
+
+  /**
+   * Validate if text is a meaningful legal issue
+   */
+  private isValidIssueText(text: string): boolean {
+    // Filter out very short or very long texts
+    if (text.length < 10 || text.length > 200) return false;
+    
+    // Filter out texts that are mostly punctuation or numbers
+    const alphaRatio = (text.match(/[a-zA-Z]/g) || []).length / text.length;
+    if (alphaRatio < 0.6) return false;
+    
+    // Filter out common non-issue phrases
+    const nonIssuePatterns = [
+      /^\s*(?:see|refer|note|page|paragraph|section|chapter)\s/i,
+      /^\s*(?:table|figure|diagram|chart|appendix)\s/i,
+      /^\s*(?:\d+\.?\s*)+$/
+    ];
+    
+    return !nonIssuePatterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * Categorize issue based on content
+   */
+  private categorizeIssue(issueText: string): string {
+    const text = issueText.toLowerCase();
+    
+    if (text.includes('contract') || text.includes('agreement') || text.includes('breach')) return 'contract';
+    if (text.includes('negligence') || text.includes('duty') || text.includes('care')) return 'tort';
+    if (text.includes('employment') || text.includes('dismissal') || text.includes('discrimination')) return 'employment';
+    if (text.includes('property') || text.includes('land') || text.includes('lease')) return 'property';
+    if (text.includes('family') || text.includes('divorce') || text.includes('custody')) return 'family';
+    if (text.includes('criminal') || text.includes('sentence') || text.includes('conviction')) return 'criminal';
+    if (text.includes('public') || text.includes('administrative') || text.includes('judicial review')) return 'public';
+    
+    return 'general';
   }
 
   /**

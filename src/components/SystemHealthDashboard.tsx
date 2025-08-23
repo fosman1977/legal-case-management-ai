@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { UnifiedAIClient } from '../utils/unifiedAIClient';
 import { advancedCacheSystem } from '../utils/advancedCacheSystem';
 import { AIModelMigration } from '../utils/aiModelMigration';
-import './SystemHealthDashboard.css';
 
 interface SystemHealth {
   docker: {

@@ -97,8 +97,22 @@ export const EnhancedIssuesBuilder: React.FC<EnhancedIssuesBuilderProps> = ({ ca
   }, [issues]);
 
   const loadIssues = () => {
-    const data = localStorage.getItem(`issues_${caseId}`);
-    setIssues(data ? JSON.parse(data) : []);
+    // First try to load from component-specific storage
+    const componentData = localStorage.getItem(`issues_${caseId}`);
+    const componentIssues = componentData ? JSON.parse(componentData) : [];
+    
+    // Also load from general issues storage (from AI extraction)
+    const generalIssues = storage.getIssues(caseId);
+    
+    // Merge both sources, avoiding duplicates by title
+    const allIssues = [...componentIssues];
+    generalIssues.forEach((issue: Issue) => {
+      if (!allIssues.some(i => i.title === issue.title)) {
+        allIssues.push(issue);
+      }
+    });
+    
+    setIssues(allIssues);
   };
 
   const saveIssues = (newIssues: Issue[]) => {

@@ -9,7 +9,6 @@ const enhancedProgressTracker = new EnhancedProgressTracker();
 import { UniversalDocumentExtractor } from '../services/universalDocumentExtractor';
 import { localAIService } from '../services/localAIService';
 import { EnhancedSystemHealth } from './EnhancedSystemHealth';
-import './BackendServicesStatus.css';
 
 interface ServiceStatus {
   name: string;

@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './CriminalPracticeModule.css';
 
 interface CriminalCharge {
   id: string;

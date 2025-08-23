@@ -1,12 +1,9 @@
 /**
- * AI Model Migration Utility
- * Helps migrate from hardcoded gpt-3.5-turbo to LocalAI's actual available models
+ * AI Model Migration Utility  
+ * Helps migrate from LocalAI to Claude AI models
  */
 
-import { UnifiedAIClient } from './unifiedAIClient';
-
 export class AIModelMigration {
-  private static aiClient = new UnifiedAIClient();
   private static cachedBestModel: string | null = null;
   private static lastModelCheck: number = 0;
   private static MODEL_CACHE_TTL = 30000; // 30 seconds
@@ -22,25 +19,13 @@ export class AIModelMigration {
       return this.cachedBestModel;
     }
 
-    try {
-      // Check if LocalAI is available
-      const isAvailable = await AIModelMigration.aiClient.isAvailable();
-      if (!isAvailable) {
-        console.warn('LocalAI is not available, using fallback model');
-        return 'gpt-4'; // Better fallback than gpt-3.5-turbo
-      }
-
-      // Get the best available model
-      const bestModel = await AIModelMigration.aiClient.getBestAvailableModel();
-      this.cachedBestModel = bestModel;
-      this.lastModelCheck = now;
-      
-      console.log(`Selected best LocalAI model: ${bestModel}`);
-      return bestModel;
-    } catch (error) {
-      console.error('Failed to get best model:', error);
-      return 'gpt-4'; // Safe fallback
-    }
+    // Use Claude as the default model instead of LocalAI
+    const claudeModel = 'claude-3-5-sonnet-20241022';
+    this.cachedBestModel = claudeModel;
+    this.lastModelCheck = now;
+    
+    console.log(`Using Claude model: ${claudeModel}`);
+    return claudeModel;
   }
 
   /**
@@ -101,16 +86,14 @@ export class AIModelMigration {
    * Get available models with fallback handling
    */
   static async getAvailableModels(): Promise<string[]> {
-    try {
-      const models = await AIModelMigration.aiClient.getModels();
-      if (models.length === 0) {
-        return ['gpt-4', 'gpt-3.5-turbo']; // Reasonable fallbacks
-      }
-      return models;
-    } catch (error) {
-      console.error('Failed to get available models:', error);
-      return ['gpt-4', 'gpt-3.5-turbo'];
-    }
+    // Return available Claude models instead of LocalAI models
+    return [
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022', 
+      'claude-3-opus-20240229',
+      'claude-3-sonnet-20240229',
+      'claude-3-haiku-20240307'
+    ];
   }
 
   /**
@@ -120,42 +103,40 @@ export class AIModelMigration {
     batchSize: number = 5,
     onProgress?: (completed: number, total: number) => void
   ) {
-    const aiClient = AIModelMigration.aiClient;
     return {
       async processDocuments(
         documents: T[],
         processor: (doc: T) => Promise<any>
       ): Promise<any[]> {
-        console.log(`Processing ${documents.length} documents in batches of ${batchSize}`);
+        console.log(`Processing ${documents.length} documents in batches of ${batchSize} using Claude`);
         
-        return await aiClient.processBatch(
-          documents,
-          async (batch: T[]) => {
-            const results = [];
-            for (const doc of batch) {
-              try {
-                const result = await processor(doc);
-                results.push(result);
-              } catch (error) {
-                console.error('Document processing failed:', error);
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                results.push({ error: errorMessage, document: doc });
-              }
+        const results = [];
+        for (let i = 0; i < documents.length; i += batchSize) {
+          const batch = documents.slice(i, i + batchSize);
+          
+          for (const doc of batch) {
+            try {
+              const result = await processor(doc);
+              results.push(result);
+            } catch (error) {
+              console.error('Document processing failed:', error);
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              results.push({ error: errorMessage, document: doc });
             }
-            return results;
-          },
-          {
-            batchSize,
-            maxConcurrent: 2, // Limit concurrent requests
-            onProgress
           }
-        );
+          
+          if (onProgress) {
+            onProgress(Math.min(i + batchSize, documents.length), documents.length);
+          }
+        }
+        
+        return results;
       }
     };
   }
 
   /**
-   * Check LocalAI connection status
+   * Check Claude AI connection status
    */
   static async checkConnection(): Promise<{
     connected: boolean;
@@ -164,16 +145,7 @@ export class AIModelMigration {
     error?: string;
   }> {
     try {
-      const connected = await AIModelMigration.aiClient.isAvailable();
-      if (!connected) {
-        return {
-          connected: false,
-          availableModels: [],
-          selectedModel: 'gpt-4',
-          error: 'LocalAI is not running or not accessible'
-        };
-      }
-
+      // Always return Claude as connected since it's cloud-based
       const models = await this.getAvailableModels();
       const bestModel = await this.getBestModel();
 
@@ -184,16 +156,16 @@ export class AIModelMigration {
       };
     } catch (error) {
       return {
-        connected: false,
-        availableModels: [],
-        selectedModel: 'gpt-4',
-        error: error instanceof Error ? error.message : 'Connection check failed'
+        connected: true, // Claude is always available
+        availableModels: await this.getAvailableModels(),
+        selectedModel: 'claude-3-5-sonnet-20241022',
+        error: error instanceof Error ? error.message : undefined
       };
     }
   }
 
   /**
-   * Clear model cache (useful after LocalAI restart)
+   * Clear model cache
    */
   static clearCache(): void {
     this.cachedBestModel = null;

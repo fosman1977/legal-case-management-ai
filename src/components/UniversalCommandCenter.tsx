@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import './UniversalCommandCenter.css';
 
 interface CommandSuggestion {
   id: string;

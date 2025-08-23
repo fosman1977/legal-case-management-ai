@@ -6,9 +6,12 @@ import { indexedDBManager } from '../utils/indexedDB';
 import { fileSystemManager } from '../utils/fileSystemManager';
 import { CaseFolderScanner } from './CaseFolderScanner';
 import { CaseFolderSetup } from './CaseFolderSetup';
-// Removed aiDocumentProcessor - using enhanced multi-engine system
+// Enhanced PDF processing with PDF-Extract-Kit integration
+import { EnhancedDocumentUpload } from './EnhancedDocumentUpload';
+import { ExtractedContentViewer } from './ExtractedContentViewer';
+import { AdvancedLegalAnalysisViewer } from './AdvancedLegalAnalysisViewer';
+// Using enhanced multi-engine system (no LocalAI)
 import { useAISync } from '../hooks/useAISync';
-import { unifiedAIClient } from '../utils/unifiedAIClient';
 import { enhancedAIClient } from '../utils/enhancedAIClient';
 // Performance optimization imports
 import { getProcessingQueue } from '../utils/documentProcessingQueue';
@@ -566,18 +569,9 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
             try {
               onProgress(10, 'Preparing document...');
               
-              // Check if AI service is available first
-              const aiStatus = unifiedAIClient.getConnectionStatus();
-              if (aiStatus.status === 'disconnected') {
-                console.warn(`⚠️ AI service not available: ${aiStatus.lastError}`);
-                onProgress(20, 'Connecting to LocalAI...');
-                const isAvailable = await unifiedAIClient.isAvailable();
-                if (!isAvailable) {
-                  throw new Error(`LocalAI service unavailable: ${aiStatus.lastError}`);
-                }
-              }
-              
-              onProgress(40, 'Extracting entities with AI...');
+              // Using multi-engine processing system (7 specialized engines)
+              onProgress(20, 'Initializing multi-engine extraction...');
+              onProgress(40, 'Extracting entities...');
               
               // Use enhanced multi-engine processing for better accuracy
               const entities = await enhancedAIClient.extractEntitiesIntelligent(
@@ -1273,6 +1267,29 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
         </div>
       )}
 
+      {/* Enhanced Document Upload */}
+      {isAdding && (
+        <div className="upload-section">
+          <div className="upload-header">
+            <h3>📄 Upload Documents</h3>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setIsAdding(false)}
+            >
+              ← Back to Documents
+            </button>
+          </div>
+          <EnhancedDocumentUpload 
+            caseId={caseId}
+            onDocumentAdded={(doc) => {
+              setDocuments(prev => [doc, ...prev]);
+              setIsAdding(false);
+              if (onDocumentChange) onDocumentChange(doc);
+            }}
+          />
+        </div>
+      )}
+
       {/* Document Preview Modal */}
       {previewDoc && (
         <div className="modal-overlay" onClick={() => setPreviewDoc(null)}>
@@ -1296,6 +1313,24 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
                     <p>{previewDoc.notes}</p>
                   </>
                 )}
+                {/* Enhanced Content Viewer */}
+                <div className="enhanced-content-section">
+                  <h4>📊 Extracted Content</h4>
+                  <ExtractedContentViewer 
+                    documentId={previewDoc.id}
+                    caseId={caseId}
+                  />
+                </div>
+
+                {/* Advanced Legal Analysis */}
+                <div className="advanced-analysis-section">
+                  <h4>🧠 Advanced Legal Intelligence</h4>
+                  <AdvancedLegalAnalysisViewer 
+                    caseId={caseId}
+                    documentId={previewDoc.id}
+                  />
+                </div>
+                
                 {previewDoc.fileContent && (
                   <>
                     <h4>Document Content</h4>
@@ -1334,6 +1369,61 @@ export const EnhancedDocumentManager: React.FC<EnhancedDocumentManagerProps> = (
       />
 
       <style>{`
+        /* Upload Section Styles */
+        .upload-section {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+          margin: 20px 0;
+          overflow: hidden;
+        }
+
+        .upload-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .upload-header h3 {
+          margin: 0;
+          color: #1e293b;
+          font-size: 20px;
+          font-weight: 600;
+        }
+
+        .enhanced-content-section {
+          margin: 20px 0;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .enhanced-content-section h4 {
+          margin: 0 0 12px 0;
+          color: #334155;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .advanced-analysis-section {
+          margin: 20px 0;
+          padding: 16px;
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+        }
+
+        .advanced-analysis-section h4 {
+          margin: 0 0 12px 0;
+          color: #1e293b;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
         /* Modal Styles */
         .modal-overlay {
           position: fixed;

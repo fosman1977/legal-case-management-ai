@@ -12,7 +12,6 @@ import DocumentAnalysisView from './DocumentAnalysisView';
 import TimelineVisualization from './TimelineVisualization';
 import StrategicInsightsView from './StrategicInsightsView';
 import ExportOptions from './ExportOptions';
-import './ProfessionalResults.css';
 
 const ProfessionalResults = ({ analysisResults, claudeInsights, caseContext }) => {
   const [activeTab, setActiveTab] = useState('overview');

@@ -82,8 +82,22 @@ export const EnhancedDramatisPersonae: React.FC<EnhancedDramatisPersonaeProps> =
   }, [updateCount]);
 
   const loadPersons = () => {
-    const data = localStorage.getItem(`dramatis_personae_${caseId}`);
-    setPersons(data ? JSON.parse(data) : []);
+    // First try to load from component-specific storage
+    const componentData = localStorage.getItem(`dramatis_personae_${caseId}`);
+    const componentPersons = componentData ? JSON.parse(componentData) : [];
+    
+    // Also load from general persons storage (from AI extraction)
+    const generalPersons = storage.getPersons(caseId);
+    
+    // Merge both sources, avoiding duplicates by name
+    const allPersons = [...componentPersons];
+    generalPersons.forEach((person: Person) => {
+      if (!allPersons.some(p => p.name === person.name)) {
+        allPersons.push(person);
+      }
+    });
+    
+    setPersons(allPersons);
   };
 
   const savePersons = (newPersons: Person[]) => {

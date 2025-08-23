@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import './LegalKnowledgeGraph.css';
 
 interface GraphNode {
   id: string;

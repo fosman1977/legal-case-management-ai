@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './PredictiveAnalyticsEngine.css';
 
 interface CaseOutcomePrediction {
   id: string;

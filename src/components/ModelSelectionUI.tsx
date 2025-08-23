@@ -5,7 +5,6 @@ import { AIModelMigration } from '../utils/aiModelMigration';
 import { LegalBenchEvaluator, LEGAL_MODEL_BENCHMARKS, LegalBenchScore, LNATScore, WatsonGlaserScore } from '../utils/legalBenchIntegration';
 import { LNATModelTester } from '../utils/lnatModelTester';
 import { WatsonGlaserModelTester } from '../utils/watsonGlaserTester';
-import './ModelSelectionUI.css';
 
 interface ModelInfo {
   id: string;

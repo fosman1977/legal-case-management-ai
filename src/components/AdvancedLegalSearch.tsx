@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import './AdvancedLegalSearch.css';
 
 interface SearchResult {
   id: string;

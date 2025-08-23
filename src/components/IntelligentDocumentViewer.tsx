@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import './IntelligentDocumentViewer.css';
 
 interface DocumentTag {
   id: string;

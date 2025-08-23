@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './ResourceOptimizationIntelligence.css';
 
 interface ResourceMetrics {
   id: string;

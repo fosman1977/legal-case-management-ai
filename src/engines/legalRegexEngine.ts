@@ -99,7 +99,38 @@ export class LegalRegexEngine {
       }
     });
 
-    return persons;
+    // Extract general person names (broader patterns)
+    const generalNamePatterns = [
+      // Mr/Mrs/Ms/Dr + Name
+      /\b(Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})\b/g,
+      // Full names in sentences (Title Case)
+      /\b([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s+(?:said|stated|argued|claimed|testified|declared|mentioned|reported|indicated))/g,
+      // Names with professional titles
+      /\b([A-Z][a-zA-Z\s]+)(?:\s+(?:Esq|Solicitor|Barrister|Counsel|Attorney|Lawyer))\b/g,
+      // Party references
+      /\b(?:the\s+)?(claimant|defendant|plaintiff|respondent|appellant|applicant)[,\s]+([A-Z][a-zA-Z\s]+)/gi,
+      // Witness/expert references
+      /\b(?:witness|expert|professor|doctor)\s+([A-Z][a-zA-Z\s]+)/gi
+    ];
+
+    generalNamePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const name = match[2] ? match[2].trim() : match[1].trim();
+        const role = match[2] ? match[1] : 'Individual';
+        
+        // Filter out common false positives
+        if (name && name.length > 3 && !this.isCommonWord(name)) {
+          persons.push({
+            name: name,
+            role: this.capitalizeRole(role),
+            confidence: 0.75
+          });
+        }
+      }
+    });
+
+    return this.deduplicatePersons(persons);
   }
 
   private extractIssues(text: string): Array<{ issue: string; type: string; confidence: number }> {
@@ -129,7 +160,82 @@ export class LegalRegexEngine {
       }
     });
 
-    return issues;
+    // Enhanced issue extraction patterns
+    const enhancedIssuePatterns = [
+      // Questions and disputes
+      /\b(?:the\s+)?(?:main\s+|primary\s+|key\s+)?(?:issue|question|dispute|matter|problem)\s+(?:is|are|concerns?)\s+([^.!?]+)/gi,
+      /\b(?:whether|if)\s+([^.!?]+)/gi,
+      // Claims and allegations
+      /\b(?:alleges?|claims?|contends?)\s+(?:that\s+)?([^.!?]+)/gi,
+      /\b(?:argues?|submits?)\s+(?:that\s+)?([^.!?]+)/gi,
+      // Legal grounds
+      /\b(?:on\s+the\s+)?(?:grounds?|basis)\s+(?:that\s+|of\s+)?([^.!?]+)/gi,
+      // Headings and numbered points (potential issues)
+      /^\s*\d+\.\s*([^\n]{10,80})/gm,
+      /^\s*[A-Z][^\n]{10,80}$/gm
+    ];
+
+    enhancedIssuePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const issueText = match[1] ? match[1].trim() : '';
+        if (issueText && issueText.length > 5 && issueText.length < 200) {
+          issues.push({
+            issue: issueText,
+            type: 'general',
+            confidence: 0.70
+          });
+        }
+      }
+    });
+
+    // Extract common legal issues
+    const commonLegalIssues = [
+      { pattern: /\b(negligence|duty of care|breach of duty|standard of care)\b/gi, type: 'tort' },
+      { pattern: /\b(contract|agreement|breach|consideration|terms)\b/gi, type: 'contract' },
+      { pattern: /\b(employment|dismissal|discrimination|harassment)\b/gi, type: 'employment' },
+      { pattern: /\b(property|lease|rent|possession|eviction)\b/gi, type: 'property' },
+      { pattern: /\b(family|divorce|custody|maintenance|children)\b/gi, type: 'family' },
+      { pattern: /\b(criminal|sentence|conviction|guilty|innocent)\b/gi, type: 'criminal' }
+    ];
+
+    commonLegalIssues.forEach(({ pattern, type }) => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        // Look for context around the match
+        const contextStart = Math.max(0, match.index - 100);
+        const contextEnd = Math.min(text.length, match.index + 100);
+        const context = text.substring(contextStart, contextEnd);
+        
+        issues.push({
+          issue: `${type.charAt(0).toUpperCase() + type.slice(1)} matter: ${match[1]}`,
+          type: type,
+          confidence: 0.75
+        });
+      }
+    });
+
+    return this.deduplicateIssues(issues);
+  }
+
+  private deduplicateIssues(issues: Array<{ issue: string; type: string; confidence: number }>): Array<{ issue: string; type: string; confidence: number }> {
+    const unique: Array<{ issue: string; type: string; confidence: number }> = [];
+    
+    issues.forEach(issue => {
+      const existing = unique.find(i => 
+        i.issue.toLowerCase().trim() === issue.issue.toLowerCase().trim() ||
+        (i.issue.toLowerCase().includes(issue.issue.toLowerCase().substring(0, 20)) && issue.issue.length > 20)
+      );
+      
+      if (!existing) {
+        unique.push(issue);
+      } else if (issue.confidence > existing.confidence) {
+        const index = unique.indexOf(existing);
+        unique[index] = issue;
+      }
+    });
+    
+    return unique;
   }
 
   private extractEvents(text: string): Array<{ date: string; event: string; confidence: number }> {
@@ -147,7 +253,58 @@ export class LegalRegexEngine {
       }
     });
 
-    return events;
+    // Enhanced date extraction patterns
+    const datePatterns = [
+      // DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
+      /(\d{1,2}[\/\-\.](\d{1,2})[\/\-\.]\d{4})/g,
+      // Month DD, YYYY or DD Month YYYY
+      /(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/g,
+      /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})/g,
+      // ISO dates
+      /(\d{4}-\d{2}-\d{2})/g
+    ];
+
+    datePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const date = match[1];
+        
+        // Look for context around the date
+        const contextStart = Math.max(0, match.index - 150);
+        const contextEnd = Math.min(text.length, match.index + 150);
+        const context = text.substring(contextStart, contextEnd);
+        
+        // Extract event description from context
+        const eventKeywords = [
+          'hearing', 'trial', 'judgment', 'order', 'filing', 'service',
+          'meeting', 'conference', 'deadline', 'application', 'motion',
+          'signed', 'executed', 'delivered', 'received', 'sent', 'occurred'
+        ];
+        
+        let eventFound = false;
+        eventKeywords.forEach(keyword => {
+          if (context.toLowerCase().includes(keyword) && !eventFound) {
+            events.push({
+              date: date,
+              event: this.extractEventDescription(context, keyword),
+              confidence: 0.80
+            });
+            eventFound = true;
+          }
+        });
+        
+        // If no specific event found, just record the date
+        if (!eventFound) {
+          events.push({
+            date: date,
+            event: `Event on ${date}`,
+            confidence: 0.60
+          });
+        }
+      }
+    });
+
+    return this.deduplicateEvents(events);
   }
 
   private extractAuthorities(text: string): Array<{ citation: string; relevance: string; confidence: number }> {
@@ -171,6 +328,67 @@ export class LegalRegexEngine {
   private normalizeDate(dateStr: string): string {
     // Simple date normalization - in production would use proper date parsing
     return dateStr.replace(/(\d{1,2})(st|nd|rd|th)/, '$1');
+  }
+
+  private extractEventDescription(context: string, keyword: string): string {
+    // Extract a meaningful event description from context
+    const sentences = context.split(/[.!?]/);
+    const relevantSentence = sentences.find(s => s.toLowerCase().includes(keyword));
+    
+    if (relevantSentence) {
+      return relevantSentence.trim().substring(0, 100) + (relevantSentence.length > 100 ? '...' : '');
+    }
+    
+    return `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} event`;
+  }
+
+  private isCommonWord(word: string): boolean {
+    const commonWords = [
+      'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+      'court', 'case', 'matter', 'document', 'evidence', 'law', 'legal', 'section',
+      'order', 'judgment', 'decision', 'ruling', 'opinion', 'appeal', 'application'
+    ];
+    return commonWords.includes(word.toLowerCase());
+  }
+
+  private capitalizeRole(role: string): string {
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  }
+
+  private deduplicatePersons(persons: Array<{ name: string; role: string; confidence: number }>): Array<{ name: string; role: string; confidence: number }> {
+    const unique: Array<{ name: string; role: string; confidence: number }> = [];
+    
+    persons.forEach(person => {
+      const existing = unique.find(p => 
+        p.name.toLowerCase().trim() === person.name.toLowerCase().trim()
+      );
+      
+      if (!existing) {
+        unique.push(person);
+      } else if (person.confidence > existing.confidence) {
+        const index = unique.indexOf(existing);
+        unique[index] = person;
+      }
+    });
+    
+    return unique;
+  }
+
+  private deduplicateEvents(events: Array<{ date: string; event: string; confidence: number }>): Array<{ date: string; event: string; confidence: number }> {
+    const unique: Array<{ date: string; event: string; confidence: number }> = [];
+    
+    events.forEach(event => {
+      const existing = unique.find(e => 
+        e.date === event.date && 
+        e.event.toLowerCase().includes(event.event.toLowerCase().split(' ')[0])
+      );
+      
+      if (!existing) {
+        unique.push(event);
+      }
+    });
+    
+    return unique;
   }
 
   getStatus() {

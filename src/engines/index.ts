@@ -6,11 +6,13 @@
 import { blackstoneEngine, BlackstoneEngine } from './blackstoneEngine';
 import { eyeciteEngine, EyeciteEngine } from './eyeciteEngine';
 import { legalRegexEngine, LegalRegexEngine } from './legalRegexEngine';
+import { generalEntityEngine, GeneralEntityEngine } from './generalEntityEngine';
 
 // Re-export
 export { blackstoneEngine, BlackstoneEngine } from './blackstoneEngine';
 export { eyeciteEngine, EyeciteEngine } from './eyeciteEngine';
 export { legalRegexEngine, LegalRegexEngine } from './legalRegexEngine';
+export { generalEntityEngine, GeneralEntityEngine } from './generalEntityEngine';
 
 // Engine implementations (simplified for MVP)
 import { EntityExtractionResult } from '../utils/unifiedAIClient';
@@ -165,6 +167,7 @@ export const ENGINE_REGISTRY = {
   'blackstone-uk': blackstoneEngine as any,
   'eyecite': eyeciteEngine as any,
   'legal-regex': legalRegexEngine as any,
+  'general-entity': generalEntityEngine as any,
   'spacy-legal': spacyLegalEngine,
   'custom-uk': customUKEngine,
   'database-validator': databaseValidatorEngine,

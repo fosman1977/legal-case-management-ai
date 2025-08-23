@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Case } from '../types';
 import { AITransparencyDashboard, ConsultationLogEntry } from './AITransparencyDashboard';
 import { ComplianceConfirmationSystem } from './ComplianceConfirmationSystem';
-import './AITransparencyDashboard.css';
-import './ComplianceConfirmationSystem.css';
 
 interface CleanDashboardProps {
   cases: Case[];

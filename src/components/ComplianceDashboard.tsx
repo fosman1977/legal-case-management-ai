@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './ComplianceDashboard.css';
 
 interface ComplianceCheck {
   id: string;

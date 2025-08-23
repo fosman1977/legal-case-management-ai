@@ -3,7 +3,6 @@ import { LNATModelTester } from '../utils/lnatModelTester';
 import { WatsonGlaserModelTester } from '../utils/watsonGlaserTester';
 import { LEGAL_MODEL_BENCHMARKS } from '../utils/legalBenchIntegration';
 import { UnifiedAIClient } from '../utils/unifiedAIClient';
-import './ComprehensiveLegalTestingDashboard.css';
 
 interface ComprehensiveDashboardProps {
   caseId?: string;

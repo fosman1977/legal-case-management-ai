@@ -3,7 +3,8 @@
  * Integrates the 7-engine system with the existing unifiedAIClient
  */
 
-import { unifiedAIClient, EntityExtractionResult, AIResponse } from './unifiedAIClient';
+// Enhanced multi-engine system with advanced legal intelligence
+import { EntityExtractionResult } from './unifiedAIClient';
 import { multiEngineProcessor, ProcessingOptions, ConsensusResult } from './multiEngineProcessor';
 
 export interface EnhancedProcessingOptions extends ProcessingOptions {
@@ -53,12 +54,12 @@ export class EnhancedAIClient {
   ): Promise<EnhancedResult> {
     const startTime = Date.now();
     
-    // Set defaults
+    // Set defaults - NO LocalAI, using multi-engine only
     const enhancedOptions: EnhancedProcessingOptions = {
       requiredAccuracy: 'high',
       maxProcessingTime: 30000,
       documentType: documentType as 'legal' | 'court-order' | 'pleading' | 'authority' | 'user-note',
-      fallbackToAI: true,
+      fallbackToAI: false,  // Disabled - we don't use LocalAI anymore
       enableConsensus: true,
       transparencyLevel: 'detailed',
       ...options
@@ -70,42 +71,23 @@ export class EnhancedAIClient {
     }
 
     try {
-      // Attempt multi-engine processing
-      if (enhancedOptions.enableConsensus) {
-        console.log(`🎯 Starting ${enhancedOptions.requiredAccuracy} accuracy processing...`);
-        
-        const consensusResult = await multiEngineProcessor.processDocument(text, enhancedOptions);
-        
-        return {
-          ...consensusResult,
-          fallbackUsed: false,
-          transparencyLevel: enhancedOptions.transparencyLevel,
-          processingMode: consensusResult.transparencyReport.primaryMethod as 'rules-only' | 'consensus' | 'ai-enhanced' | 'fallback-ai',
-          recommendations: this.generateRecommendations(consensusResult)
-        };
-      }
-    } catch (error) {
-      console.warn('⚠️ Multi-engine processing failed, falling back to AI:', error);
-    }
-
-    // Fallback to original AI processing
-    if (enhancedOptions.fallbackToAI) {
-      console.log('🤖 Using AI fallback processing...');
+      // Always use multi-engine processing (no LocalAI)
+      console.log(`🎯 Starting ${enhancedOptions.requiredAccuracy} accuracy multi-engine processing...`);
       
-      try {
-        const aiResult = await unifiedAIClient.extractEntities(text, documentType);
-        
-        return this.convertToEnhancedResult(aiResult, 'fallback-ai', enhancedOptions.transparencyLevel);
-      } catch (aiError) {
-        console.error('❌ AI fallback also failed:', aiError);
-        
-        // Return empty result with error indication
-        return this.createEmptyEnhancedResult('failed', enhancedOptions.transparencyLevel);
-      }
+      const consensusResult = await multiEngineProcessor.processDocument(text, enhancedOptions);
+      
+      return {
+        ...consensusResult,
+        fallbackUsed: false,
+        transparencyLevel: enhancedOptions.transparencyLevel,
+        processingMode: consensusResult.transparencyReport.primaryMethod as 'rules-only' | 'consensus' | 'ai-enhanced' | 'fallback-ai',
+        recommendations: this.generateRecommendations(consensusResult)
+      };
+    } catch (error) {
+      console.error('❌ Multi-engine processing error:', error);
+      // Return empty result with proper structure
+      return this.createEmptyEnhancedResult('processing-error', enhancedOptions.transparencyLevel);
     }
-
-    // No fallback - return empty result
-    return this.createEmptyEnhancedResult('no-fallback', enhancedOptions.transparencyLevel);
   }
 
   /**
@@ -121,19 +103,19 @@ export class EnhancedAIClient {
     
     let options: Partial<EnhancedProcessingOptions>;
     
-    // Intelligent routing logic
+    // Intelligent routing logic - NO LocalAI
     if (userPreference === 'speed' || (complexity === 'simple' && textLength < 5000)) {
       options = {
         requiredAccuracy: 'standard',
         enableConsensus: false,
-        fallbackToAI: true,
+        fallbackToAI: false,  // No LocalAI
         transparencyLevel: 'basic'
       };
     } else if (userPreference === 'accuracy' || complexity === 'complex') {
       options = {
         requiredAccuracy: 'near-perfect',
         enableConsensus: true,
-        fallbackToAI: true,
+        fallbackToAI: false,  // No LocalAI
         transparencyLevel: 'full'
       };
     } else {
@@ -141,7 +123,7 @@ export class EnhancedAIClient {
       options = {
         requiredAccuracy: 'high',
         enableConsensus: true,
-        fallbackToAI: true,
+        fallbackToAI: false,  // No LocalAI
         transparencyLevel: 'detailed'
       };
     }
@@ -152,27 +134,70 @@ export class EnhancedAIClient {
   }
 
   /**
-   * Document analysis with multi-engine insights
+   * Document analysis with multi-engine insights (no LocalAI)
    */
   async analyzeDocument(
     text: string,
     analysisType: 'summary' | 'strengths' | 'weaknesses' | 'chronology'
   ): Promise<string> {
     try {
-      // Try enhanced analysis first
+      // Extract entities using multi-engine system
       const entities = await this.extractEntitiesIntelligent(text, 'legal', 'balanced');
       
-      // Generate enhanced analysis using entity insights
+      // Generate analysis based on extracted entities
       const analysisContext = this.buildAnalysisContext(entities);
       
-      // Use AI for analysis with enhanced context
-      const prompt = this.buildAnalysisPrompt(analysisType, text, analysisContext);
-      const response = await unifiedAIClient.query(prompt, { temperature: 0.3 });
-      
-      return response.content;
+      // Generate rule-based analysis from entities
+      return this.generateRuleBasedAnalysis(analysisType, text, analysisContext, entities);
     } catch (error) {
-      console.warn('Enhanced analysis failed, using basic analysis:', error);
-      return unifiedAIClient.analyzeDocument(text, analysisType);
+      console.error('Document analysis failed:', error);
+      return 'Analysis unavailable - please check the extracted entities directly.';
+    }
+  }
+  
+  /**
+   * Generate rule-based analysis from extracted entities
+   */
+  private generateRuleBasedAnalysis(
+    analysisType: 'summary' | 'strengths' | 'weaknesses' | 'chronology',
+    text: string,
+    context: string,
+    entities: EnhancedResult
+  ): string {
+    switch (analysisType) {
+      case 'summary':
+        return `Document Summary:\n\n` +
+          `Persons Identified: ${entities.persons.map(p => p.name).join(', ') || 'None'}\n` +
+          `Legal Issues: ${entities.issues.map(i => i.issue).join(', ') || 'None'}\n` +
+          `Authorities Cited: ${entities.authorities.map(a => a.citation).join(', ') || 'None'}\n` +
+          `Key Events: ${entities.chronologyEvents.length} events identified\n\n` +
+          `Processing Confidence: ${entities.consensusConfidence}%`;
+      
+      case 'chronology':
+        if (entities.chronologyEvents.length === 0) {
+          return 'No chronological events identified in the document.';
+        }
+        return 'Chronological Events:\n\n' + 
+          entities.chronologyEvents
+            .map(e => `• ${e.date}: ${e.event}`)
+            .join('\n');
+      
+      case 'strengths':
+        const strengths = [];
+        if (entities.authorities.length > 0) strengths.push('Strong legal authority citations');
+        if (entities.persons.length > 3) strengths.push('Multiple parties properly identified');
+        if (entities.chronologyEvents.length > 2) strengths.push('Clear chronological structure');
+        return 'Document Strengths:\n\n' + (strengths.length > 0 ? strengths.map(s => `• ${s}`).join('\n') : 'No specific strengths identified.');
+      
+      case 'weaknesses':
+        const weaknesses = [];
+        if (entities.authorities.length === 0) weaknesses.push('No legal authorities cited');
+        if (entities.issues.length === 0) weaknesses.push('No clear legal issues identified');
+        if (entities.consensusConfidence < 70) weaknesses.push('Low confidence in entity extraction');
+        return 'Document Weaknesses:\n\n' + (weaknesses.length > 0 ? weaknesses.map(w => `• ${w}`).join('\n') : 'No specific weaknesses identified.');
+      
+      default:
+        return context;
     }
   }
 

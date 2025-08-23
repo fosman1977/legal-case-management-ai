@@ -12,7 +12,6 @@ import TimelineEvent from './TimelineEvent';
 import TimelineFooter from './TimelineFooter';
 import ConfidenceIndicator from './ConfidenceIndicator';
 import GapAnalysis from './GapAnalysis';
-import './Timeline.css';
 
 const TimelineVisualization = ({ events, analysis }) => {
   const [activeFilter, setActiveFilter] = useState('all');

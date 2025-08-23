@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import './SmartCaseClassification.css';
 
 interface ClassificationResult {
   primaryType: 'criminal' | 'civil' | 'poca' | 'mixed';

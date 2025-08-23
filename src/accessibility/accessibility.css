@@ -1,0 +1,297 @@
+/**
+ * Accessibility Styles - Week 17 Day 3-4
+ * CSS for enhanced accessibility features
+ */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sr-only.focus:focus,
+.sr-only:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Focus visibility enhancements */
+.focus-visible *:focus-visible,
+.keyboard-nav *:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+
+/* High contrast mode */
+.high-contrast {
+  --bg-primary: #000000;
+  --bg-secondary: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #000000;
+  --border-color: #ffffff;
+  --focus-color: #ffff00;
+}
+
+.high-contrast * {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.high-contrast button,
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.high-contrast *:focus {
+  outline-color: var(--focus-color) !important;
+  background-color: var(--focus-color) !important;
+  color: var(--bg-primary) !important;
+}
+
+/* Reduced motion preferences */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Font size adjustments */
+.font-size-small {
+  font-size: 14px;
+}
+
+.font-size-medium {
+  font-size: 16px;
+}
+
+.font-size-large {
+  font-size: 18px;
+}
+
+.font-size-large h1 { font-size: 2.5rem; }
+.font-size-large h2 { font-size: 2rem; }
+.font-size-large h3 { font-size: 1.75rem; }
+.font-size-large h4 { font-size: 1.5rem; }
+.font-size-large p, .font-size-large span, .font-size-large div { font-size: 1.125rem; }
+
+/* Skip link styling */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 1000;
+  border-radius: 0 0 4px 4px;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Enhanced button focus states */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px #ffffff, 0 0 0 4px #3b82f6;
+}
+
+/* Tab focus indicators */
+[role="tab"]:focus {
+  position: relative;
+  z-index: 1;
+}
+
+[role="tab"]:focus::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+}
+
+/* Live region styling */
+[aria-live] {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Modal and dialog accessibility */
+[role="dialog"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1050;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+[role="dialog"]:focus {
+  outline: none;
+}
+
+/* Form field error states */
+[aria-invalid="true"] {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px #dc2626;
+}
+
+[aria-invalid="true"]:focus {
+  outline-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px #dc2626, 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Required field indicators */
+[required] + label::after,
+label[for] [required]::after {
+  content: " *";
+  color: #dc2626;
+}
+
+/* Table accessibility */
+table[role="grid"] th,
+table[role="grid"] td {
+  border: 1px solid #d1d5db;
+}
+
+table[role="grid"] th:focus,
+table[role="grid"] td:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* List and grid navigation */
+[role="listbox"] [role="option"],
+[role="grid"] [role="gridcell"] {
+  cursor: pointer;
+}
+
+[role="listbox"] [role="option"]:focus,
+[role="grid"] [role="gridcell"]:focus {
+  background-color: #dbeafe;
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+[role="listbox"] [aria-selected="true"],
+[role="grid"] [aria-selected="true"] {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Progress indicators */
+[role="progressbar"] {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+[role="progressbar"]::before {
+  content: '';
+  display: block;
+  height: 100%;
+  background-color: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+/* Status indicators */
+[role="status"] {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+[role="alert"] {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid #dc2626;
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+/* Interactive element sizing for touch */
+button,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Ensure sufficient color contrast */
+.contrast-check {
+  color-contrast: AA;
+}
+
+/* Motion-safe animations */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-in-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Print accessibility */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+  
+  .sr-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    clip: auto !important;
+    overflow: visible !important;
+  }
+}
