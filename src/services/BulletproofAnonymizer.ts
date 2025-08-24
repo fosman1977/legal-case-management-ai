@@ -1,7 +1,7 @@
 /**
- * Bulletproof Anonymizer - Phase 1 Week 5-6
+ * Bulletproof Anonymizer - Phase 1 Week 5-6 - REAL INTEGRATIONS
  * Multi-layer anonymization with verification following Development Strategy
- * BlackstoneNLP + Microsoft Presidio + Custom UK patterns + Verification framework
+ * BlackstoneNLP (REAL) + Microsoft Presidio (REAL) + Custom UK patterns + Verification framework
  */
 
 export interface AnonymizationOptions {
@@ -50,6 +50,16 @@ export interface AnonymousPattern {
  */
 export class BulletproofAnonymizer {
   private ukLegalPatterns: RegExp[] = [
+    // Person Names (common patterns)
+    /\b([A-Z][a-z]+ [A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g, // John Smith, Mary Jane Cooper
+    
+    // Organizations/Companies  
+    /\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+(?:Corporation|Corp|Inc|Ltd|Limited|LLP|LLC|Company|Co\.|Partners|Group|Services|Associates|Bank|Trust|Insurance|Holdings))\b/gi,
+    
+    // Dates
+    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}\b/gi,
+    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
+    
     // UK Courts
     /\b(High Court|Court of Appeal|Supreme Court|Crown Court|Magistrates' Court|County Court|Employment Tribunal|Family Court|Chancery Division|Queen's Bench|King's Bench)\b/gi,
     
@@ -60,7 +70,10 @@ export class BulletproofAnonymizer {
     /\b(Companies Act|Employment Rights Act|Human Rights Act|Data Protection Act|Criminal Justice Act|Mental Health Act|Housing Act)\s+\d{4}/gi,
     
     // UK Legal Terms
-    /\b(claimant|defendant|appellant|respondent|applicant|barrister|solicitor|QC|KC|silk|junior counsel|leading counsel)\b/gi,
+    /\b(claimant|defendant|appellant|respondent|applicant|barrister|solicitor|QC|KC|silk|junior counsel|leading counsel|plaintiff)\b/gi,
+    
+    // Party labels (Party A, Party B, etc)
+    /\bParty\s+[A-Z]\b/g,
     
     // UK Financial Terms
     /£\s*[\d,]+(?:\.\d{2})?|\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\s*(?:pounds?|GBP)\b/gi,
@@ -158,12 +171,54 @@ export class BulletproofAnonymizer {
   }
 
   /**
-   * Layer 1: BlackstoneNLP for UK legal entities (simulated)
+   * Layer 1: BlackstoneNLP for UK legal entities (REAL INTEGRATION)
    */
   private async extractWithBlackstone(text: string): Promise<EntityDetection[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const entities: EntityDetection[] = [];
+    try {
+      console.log('⚖️ Calling REAL BlackstoneNLP service...');
+      
+      // Call real BlackstoneNLP service
+      const response = await fetch('http://localhost:5004/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+
+      if (!response.ok) {
+        console.warn('🚨 BlackstoneNLP service failed:', response.status, 'using fallback');
+        return this.fallbackBlackstoneDetection(text);
+      }
+
+      const blackstoneResults = await response.json();
+      const entities = blackstoneResults.entities || [];
+      console.log('✅ Real BlackstoneNLP detected', entities.length, 'legal entities');
+
+      return entities.map((entity: any) => ({
+        text: entity.text,
+        label: entity.label,
+        start: entity.start,
+        end: entity.end,
+        confidence: entity.confidence,
+        source: 'blackstone' as const,
+        context: text.substring(
+          Math.max(0, entity.start - 20),
+          Math.min(text.length, entity.end + 20)
+        ),
+        category: this.getLegalCategory(entity.label)
+      }));
+
+    } catch (error) {
+      console.warn('🚨 BlackstoneNLP service error:', error.message, '- using fallback');
+      return this.fallbackBlackstoneDetection(text);
+    }
+  }
+
+  /**
+   * Fallback BlackstoneNLP detection when real service is unavailable
+   */
+  private fallbackBlackstoneDetection(text: string): EntityDetection[] {
+    const entities: EntityDetection[] = [];
         
         // Simulate BlackstoneNLP entity extraction
         this.ukLegalPatterns.forEach((pattern) => {
@@ -181,38 +236,223 @@ export class BulletproofAnonymizer {
           }
         });
         
-        resolve(entities);
-      }, 300);
-    });
+        return entities;
   }
 
   /**
-   * Layer 2: Microsoft Presidio for comprehensive PII (simulated)
+   * Layer 2: Microsoft Presidio for comprehensive PII (REAL INTEGRATION)
    */
   private async extractWithPresidio(text: string): Promise<EntityDetection[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const entities: EntityDetection[] = [];
-        
-        // Simulate Presidio PII detection
-        this.sensitivePatterns.forEach((pattern) => {
-          let match;
-          while ((match = pattern.exec(text)) !== null) {
-            entities.push({
-              text: match[0],
-              label: 'PII_DETECTED',
-              start: match.index,
-              end: match.index + match[0].length,
-              confidence: 0.89, // Presidio typical confidence
-              source: 'presidio',
-              category: this.getPIICategory(match[0])
-            });
-          }
+    try {
+      console.log('🔒 Calling REAL Presidio analyzer service...');
+      
+      // Check if text is too long for Presidio (50,000 char limit)
+      const MAX_PRESIDIO_LENGTH = 45000; // Leave some buffer
+      
+      if (text.length > MAX_PRESIDIO_LENGTH) {
+        console.log(`📄 Text too long for Presidio (${text.length} chars), chunking...`);
+        return await this.extractWithPresidioChunked(text, MAX_PRESIDIO_LENGTH);
+      }
+      
+      // Call real Presidio analyzer service
+      const response = await fetch('http://localhost:5002/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          language: 'en'
+          // Let Presidio detect all available entities by default
+        }),
+        signal: AbortSignal.timeout(15000) // 15 second timeout for large texts
+      });
+
+      if (!response.ok) {
+        console.warn('🚨 Presidio analyzer failed:', response.status, 'using fallback');
+        return this.fallbackPresidioDetection(text);
+      }
+
+      const presidioResults = await response.json();
+      const entities = presidioResults.entities || presidioResults || [];
+      console.log('✅ Real Presidio detected', entities.length, 'PII entities');
+
+      return entities.map((entity: any) => ({
+        text: text.substring(entity.start, entity.end),
+        label: entity.entity_type,
+        start: entity.start,
+        end: entity.end,
+        confidence: entity.score || entity.confidence || 0.8,
+        source: 'presidio' as const,
+        context: text.substring(
+          Math.max(0, entity.start - 20),
+          Math.min(text.length, entity.end + 20)
+        ),
+        category: this.getPIICategory(entity.entity_type)
+      }));
+
+    } catch (error) {
+      console.warn('🚨 Presidio service error:', error.message, '- using fallback');
+      return this.fallbackPresidioDetection(text);
+    }
+  }
+
+  /**
+   * Handle long texts by chunking them for Presidio
+   */
+  private async extractWithPresidioChunked(text: string, maxChunkSize: number): Promise<EntityDetection[]> {
+    const allEntities: EntityDetection[] = [];
+    const chunks = this.createTextChunks(text, maxChunkSize);
+    
+    console.log(`📋 Processing ${chunks.length} chunks for Presidio analysis...`);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const { chunk, startOffset } = chunks[i];
+      console.log(`🔍 Processing chunk ${i + 1}/${chunks.length} (${chunk.length} chars, offset: ${startOffset})`);
+      
+      try {
+        const response = await fetch('http://localhost:5002/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: chunk,
+            language: 'en'
+          }),
+          signal: AbortSignal.timeout(15000)
         });
+
+        if (response.ok) {
+          const presidioResults = await response.json();
+          const entities = presidioResults.entities || presidioResults || [];
+          
+          // Adjust entity positions to account for chunk offset
+          const adjustedEntities = entities.map((entity: any) => ({
+            text: chunk.substring(entity.start, entity.end),
+            label: entity.entity_type,
+            start: entity.start + startOffset,
+            end: entity.end + startOffset,
+            confidence: entity.score || entity.confidence || 0.8,
+            source: 'presidio' as const,
+            context: text.substring(
+              Math.max(0, entity.start + startOffset - 20),
+              Math.min(text.length, entity.end + startOffset + 20)
+            ),
+            category: this.getPIICategory(entity.entity_type)
+          }));
+          
+          allEntities.push(...adjustedEntities);
+          console.log(`✅ Chunk ${i + 1} processed: ${adjustedEntities.length} entities`);
+        } else {
+          console.warn(`⚠️ Chunk ${i + 1} failed: HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Chunk ${i + 1} error:`, error.message);
+      }
+      
+      // Small delay between chunks to avoid overwhelming the service
+      if (i < chunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    console.log(`✅ Presidio chunked analysis complete: ${allEntities.length} total entities`);
+    return this.deduplicateEntities(allEntities);
+  }
+
+  /**
+   * Create overlapping text chunks to ensure entities aren't split
+   */
+  private createTextChunks(text: string, maxChunkSize: number): Array<{ chunk: string; startOffset: number }> {
+    const chunks: Array<{ chunk: string; startOffset: number }> = [];
+    const overlapSize = 500; // Overlap to catch entities that span chunk boundaries
+    
+    let start = 0;
+    while (start < text.length) {
+      const end = Math.min(start + maxChunkSize, text.length);
+      let chunk = text.substring(start, end);
+      
+      // If this isn't the last chunk, try to end at a sentence boundary
+      if (end < text.length) {
+        const lastSentenceEnd = chunk.lastIndexOf('. ');
+        const lastLineBreak = chunk.lastIndexOf('\n');
+        const lastSpace = chunk.lastIndexOf(' ');
         
-        resolve(entities);
-      }, 400);
+        // Use the best available boundary
+        const bestBoundary = Math.max(lastSentenceEnd, lastLineBreak, lastSpace);
+        if (bestBoundary > maxChunkSize * 0.8) { // Only if it's not too far back
+          chunk = chunk.substring(0, bestBoundary + 1);
+        }
+      }
+      
+      chunks.push({
+        chunk,
+        startOffset: start
+      });
+      
+      // Move start position, accounting for overlap
+      const actualChunkLength = chunk.length;
+      start += actualChunkLength - overlapSize;
+      
+      // Ensure we don't get stuck in an infinite loop
+      if (actualChunkLength <= overlapSize) {
+        start += maxChunkSize - overlapSize;
+      }
+    }
+    
+    return chunks;
+  }
+
+  /**
+   * Remove duplicate entities that may result from overlapping chunks
+   */
+  private deduplicateEntities(entities: EntityDetection[]): EntityDetection[] {
+    const deduplicated: EntityDetection[] = [];
+    
+    for (const entity of entities) {
+      // Check if this entity overlaps significantly with an existing one
+      const isDuplicate = deduplicated.some(existing => {
+        const overlapStart = Math.max(entity.start, existing.start);
+        const overlapEnd = Math.min(entity.end, existing.end);
+        const overlapLength = Math.max(0, overlapEnd - overlapStart);
+        
+        const entityLength = entity.end - entity.start;
+        const existingLength = existing.end - existing.start;
+        const minLength = Math.min(entityLength, existingLength);
+        
+        // Consider it a duplicate if overlap is more than 80% of the shorter entity
+        return overlapLength > minLength * 0.8 && 
+               entity.label === existing.label;
+      });
+      
+      if (!isDuplicate) {
+        deduplicated.push(entity);
+      }
+    }
+    
+    return deduplicated;
+  }
+
+  /**
+   * Fallback Presidio detection when real service is unavailable
+   */
+  private fallbackPresidioDetection(text: string): EntityDetection[] {
+    const entities: EntityDetection[] = [];
+    
+    // Use the existing sensitive patterns as fallback
+    this.sensitivePatterns.forEach((pattern) => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        entities.push({
+          text: match[0],
+          label: 'PII_DETECTED',
+          start: match.index,
+          end: match.index + match[0].length,
+          confidence: 0.75, // Lower confidence for fallback
+          source: 'presidio',
+          category: this.getPIICategory(match[0])
+        });
+      }
     });
+    
+    return entities;
   }
 
   /**
@@ -476,6 +716,18 @@ export class BulletproofAnonymizer {
     if (/^\d+$/.test(text)) return 'financial'; // Numbers
     if (/^[A-Z]/.test(text)) return 'person'; // Capitalized (likely name)
     return 'other';
+  }
+
+  private getLegalCategory(label: string): EntityDetection['category'] {
+    const categoryMap: { [key: string]: EntityDetection['category'] } = {
+      'PERSON': 'person',
+      'ORG': 'organization', 
+      'CASE_NUMBER': 'other',
+      'LEGAL_ROLE': 'person',
+      'LEGAL_CONCEPT': 'other',
+      'STATUTE': 'other'
+    };
+    return categoryMap[label] || 'other';
   }
 
   private getAnonymousPlaceholder(entity: EntityDetection): string {

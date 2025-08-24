@@ -212,23 +212,16 @@ export class EnhancedPDFService {
       // Import PDF.js dynamically and configure worker
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Configure worker for PDF.js with multiple fallbacks
+      // Configure worker for PDF.js
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
         console.log('🔧 Configuring PDF.js worker...');
         try {
-          // Try local worker first
+          // Use local worker to avoid CSP issues
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
           console.log('✅ PDF.js worker configured with local file');
         } catch (error) {
-          console.warn('Local worker failed, trying CDN fallback:', error);
-          try {
-            // Fallback to CDN
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-            console.log('✅ PDF.js worker configured with CDN');
-          } catch (cdnError) {
-            console.warn('CDN worker failed, disabling worker:', cdnError);
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-          }
+          console.warn('Worker configuration failed, disabling worker:', error);
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '';
         }
       }
       

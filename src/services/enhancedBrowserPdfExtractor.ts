@@ -22,19 +22,7 @@ const configurePDFWorker = (): void => {
     console.log('✅ Using bundled PDF.js worker from public folder');
   } catch (error) {
     console.error('Failed to set PDF.js worker:', error);
-    
-    // Last resort fallback - try CDN if not in air-gap mode
-    try {
-      if (!isAirGapMode()) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.54/pdf.worker.min.mjs`;
-        console.log('✅ Fallback: Using CDN worker (not air-gap mode)');
-      } else {
-        throw new Error('Air-gap mode: Cannot use external CDN worker');
-      }
-    } catch (cdnError) {
-      console.error('All PDF.js worker configurations failed:', cdnError);
-      throw new Error('Cannot configure PDF.js worker. Please ensure pdf.worker.min.mjs is available.');
-    }
+    throw new Error('Cannot configure PDF.js worker. Please ensure pdf.worker.min.mjs is available.');
   }
 };
 

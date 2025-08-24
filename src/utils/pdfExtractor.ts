@@ -2,19 +2,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
-// Configure PDF.js worker - v5 with proper version handling
-if (typeof pdfjsLib !== 'undefined' && pdfjsLib.version) {
-  try {
-    const version = pdfjsLib.version;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-    console.log(`PDF.js worker configured for version ${version}`);
-  } catch (error) {
-    console.warn('Failed to set PDF.js worker from CDN, using local fallback');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-  }
-} else {
-  console.warn('PDF.js version not detected, using fallback worker');
+// Configure PDF.js worker - use local worker file to avoid CSP issues
+if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  console.log('PDF.js worker configured with local file');
+} else {
+  console.warn('PDF.js not available');
 }
 
 // Enhanced text extraction interfaces
