@@ -3,7 +3,7 @@
  * AI consultation results and timeline with REAL Claude integration
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'; // Force refresh
 import { Case } from '../types';
 import Button from '../design/components/Button';
 import Card, { CardHeader, CardContent } from '../design/components/Card';
@@ -34,15 +34,93 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
   onConsultationComplete,
   onExportComplete
 }) => {
+  console.log('🔍 InsightsSection render - analysisResults:', analysisResults);
+  console.log('🔍 InsightsSection render - enhancedAnalysis:', analysisResults?.enhancedAnalysis);
+  
   const { announce } = useAccessibility();
   const [activeTab, setActiveTab] = useState('summary');
   const [isConsulting, setIsConsulting] = useState(false);
   const [consultationResults, setConsultationResults] = useState<any>(passedConsultationResults);
-  // Real AI consultation framework
-  const [consultationFramework] = useState(() => new MultiRoundConsultationFramework());
+  // Real AI consultation framework - safely initialized
+  const [consultationFramework] = useState(() => {
+    try {
+      return new MultiRoundConsultationFramework();
+    } catch (error) {
+      console.warn('Claude integration unavailable, consultations will use fallback mode');
+      return null;
+    }
+  });
   const [patternGenerator] = useState(() => new EnhancedPatternGenerator());
   // Professional export system
   const [courtExporter] = useState(() => new CourtReadyExporter());
+  
+  // Auto-populate consultation results when analysis results are available
+  useEffect(() => {
+    if (analysisResults && analysisResults.enhancedAnalysis && !consultationResults) {
+      console.log('🔍 InsightsSection - Auto-populating consultation results from analysis');
+      
+      // Create fallback insights based on analysis results
+      const autoInsights = {
+        strategicAnalysis: `Enhanced local analysis completed successfully. Based on the sophisticated pattern detection:\n\n` +
+          `• ${analysisResults.entitiesFound} entities identified and analyzed\n` +
+          `• ${analysisResults.enhancedAnalysis?.contradictionsFound || 0} contradictions detected\n` +
+          `• ${analysisResults.enhancedAnalysis?.relationshipsFound || 0} relationships mapped\n` +
+          `• ${analysisResults.enhancedAnalysis?.timelineEvents || 0} timeline events extracted\n\n` +
+          `All analysis performed locally with complete privacy compliance.`,
+        
+        keyFindings: [
+          {
+            category: 'Document Processing',
+            confidence: analysisResults.qualityMetrics?.averageConfidence || 0.9,
+            description: `Successfully processed ${analysisResults.processedFiles} documents with ${analysisResults.extractionAccuracy} accuracy`
+          },
+          {
+            category: 'Enhanced Analysis Complete',
+            confidence: analysisResults.qualityMetrics?.averageConfidence || 0.9,
+            description: `Analysis found ${analysisResults.entitiesFound} entities with ${analysisResults.enhancedAnalysis?.contradictionsFound || 0} contradictions detected`
+          }
+        ],
+
+        recommendedActions: [
+          'Review extracted entities for case relevance',
+          'Analyze detected contradictions for strategic implications',
+          'Examine relationship patterns for evidence strategy',
+          'Consult timeline analysis for procedural planning'
+        ],
+        
+        caseStrategy: {
+          primaryApproach: 'Local Analysis Based Strategy',
+          fallbackStrategy: 'Enhanced Pattern Analysis',
+          estimatedDuration: '4-8 weeks analysis phase',
+          budgetRange: 'Analysis complete - ready for strategy development',
+          successProbability: `${Math.round((analysisResults.qualityMetrics?.averageConfidence || 0.8) * 100)}%`
+        },
+        
+        timelineInsights: analysisResults.enhancedAnalysis?.timeline?.slice(0, 5).map(event => ({
+          date: event.date || new Date().toISOString(),
+          significance: event.significance || 'Medium',
+          event: event.description || event.title || 'Timeline event identified'
+        })) || [
+          {
+            date: new Date().toISOString(),
+            significance: 'High',
+            event: 'Enhanced document analysis completed successfully'
+          }
+        ],
+        
+        consultationMetadata: {
+          sessionId: 'local-analysis',
+          patternsUsed: ['Local Pattern Analysis'],
+          confidenceLevel: analysisResults.qualityMetrics?.averageConfidence || 0.85,
+          processingTime: analysisResults.processingTime,
+          privacyCompliant: true,
+          dataTransmitted: 'No external data transmission'
+        }
+      };
+      
+      setConsultationResults(autoInsights);
+    }
+  }, [analysisResults]); // Remove consultationResults from dependencies to prevent infinite loop
 
   const handleAIConsultation = useCallback(async () => {
     if (!analysisResults || !selectedCase) {
@@ -66,7 +144,16 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
 
       // Step 2: Start REAL Claude consultation with MultiRoundConsultationFramework
       announce('Consulting Claude AI with privacy-safe patterns...');
-      const claudeApiKey = process.env.REACT_APP_CLAUDE_API_KEY || 'demo-key';
+      
+      if (!consultationFramework) {
+        throw new Error('Claude consultation framework not available - falling back to local analysis');
+      }
+      
+      const claudeApiKey = localStorage.getItem('claude_api_key') || '';
+      
+      if (!claudeApiKey) {
+        throw new Error('Claude API key not configured. Please go to Privacy → AI Configuration to set up your API key.');
+      }
       
       const consultationSession = await consultationFramework.startConsultation(
         selectedCase.id,
@@ -529,14 +616,14 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
             margin: 0,
             color: '#1f2937'
           }}>
-            AI Insights
+            AI Legal Research and Insights
           </h1>
           <p style={{ 
             fontSize: '1rem', 
             color: '#6b7280',
             margin: '4px 0 0 0'
           }}>
-            Strategic legal guidance from anonymous pattern analysis
+            Legal research, Skeleton arguments, chronology analysis, case authorities, and strategic pleadings guidance
           </p>
         </div>
 
@@ -605,7 +692,6 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
             <p style={{ 
               fontSize: '0.875rem',
               color: '#6b7280',
-              margin: 0,
               maxWidth: '500px',
               margin: '0 auto'
             }}>
@@ -651,13 +737,13 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
                         };
                         
                         // Generate strategic advice report
-                        const strategicReport = await courtExporter.exportClientReport(
+                        const strategicResult = await courtExporter.exportClientReport(
                           analysisResults,
                           consultationResults,
                           caseContext
                         );
                         
-                        const reportBlob = new Blob([strategicReport], { 
+                        const reportBlob = new Blob([strategicResult.word.content], { 
                           type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
                         });
                         const reportUrl = URL.createObjectURL(reportBlob);
@@ -732,12 +818,12 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
                           counsel: 'To be determined'
                         };
                         
-                        const skeletonFramework = await courtExporter.exportSkeletonFramework(
+                        const skeletonResult = await courtExporter.exportSkeletonFramework(
                           consultationResults,
                           caseContext
                         );
                         
-                        const skeletonBlob = new Blob([skeletonFramework], { 
+                        const skeletonBlob = new Blob([skeletonResult.word.content], { 
                           type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
                         });
                         const skeletonUrl = URL.createObjectURL(skeletonBlob);
@@ -834,6 +920,22 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({
                   • {analysisResults.enhancedAnalysis.relationshipsFound} relationships mapped
                   • {analysisResults.enhancedAnalysis.timelineEvents} timeline events identified
                   • {analysisResults.enhancedAnalysis.semanticConcepts} semantic concepts analyzed
+                </div>
+                
+                {/* API Key Status */}
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '12px', 
+                  backgroundColor: localStorage.getItem('claude_api_key') ? '#f0f9ff' : '#fef3c7',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  color: localStorage.getItem('claude_api_key') ? '#0c4a6e' : '#92400e'
+                }}>
+                  {localStorage.getItem('claude_api_key') ? (
+                    <>🤖 Claude AI integration ready - Real AI consultation available</>
+                  ) : (
+                    <>⚠️ Claude API key not configured - Go to Privacy → AI Configuration to enable real AI consultation</>
+                  )}
                 </div>
               </div>
             )}

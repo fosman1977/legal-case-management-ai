@@ -40,7 +40,12 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
   const [courtExporter] = useState(() => new CourtReadyExporter());
 
   const handleFilesUploaded = useCallback((files: any[]) => {
-    setUploadedFiles(prev => [...prev, ...files]);
+    console.log('🔍 AnalyzeSection - handleFilesUploaded called with files:', files);
+    setUploadedFiles(prev => {
+      const newFiles = [...prev, ...files];
+      console.log('🔍 AnalyzeSection - uploadedFiles updated to:', newFiles);
+      return newFiles;
+    });
     announce(`${files.length} files uploaded successfully`);
   }, [announce]);
 
@@ -56,6 +61,9 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
   }, [onProcessingComplete, announce]);
 
   const handleStartAnalysis = async () => {
+    console.log('🔍 AnalyzeSection - handleStartAnalysis called');
+    console.log('🔍 AnalyzeSection - uploadedFiles:', uploadedFiles);
+    
     if (uploadedFiles.length === 0) {
       announce('Please upload documents before starting analysis', 'assertive');
       return;
@@ -89,7 +97,9 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
         });
         
         // Count actual entities found from anonymization result
+        console.log('🔍 AnalyzeSection - result.anonymization:', result.anonymization);
         const entityCount = result.anonymization?.detectedEntities ? result.anonymization.detectedEntities.length : 0;
+        console.log('🔍 AnalyzeSection - entityCount:', entityCount);
         
         results.push({
           file: uploadedFile,
@@ -116,10 +126,17 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
       const processingTime = Math.round(performance.now() - analysisStart);
       
       // Aggregate real analysis results from Phase 2 components
+      console.log('🔍 AnalyzeSection - raw results before aggregation:', results);
       const aggregatedContradictions = results.map(r => r.contradictionAnalysis).filter(Boolean).flat();
       const aggregatedRelationships = results.map(r => r.relationshipAnalysis).filter(Boolean).flat();
       const aggregatedTimeline = results.map(r => r.timelineAnalysis).filter(Boolean).flat();
       const aggregatedSemantics = results.map(r => r.semanticAnalysis).filter(Boolean).flat();
+      
+      console.log('🔍 AnalyzeSection - aggregated data:');
+      console.log('  - contradictions:', aggregatedContradictions);
+      console.log('  - relationships:', aggregatedRelationships);
+      console.log('  - timeline:', aggregatedTimeline);
+      console.log('  - semantics:', aggregatedSemantics);
       
       const realResults = {
         // Basic metrics
@@ -173,11 +190,14 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
         }
       };
       
+      console.log('🔍 AnalyzeSection - created realResults:', realResults);
+      console.log('🔍 AnalyzeSection - enhancedAnalysis structure:', realResults.enhancedAnalysis);
+      
       handleProcessingComplete(realResults);
       announce(`Enhanced analysis completed: ${totalEntities} entities, ${aggregatedContradictions.length} contradictions, ${aggregatedRelationships.length} relationships found with ${Math.round(avgConfidence * 100)}% average confidence`);
       
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('🔍 AnalyzeSection - Analysis failed:', error);
       announce('Analysis failed. Please try again.', 'assertive');
       // Reset processing state
       setState(prev => ({ ...prev, isProcessing: false }));
@@ -201,7 +221,7 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
           color: '#6b7280',
           margin: '4px 0 0 0'
         }}>
-          Upload and analyze legal documents with AI-powered extraction
+          Upload documents, legal research analysis, extract timeline events, Skeleton arguments preparation, and legal authorities identification
         </p>
       </div>
 
@@ -237,11 +257,11 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
       <div style={{ marginBottom: '32px' }}>
         <DocumentUploadInterface
           onFilesUploaded={handleFilesUploaded}
-          onProcessingComplete={handleProcessingComplete}
         />
       </div>
 
       {/* Analysis Control Panel */}
+      {console.log('🔍 AnalyzeSection - uploadedFiles.length:', uploadedFiles.length, 'uploadedFiles:', uploadedFiles)}
       {uploadedFiles.length > 0 && (
         <Card style={{ marginBottom: '24px' }}>
           <CardHeader>
@@ -322,15 +342,28 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
             </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <AccessibleButton
-                onClick={handleStartAnalysis}
+              {console.log('🔍 Button render - isProcessing:', isProcessing, 'uploadedFiles.length:', uploadedFiles.length, 'disabled:', (isProcessing || uploadedFiles.length === 0))}
+              <button
+                onClick={(e) => {
+                  console.log('🔍 Button clicked - event:', e);
+                  console.log('🔍 Button clicked - isProcessing:', isProcessing);
+                  console.log('🔍 Button clicked - uploadedFiles.length:', uploadedFiles.length);
+                  handleStartAnalysis();
+                }}
                 disabled={isProcessing || uploadedFiles.length === 0}
-                variant="primary"
-                size="lg"
-                ariaLabel={`Analyze ${uploadedFiles.length} uploaded documents`}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
               >
                 {isProcessing ? 'Processing...' : `Analyze ${uploadedFiles.length} Documents`}
-              </AccessibleButton>
+              </button>
 
               {uploadedFiles.length > 0 && (
                 <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -578,14 +611,14 @@ export const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({
                         date: new Date().toISOString().split('T')[0]
                       };
                       
-                      const professionalReport = await courtExporter.exportClientReport(
+                      const professionalResult = await courtExporter.exportClientReport(
                         analysisResults,
                         null, // No Claude insights yet in this context
                         caseContext
                       );
                       
                       // Create and download professional PDF/Word document
-                      const reportBlob = new Blob([professionalReport], { 
+                      const reportBlob = new Blob([professionalResult.word.content], { 
                         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
                       });
                       const reportUrl = URL.createObjectURL(reportBlob);
